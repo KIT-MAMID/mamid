@@ -3,14 +3,15 @@ package masterslaveprotocol
 import (
 	"net/http"
 	"encoding/json"
+	"bytes"
 	"fmt"
 )
 
-type MSPError struct {
+type CommunicationError struct {
 	error_message string
 }
 
-func (e MSPError) Error() string {
+func (e CommunicationError) Error() string {
 	return e.error_message
 }
 
@@ -24,7 +25,20 @@ func NewMSPClient(target HostPort) *MSPClient {
 }
 
 func (c MSPClient) MspSetDataPath(path string) error {
-	return MSPError{"Not implemented"}
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(path)
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/setDataPath", c.target.Hostname, c.target.Port), buffer)
+	resp, err := c.httpClient.Do(req)
+
+	if err == nil {
+		if resp.StatusCode == http.StatusOK {
+			return nil
+		} else {
+			return MSPErrorFromJson(resp.Body)
+		}
+	} else {
+		return CommunicationError{err.Error()}
+	}
 }
 
 func (c MSPClient) MspStatusRequest() ([]Mongod, error) {
@@ -32,16 +46,33 @@ func (c MSPClient) MspStatusRequest() ([]Mongod, error) {
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			var result []Mongod
-			json.NewDecoder(resp.Body).Decode(&result)
+			json.NewDecoder(resp.Body).Decode(&result) //TODO Check decode error
 			return result, nil
 		} else {
-			return nil, MSPError{fmt.Sprintf("HTTP error %s", resp.Status)}
+			var mspError MSPError
+			json.NewDecoder(resp.Body).Decode(mspError) //TODO Check decode error
+			return nil, mspError
 		}
 	} else {
-		return nil, MSPError{err.Error()}
+		return nil, CommunicationError{err.Error()}
 	}
 }
 
 func (c MSPClient) MspEstablishMongodState(m Mongod) error {
-	return MSPError{"Not implemented"}
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(m)
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", c.target.Hostname, c.target.Port), buffer)
+	resp, err := c.httpClient.Do(req)
+
+	if err == nil {
+		if resp.StatusCode == http.StatusOK {
+			return nil
+		} else {
+			var mspError MSPError
+			json.NewDecoder(resp.Body).Decode(mspError) //TODO Check decode error
+			return mspError
+		}
+	} else {
+		return CommunicationError{err.Error()}
+	}
 }

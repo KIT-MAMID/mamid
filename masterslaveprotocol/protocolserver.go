@@ -3,14 +3,13 @@ package masterslaveprotocol
 import (
 	"net/http"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 )
 
 type MSPListenerDelegate interface {
-	MspSetDataPath(path string) error
-	MspStatusRequest() []Mongod
-	MspEstablishMongodState(m Mongod) error
+	MspSetDataPath(path string) MSPError
+	MspStatusRequest() ([]Mongod, MSPError)
+	MspEstablishMongodState(m Mongod) MSPError
 }
 
 type MSPServer struct {
@@ -31,23 +30,33 @@ func NewMSPServer(listener MSPListenerDelegate) *MSPServer {
 }
 
 func (s MSPServer) handleMspStatusRequest(w http.ResponseWriter, r *http.Request) {
-	status := s.listener.MspStatusRequest()
+	status, err := s.listener.MspStatusRequest()
 	if status != nil {
 		json.NewEncoder(w).Encode(status)
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Controller did not return status")
+		err.encodeJson(w)
 	}
 }
 
 func (s MSPServer) handleMspSetDataPath(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprintf(w, "Not implemented")
+	var path string
+	json.NewDecoder(r.Body).Decode(&path) //TODO Check decode error
+	err := s.listener.MspSetDataPath(path)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err.encodeJson(w)
+	}
 }
 
 func (s MSPServer) handleMspEstablishMongodState(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprintf(w, "Not implemented")
+	var mongodState Mongod
+	json.NewDecoder(r.Body).Decode(&mongodState) //TODO Check decode error
+	err := s.listener.MspEstablishMongodState(mongodState)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err.encodeJson(w)
+	}
 }
 
 func (s MSPServer) Listen() {

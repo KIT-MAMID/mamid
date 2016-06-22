@@ -19,6 +19,6 @@ func main() {
 	if err == nil {
 		fmt.Println("Set path ok")
 	} else {
-		fmt.Println(err.Error())
+		fmt.Printf("Set path error: %s\n", err.Error())
 	}
 }
