@@ -5,6 +5,11 @@ import (
 	"io"
 )
 
+const (
+	MongodStateNotRunning = "notrunning"
+	MongodStateRunning = "running"
+)
+
 type HostPort struct {
 	Hostname string
 	Port uint
@@ -15,6 +20,7 @@ type Mongod struct {
 	ReplSetName string
 	Targets []HostPort
 	CurrentError error
+	State string
 }
 
 type MSPError interface { // I am using an interface instead of a struct as error so that it can be nil without having to use pointers

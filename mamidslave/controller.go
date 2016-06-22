@@ -16,7 +16,7 @@ func (c Controller) MspSetDataPath(path string) masterslaveprotocol.MSPError {
 
 func (c Controller) MspStatusRequest() ([]masterslaveprotocol.Mongod, masterslaveprotocol.MSPError) {
 	return []masterslaveprotocol.Mongod{
-		masterslaveprotocol.Mongod{Port: 1234, ReplSetName: "hello world"},
+		masterslaveprotocol.Mongod{Port: 1234, ReplSetName: "hello world", State: masterslaveprotocol.MongodStateRunning},
 	}, nil
 }
 
