@@ -1,4 +1,4 @@
-package main
+package mamidslave
 
 import (
 	"github.com/KIT-MAMID/mamid/masterslaveprotocol"
