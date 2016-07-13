@@ -1,4 +1,6 @@
 GO ?= $(shell which go)
+GOFMT ?= $(shell which gofmt)
+GREP ?= $(shell which grep)
 GOOS ?= $(shell uname | tr A-Z a-z)
 GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
 BUILD_SUFFIX = $(GOOS)_$(GOARCH)
@@ -27,3 +29,15 @@ build/slave_$(BUILD_SUFFIX):
 clean_slave:
 	cd slave/ && $(GO) clean
 	rm -rf build/slave*
+
+
+GO_PACKAGES := msp master slave model notifier
+
+.PHONY: check-format
+check-format:
+	@! $(GOFMT) -d $(GO_PACKAGES) | $(GREP) '^'
+
+.PHONY: format
+format:
+	@ $(GOFMT) -w $(GO_PACKAGES)
+
