@@ -5,6 +5,9 @@ GOOS ?= $(shell uname | tr A-Z a-z)
 GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
 BUILD_SUFFIX = $(GOOS)_$(GOARCH)
 
+pkgs          = $(shell $(GO) list ./... | grep -v /vendor/)
+pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
+
 .PHONY: all
 all: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX)
 
@@ -31,13 +34,11 @@ clean_slave:
 	rm -rf build/slave*
 
 
-GO_PACKAGES := msp master slave model notifier
-
 .PHONY: check-format
 check-format:
-	@! $(GOFMT) -d $(GO_PACKAGES) | $(GREP) '^'
+	@! $(GOFMT) -d $(pkg_dirs) | $(GREP) '^'
 
 .PHONY: format
 format:
-	@ $(GOFMT) -w $(GO_PACKAGES)
+	@ $(GOFMT) -w $(pkg_dirs)
 
