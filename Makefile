@@ -33,6 +33,10 @@ clean_slave:
 	cd slave/ && $(GO) clean
 	rm -rf build/slave*
 
+.PHONY: test
+test:
+	@$(GO) test -short $(pkgs)
+
 
 .PHONY: check-format
 check-format:
