@@ -42,3 +42,7 @@ check-format:
 format:
 	@ $(GOFMT) -w $(pkg_dirs)
 
+.PHONY: vet
+vet:
+	@ $(GO) vet $(pkgs)
+
