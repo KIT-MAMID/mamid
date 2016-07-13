@@ -50,3 +50,7 @@ format:
 vet:
 	@ $(GO) vet $(pkgs)
 
+.PHONY: release
+release:
+	./makeRelease.bash
+
