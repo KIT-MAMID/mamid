@@ -1,11 +1,11 @@
-package mamidslave
+package main
 
 import (
 	"github.com/KIT-MAMID/mamid/masterslaveprotocol"
 )
 
 func main() {
-	controller := mamidslave.NewController()
+	controller := NewController()
 	server := masterslaveprotocol.NewMSPServer(controller)
 	server.Listen()
 }
