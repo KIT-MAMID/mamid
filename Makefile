@@ -1,26 +1,25 @@
-all: master slave
+GO=`which go`
 
-clean: clean_master clean_slave clean_msp
+.PHONY: all
+all: master/master slave/slave
 
 
-master: msp
-	
+.PHONY: clean
+clean: clean_master clean_slave
 
+
+master/master:
+	cd master && go build master.go
+
+.PHONY:clean_master
 clean_master:
-	
+	cd master/ && go clean
+	rm -f master/master
 
+slave/slave:
+	cd slave && go build slave.go controller.go
 
-slave: msp
-	
-
-clean_master:
-	
-
-
-msp: setup_go
-	
-clean_msp:
-	
-
-setup_go:
-	
+.PHONY: clean_slave
+clean_slave:
+	cd slave/ && go clean
+	rm -f slave/slave
