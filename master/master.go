@@ -1,4 +1,4 @@
-package mamidmaster
+package main
 
 import (
 	"fmt"
