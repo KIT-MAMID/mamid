@@ -1,9 +1,9 @@
 package msp
 
 import (
-	"net/http"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 type MSPListenerDelegate interface {
@@ -14,7 +14,7 @@ type MSPListenerDelegate interface {
 
 type MSPServer struct {
 	listener MSPListenerDelegate
-	router *mux.Router
+	router   *mux.Router
 }
 
 func NewMSPServer(listener MSPListenerDelegate) *MSPServer {

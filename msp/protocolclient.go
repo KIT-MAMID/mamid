@@ -1,10 +1,10 @@
 package msp
 
 import (
-	"net/http"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 type CommunicationError struct {
@@ -16,7 +16,7 @@ func (e CommunicationError) Error() string {
 }
 
 type MSPClient struct {
-	target HostPort
+	target     HostPort
 	httpClient http.Client
 }
 

@@ -7,20 +7,20 @@ import (
 
 const (
 	MongodStateNotRunning = "notrunning"
-	MongodStateRunning = "running"
+	MongodStateRunning    = "running"
 )
 
 type HostPort struct {
 	Hostname string
-	Port uint
+	Port     uint
 }
 
 type Mongod struct {
-	Port uint
-	ReplSetName string
-	Targets []HostPort
+	Port         uint
+	ReplSetName  string
+	Targets      []HostPort
 	CurrentError error
-	State string
+	State        string
 }
 
 type MSPError interface { // I am using an interface instead of a struct as error so that it can be nil without having to use pointers

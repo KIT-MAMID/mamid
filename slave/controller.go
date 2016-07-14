@@ -3,7 +3,6 @@ package slave
 import "github.com/KIT-MAMID/mamid/msp"
 
 type Controller struct {
-
 }
 
 func NewController() *Controller {

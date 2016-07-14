@@ -10,5 +10,3 @@ func main() {
 	server := msp.NewMSPServer(controller)
 	server.Listen()
 }
-
-

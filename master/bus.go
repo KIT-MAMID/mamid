@@ -26,7 +26,7 @@ func (b *Bus) Run() {
 		if recvOk {
 			for i, channel := range b.channels {
 				if i != chosen {
-					channel<-recv
+					channel <- recv
 				}
 			}
 		}
