@@ -54,3 +54,4 @@ vet:
 release:
 	./makeRelease.bash
 
+shouldbreak
