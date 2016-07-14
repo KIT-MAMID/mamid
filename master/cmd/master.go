@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/KIT-MAMID/mamid/masterslaveprotocol"
+	"github.com/KIT-MAMID/mamid/msp"
 )
 
 func main() {
-	target := masterslaveprotocol.HostPort{"localhost", 8081}
-	client := masterslaveprotocol.NewMSPClient(target)
+	target := msp.HostPort{"localhost", 8081}
+	client := msp.NewMSPClient(target)
 	status, err := client.MspStatusRequest()
 	if err == nil {
 		fmt.Printf("status: %s\n", status)

@@ -1,4 +1,4 @@
-package masterslaveprotocol
+package msp
 
 import (
 	"net/http"

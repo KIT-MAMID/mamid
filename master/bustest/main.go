@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/KIT-MAMID/mamid/mamidmaster"
+	"github.com/KIT-MAMID/mamid/master"
 	"time"
 	"fmt"
 )
 
 func main() {
-	var bus mamidmaster.Bus
+	var bus master.Bus
 	ch1 := bus.GetNewChannel()
 	ch2 := bus.GetNewChannel()
 	ch3 := bus.GetNewChannel()

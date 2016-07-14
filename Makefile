@@ -17,7 +17,7 @@ clean: clean_master clean_slave
 
 
 build/master_$(BUILD_SUFFIX):
-	cd master && $(GO) build -o ../build/master_$(BUILD_SUFFIX) master.go
+	cd master/cmd && $(GO) build -o ../../build/master_$(BUILD_SUFFIX)
 
 .PHONY:clean_master
 clean_master:
@@ -26,7 +26,7 @@ clean_master:
 
 
 build/slave_$(BUILD_SUFFIX):
-	cd slave && $(GO) build -o ../build/slave_$(BUILD_SUFFIX) slave.go controller.go
+	cd slave/cmd && $(GO) build -o ../../build/slave_$(BUILD_SUFFIX)
 
 .PHONY: clean_slave
 clean_slave:
