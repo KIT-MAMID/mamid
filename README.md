@@ -1,6 +1,6 @@
 | Overall | Test | Format | Vet | Release |
 | --- | --- | --- | --- | --- | --- |
-| [![Overall](https://v4.jenkins.cschwarz.com/buildStatus/icon?job=mamid-multi)](https://v4.jenkins.cschwarz.com/job/mamid-multi/) | [![Test](https://v4.jenkins.cschwarz.com/buildStatus/icon?job=mamid-multi/target=test)](https://v4.jenkins.cschwarz.com/job/mamid-multi/target=test) | [![Format](https://v4.jenkins.cschwarz.com/buildStatus/icon?job=mamid-multi/target=check-format)](https://v4.jenkins.cschwarz.com/job/mamid-multi/target=check-format) | [![Vet](https://v4.jenkins.cschwarz.com/buildStatus/icon?job=mamid-multi/target=vet)](https://v4.jenkins.cschwarz.com/job/mamid-multi/target=vet) | [![Release](https://v4.jenkins.cschwarz.com/buildStatus/icon?job=mamid-multi/target=release)](https://v4.jenkins.cschwarz.com/job/mamid-multi/target=release) |
+| [![Overall](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid)](https://jenkins.dogcraft.de/job/mamid/) | [![Test](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=test)](https://jenkins.dogcraft.de/job/mamid/target=test) | [![Format](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=check-format)](https://jenkins.dogcraft.de/job/mamid/target=check-format) | [![Vet](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=vet)](https://jenkins.dogcraft.de/job/mamid/target=vet) | [![Release](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=release)](https://jenkins.dogcraft.de/job/mamid/target=release) |
 
 # Development Setup
 
