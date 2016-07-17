@@ -79,6 +79,16 @@ git merge --ff-only myfeature
 git push
 ```
 
+## Local Staging Environment
+
+You can spawn a local staging environment using **docker** and **sudo**.
+Assert that the Docker daemon is running on your system.
+
+```
+make testbed_up
+```
+Checkout the `Makefile` for details.
+
 # Producing a release
 
 ```
