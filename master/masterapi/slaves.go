@@ -1,29 +1,29 @@
 package masterapi
 
 import (
-	"net/http"
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"strconv"
 	"fmt"
+	"github.com/gorilla/mux"
+	"net/http"
+	"strconv"
 )
 
 var slaves = []Slave{
-	Slave{Id: 0, Hostname: "mksuns31", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd:20100, PersistantStorage:true, RootDataDirectory:"/home/mongo/data", State: "active"},
-	Slave{Id: 1, Hostname: "mksuns32", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd:20001, PersistantStorage:false, RootDataDirectory:"/home/mongo/data", State: "active"},
-	Slave{Id: 2, Hostname: "mksuns33", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd:20001, PersistantStorage:false, RootDataDirectory:"/home/mongo/data", State: "active"},
-	Slave{Id: 3, Hostname: "mksuns34", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd:20001, PersistantStorage:false, RootDataDirectory:"/home/mongo/data", State: "active"},
+	Slave{Id: 0, Hostname: "mksuns31", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20100, PersistantStorage: true, RootDataDirectory: "/home/mongo/data", State: "active"},
+	Slave{Id: 1, Hostname: "mksuns32", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
+	Slave{Id: 2, Hostname: "mksuns33", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
+	Slave{Id: 3, Hostname: "mksuns34", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
 }
 
 type Slave struct {
-	Id uint			   `json:"id"`
-	Hostname string		   `json:"hostname"`
-	Port uint		   `json:"slave_port"`
-	MongodPortRangeBegin uint  `json:"mongod_port_range_begin"` //inclusive
-	MongodPortRangeEnd uint    `json:"mongod_port_range_end"`   //exclusive
-	PersistantStorage bool     `json:"persistant_storage"`
-	RootDataDirectory string   `json:"root_data_directory"`
-	State string               `json:"state"`
+	Id                   uint   `json:"id"`
+	Hostname             string `json:"hostname"`
+	Port                 uint   `json:"slave_port"`
+	MongodPortRangeBegin uint   `json:"mongod_port_range_begin"` //inclusive
+	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
+	PersistantStorage    bool   `json:"persistant_storage"`
+	RootDataDirectory    string `json:"root_data_directory"`
+	State                string `json:"state"`
 }
 
 func SlaveIndex(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func SlaveById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := uint(id64)
-	for _,slave := range slaves {
+	for _, slave := range slaves {
 		if slave.Id == id {
 			json.NewEncoder(w).Encode(slave)
 			return
@@ -57,7 +57,7 @@ func SlavePut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var maxId uint = 0;
+	var maxId uint = 0
 	for _, slave := range slaves {
 		if slave.Id > maxId {
 			maxId = slave.Id

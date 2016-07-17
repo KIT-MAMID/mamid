@@ -1,13 +1,13 @@
 package masterapi
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 )
 
 type RiskGroup struct {
-	Id uint					`json:"id"`
-	Name string				`json:"name"`
+	Id   uint   `json:"id"`
+	Name string `json:"name"`
 }
 
 func RiskGroupIndex(w http.ResponseWriter, r *http.Request) {

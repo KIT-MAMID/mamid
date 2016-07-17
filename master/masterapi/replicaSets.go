@@ -1,16 +1,16 @@
 package masterapi
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 )
 
 type ReplicaSet struct {
-	Id uint					`json:"id"`
-	Name string				`json:"name"`
-	PersistentNodeCunt uint			`json:"presistent_node_count"`
-	VolatileNodeCount uint			`json:"volatile_node_count"`
-	ConfigureAsShardingConfigServer bool	`json:"configure_as_sharding_config_server"`
+	Id                              uint   `json:"id"`
+	Name                            string `json:"name"`
+	PersistentNodeCunt              uint   `json:"presistent_node_count"`
+	VolatileNodeCount               uint   `json:"volatile_node_count"`
+	ConfigureAsShardingConfigServer bool   `json:"configure_as_sharding_config_server"`
 }
 
 func ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {

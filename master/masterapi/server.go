@@ -1,9 +1,9 @@
 package masterapi
 
 import (
-	"net/http"
 	"github.com/gorilla/mux"
 	"log"
+	"net/http"
 )
 
 type MasterAPIServer struct {
