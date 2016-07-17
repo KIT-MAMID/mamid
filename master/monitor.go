@@ -11,6 +11,6 @@ func (m *Monitor) Run() {
 
 }
 
-func (m *Monitor) compareStates(mongod Mongod) model.MongodMatchStatus {
-
+func (m *Monitor) compareStates(mongod model.Mongod) model.MongodMatchStatus {
+	return model.MongodMatchStatus{}
 }

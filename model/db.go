@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/KIT-MAMID/mamid/msp"
+	"time"
 )
 
 /*
@@ -105,4 +106,16 @@ type HostPort struct {
 	// TODO missing primary key.
 	Hostname string
 	Port     PortNumber
+}
+
+type Problem struct {
+	Id              uint
+	Description     string
+	LongDescription string
+	ProblemType     uint
+	FirstOccurred   time.Time
+	LastUpdated     time.Time
+	Slave           *Slave
+	ReplicaSet      *ReplicaSet
+	Mongod          *Mongod
 }

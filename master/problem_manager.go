@@ -12,13 +12,13 @@ func (p *ProblemManager) Run() {
 }
 
 func (p *ProblemManager) generateProblem(e model.StatusMessage) model.Problem {
+	return model.Problem{}
+}
+
+func (p *ProblemManager) updateProblem(problem model.Problem) {
 
 }
 
-func (p *ProblemManager) updateProblem(p model.Problem) {
-
-}
-
-func (p *ProblemManager) removeProblem(p model.Problem) {
+func (p *ProblemManager) removeProblem(problem model.Problem) {
 
 }
