@@ -1,23 +1,31 @@
-GO ?= $(shell which go)
-GOFMT ?= $(shell which gofmt)
-GREP ?= $(shell which grep)
-GOOS ?= $(shell uname | tr A-Z a-z)
-GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
-BUILD_SUFFIX = $(GOOS)_$(GOARCH)
-TESTBED_SLAVE_COUNT ?= 3
+# User-settable
+GO 			?= $(shell which go)
+GOFMT 			?= $(shell which gofmt)
+GREP 			?= $(shell which grep)
+GOOS 			?= $(shell uname | tr A-Z a-z)
+TESTBED_SLAVE_COUNT 	?= 3
+
+########################################################################################################################
+
+## Commands
 GOFILES_IN_DIR_CMD = $(shell find $(1) -name '*.go')
 GOFILES_IN_DIRS = $(foreach dir,$(1),$(call GOFILES_IN_DIR_CMD,$(dir)))
 
+## Onetimers
+GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
+BUILD_SUFFIX = $(GOOS)_$(GOARCH)
 pkgs          = $(shell $(GO) list ./... | grep -v /vendor/)
 pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
+
+########################################################################################################################
 
 .PHONY: all
 all: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$(BUILD_SUFFIX)
 
-
 .PHONY: clean
 clean: clean_master clean_slave clean_testbed
 
+########################################################################################################################
 
 build/master_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,master/ msp/ model/)
 	cd master/cmd && $(GO) build -o ../../build/master_$(BUILD_SUFFIX)
@@ -27,6 +35,8 @@ clean_master:
 	cd master/ && $(GO) clean
 	rm -rf build/master*
 
+########################################################################################################################
+
 build/notifier_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,notifier/)
 	cd notifier && $(GO) build -o ../build/notifier_$(BUILD_SUFFIX)
 
@@ -35,6 +45,7 @@ clean_notifier:
 	cd notifier/ && $(GO) clean
 	rm -rf build/notifier*
 
+########################################################################################################################
 
 build/slave_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,slave/ msp/)
 	cd slave/cmd && $(GO) build -o ../../build/slave_$(BUILD_SUFFIX)
@@ -43,6 +54,8 @@ build/slave_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,slave/ msp/)
 clean_slave:
 	cd slave/ && $(GO) clean
 	rm -rf build/slave*
+
+########################################################################################################################
 
 .PHONY: test
 test:
@@ -65,9 +78,11 @@ vet:
 release:
 	./makeRelease.bash
 
+########################################################################################################################
+
+# The docker-based local staging environment
 
 .PHONY: testbed_up testbed_down testbed_net
-
 
 clean_testbed: testbed_down
 	rm -f docker/*.depend
@@ -108,4 +123,6 @@ testbed_down:
 	-for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
 		sudo docker rm -f slave$$i; \
 	done
+
+########################################################################################################################
 
