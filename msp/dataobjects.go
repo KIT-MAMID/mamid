@@ -23,6 +23,14 @@ type Mongod struct {
 	State        string
 }
 
+type Error interface {
+	// TODO Placeholder for the real implementation
+}
+
+type SlaveError struct {
+	// TODO Placeholder for the real implementation
+}
+
 type MSPError interface { // I am using an interface instead of a struct as error so that it can be nil without having to use pointers
 	Error() string
 	encodeJson(w io.Writer) // Cant json encode interface directly so use this method for that
