@@ -33,6 +33,12 @@ The `master` branch must work. This invariant holds true by adhering to the foll
 
 This workflow is enforced through GitHub repository settings.
 
+```
+# Create a new branch before you start working on a feature
+git checkout -b myfeature
+# Work and commit frequently...
+```
+
 ## Pre-Commit Checklist 
 
 To make your life simpler, 
@@ -42,6 +48,36 @@ To make your life simpler,
   * `make format` applies `gofmt` to all unvendored go files
 * assert that your changes do not cause `make vet` to fail
 * build before commit
+
+## Pull Requests & Peer Review
+
+Once you verified all local tests pass, create a pull request, allowing other project members to review your changes.
+
+Remember the rule **rebase before merge/pull-request**!
+
+```
+# Assert you are on your feature branch. The following command should print `myfeature`
+git branch
+# Fetch the latest changes
+git fetch
+# Rebase onto the latest changes in master
+# If your branch and master are out of sync, you may have to resolve merge conflicts.
+# Ask your team members if you are unsure about how to merge changes properly.
+git rebase origin/master
+git push -u origin myfeature:myfeature 
+```
+
+Once you pull request is reviewed, merge your changes fast-forward into master.
+
+GitHub does not provide functionality for this in the GUI, so use the command line.
+
+Given all tests on your PR passed, branch-protection will allow your commits on master.
+
+```
+git checkout master
+git merge --ff-only myfeature
+git push
+```
 
 # Producing a release
 
