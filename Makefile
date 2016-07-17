@@ -5,6 +5,9 @@ GOOS ?= $(shell uname | tr A-Z a-z)
 GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
 BUILD_SUFFIX = $(GOOS)_$(GOARCH)
 TESTBED_SLAVE_COUNT ?= 3
+GOFILES_IN_DIR_CMD = $(shell find $(1) -name '*.go')
+GOFILES_IN_DIRS = $(foreach dir,$(1),$(call GOFILES_IN_DIR_CMD,$(dir)))
+
 pkgs          = $(shell $(GO) list ./... | grep -v /vendor/)
 pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
 
@@ -16,7 +19,7 @@ all: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX)
 clean: clean_master clean_slave clean_testbed
 
 
-build/master_$(BUILD_SUFFIX):
+build/master_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,master/ msp/ model/)
 	cd master/cmd && $(GO) build -o ../../build/master_$(BUILD_SUFFIX)
 
 .PHONY:clean_master
@@ -25,7 +28,7 @@ clean_master:
 	rm -rf build/master*
 
 
-build/slave_$(BUILD_SUFFIX):
+build/slave_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,slave/ msp/)
 	cd slave/cmd && $(GO) build -o ../../build/slave_$(BUILD_SUFFIX)
 
 .PHONY: clean_slave
@@ -68,7 +71,10 @@ testbed_net:
 	-sudo docker network create \
 		--gateway=10.101.202.254 --subnet 10.101.202.0/24 mamidnet0 >/dev/null 2>&1
 
-docker/testbed_images.depend: build/master_linux_amd64 build/slave_linux_amd64 docker/slave.dockerfile docker/master.dockerfile
+docker/testbed_images.depend: \
+		build/master_linux_amd64 build/slave_linux_amd64 \
+		docker/slave.dockerfile docker/master.dockerfile \
+		$(shell find gui/)
 	sudo docker build -f=docker/slave.dockerfile -t=mamid/slave .
 	sudo docker build -f=docker/master.dockerfile -t=mamid/master .
 	touch docker/testbed_images.depend
