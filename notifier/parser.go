@@ -8,7 +8,6 @@ type EmailContact struct {
 }
 
 type Parser struct {
-
 }
 
 func (p *Parser) Parse(path string) ([]*Contact, error) {
