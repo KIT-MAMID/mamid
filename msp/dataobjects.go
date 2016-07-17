@@ -36,3 +36,5 @@ type SlaveError struct {
 type CommunicationError struct {
 	Message string
 }
+
+type PortNumber uint16
