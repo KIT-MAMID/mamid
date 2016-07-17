@@ -1,12 +1,11 @@
 package msp
 
-import (
-	"encoding/json"
-	"io"
-)
+type MongodState string
 
 const (
+	MongodStateDestroyed  = "destroyed"
 	MongodStateNotRunning = "notrunning"
+	MongodStateRecovering = "recovering"
 	MongodStateRunning    = "running"
 )
 
@@ -16,46 +15,24 @@ type HostPort struct {
 }
 
 type Mongod struct {
-	Port         uint
-	ReplSetName  string
-	Targets      []HostPort
-	CurrentError error
-	State        string
+	Port                    uint
+	ReplicaSetName          string
+	ReplicaSetMembers       []HostPort
+	ShardingConfigServer    bool
+	StatusError             *SlaveError
+	LastEstablishStateError *SlaveError
+	State                   MongodState
 }
 
 type Error interface {
-	// TODO Placeholder for the real implementation
 }
 
 type SlaveError struct {
-	// TODO Placeholder for the real implementation
+	Identifier      string
+	Description     string
+	LongDescription string
 }
 
-type MSPError interface { // I am using an interface instead of a struct as error so that it can be nil without having to use pointers
-	Error() string
-	encodeJson(w io.Writer) // Cant json encode interface directly so use this method for that
-}
-
-func NewMSPError(error_message string) MSPError {
-	mspError := new(mspErrorImpl)
-	mspError.ErrorMessage = error_message
-	return mspError
-}
-
-func MSPErrorFromJson(r io.Reader) MSPError {
-	var mspError mspErrorImpl
-	json.NewDecoder(r).Decode(&mspError) //TODO Check decode error
-	return &mspError
-}
-
-type mspErrorImpl struct {
-	ErrorMessage string
-}
-
-func (e mspErrorImpl) Error() string {
-	return e.ErrorMessage
-}
-
-func (e mspErrorImpl) encodeJson(w io.Writer) {
-	json.NewEncoder(w).Encode(e)
+type CommunicationError struct {
+	Message string
 }

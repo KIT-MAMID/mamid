@@ -8,5 +8,5 @@ import (
 func main() {
 	controller := NewController()
 	server := msp.NewMSPServer(controller)
-	server.Listen()
+	server.Run()
 }

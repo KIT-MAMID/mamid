@@ -6,59 +6,47 @@ import (
 	"net/http"
 )
 
-type MSPListenerDelegate interface {
-	MspSetDataPath(path string) MSPError
-	MspStatusRequest() ([]Mongod, MSPError)
-	MspEstablishMongodState(m Mongod) MSPError
+type Consumer interface {
+	RequestStatus() ([]Mongod, *SlaveError)
+	EstablishMongodState(m Mongod) *SlaveError
 }
 
-type MSPServer struct {
-	listener MSPListenerDelegate
+type Listener struct {
+	listener Consumer
 	router   *mux.Router
 }
 
-func NewMSPServer(listener MSPListenerDelegate) *MSPServer {
-	s := new(MSPServer)
+func NewMSPServer(listener Consumer) *Listener {
+	s := new(Listener)
 	s.listener = listener
 
 	s.router = mux.NewRouter().StrictSlash(true)
-	s.router.Methods("GET").Path("/msp/status").Name("MspStatusRequest").HandlerFunc(s.handleMspStatusRequest)
-	s.router.Methods("POST").Path("/msp/setDataPath").Name("MspStatusRequest").HandlerFunc(s.handleMspSetDataPath)
-	s.router.Methods("POST").Path("/msp/establishMongodState").Name("MspStatusRequest").HandlerFunc(s.handleMspEstablishMongodState)
+	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
+	s.router.Methods("POST").Path("/msp/establishMongodState").Name("EstablishMongodState").HandlerFunc(s.handleMspEstablishMongodState)
 
 	return s
 }
 
-func (s MSPServer) handleMspStatusRequest(w http.ResponseWriter, r *http.Request) {
-	status, err := s.listener.MspStatusRequest()
+func (s Listener) handleRequestStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := s.listener.RequestStatus()
 	if status != nil {
 		json.NewEncoder(w).Encode(status)
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
-		err.encodeJson(w)
+		json.NewEncoder(w).Encode(err)
 	}
 }
 
-func (s MSPServer) handleMspSetDataPath(w http.ResponseWriter, r *http.Request) {
-	var path string
-	json.NewDecoder(r.Body).Decode(&path) //TODO Check decode error
-	err := s.listener.MspSetDataPath(path)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		err.encodeJson(w)
-	}
-}
-
-func (s MSPServer) handleMspEstablishMongodState(w http.ResponseWriter, r *http.Request) {
+func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.Request) {
 	var mongodState Mongod
 	json.NewDecoder(r.Body).Decode(&mongodState) //TODO Check decode error
-	err := s.listener.MspEstablishMongodState(mongodState)
+	err := s.listener.EstablishMongodState(mongodState)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		err.encodeJson(w)
+		json.NewEncoder(w).Encode(err)
 	}
 }
 
-func (s MSPServer) Listen() {
+func (s Listener) Run() {
 	http.ListenAndServe(":8081", s.router)
 }
