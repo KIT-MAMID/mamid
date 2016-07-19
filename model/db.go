@@ -60,8 +60,8 @@ type PortNumber uint16
 type SlaveState uint
 
 const (
-	_                           = iota
-	SlaveStateActive SlaveState = 1
+	_                           = 0
+	SlaveStateActive SlaveState = iota
 	SlaveStateMaintenance
 	SlaveStateDisabled
 )
@@ -116,8 +116,8 @@ type MongodState struct {
 type MongodExecutionState uint
 
 const (
-	_                                                  = iota
-	MongodExecutionStateDestroyed MongodExecutionState = 1
+	_                                                  = 0
+	MongodExecutionStateDestroyed MongodExecutionState = iota
 	MongodExecutionStateNotRunning
 	MongodExecutionStateRecovering // invalid for a desired MongodState
 	MongodExecutionStateRunning
