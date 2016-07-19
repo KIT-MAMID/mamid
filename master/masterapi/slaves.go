@@ -3,7 +3,9 @@ package masterapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/KIT-MAMID/mamid/master"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 	"net/http"
 	"strconv"
 )
@@ -13,6 +15,11 @@ var slaves = []Slave{
 	Slave{Id: 1, Hostname: "mksuns32", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
 	Slave{Id: 2, Hostname: "mksuns33", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
 	Slave{Id: 3, Hostname: "mksuns34", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
+}
+
+type SlaveAPI struct {
+	DB               *gorm.DB
+	ClusterAllocator *master.ClusterAllocator
 }
 
 type Slave struct {
@@ -26,11 +33,11 @@ type Slave struct {
 	State                string `json:"state"`
 }
 
-func SlaveIndex(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(slaves)
 }
 
-func SlaveById(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["slaveId"]
 	id64, err := strconv.ParseUint(idStr, 10, 0)
 	if err != nil {
@@ -48,7 +55,7 @@ func SlaveById(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func SlavePut(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 	var postSlave Slave
 	err := json.NewDecoder(r.Body).Decode(&postSlave)
 	if err != nil {
@@ -69,7 +76,7 @@ func SlavePut(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func SlaveUpdate(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["slaveId"]
 	id64, err := strconv.ParseUint(idStr, 10, 0)
 	if err != nil {
@@ -102,7 +109,7 @@ func SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func SlaveDelete(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["slaveId"]
 	id64, err := strconv.ParseUint(idStr, 10, 0)
 	if err != nil {

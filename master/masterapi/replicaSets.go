@@ -13,7 +13,7 @@ type ReplicaSet struct {
 	ConfigureAsShardingConfigServer bool   `json:"configure_as_sharding_config_server"`
 }
 
-func ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
 	replicaSets := []ReplicaSet{
 		ReplicaSet{Id: 1, Name: "meterologic_data", PersistentNodeCunt: 1, VolatileNodeCount: 2, ConfigureAsShardingConfigServer: false},
 	}

@@ -1,28 +1,25 @@
 package masterapi
 
 import (
+	"github.com/KIT-MAMID/mamid/master"
 	"github.com/gorilla/mux"
-	"log"
-	"net/http"
+	"github.com/jinzhu/gorm"
 )
 
-type MasterAPIServer struct {
+type MasterAPI struct {
+	DB               *gorm.DB
+	ClusterAllocator *master.ClusterAllocator
+	Router           *mux.Router
 }
 
-func (s MasterAPIServer) Run() {
-	router := mux.NewRouter().StrictSlash(true)
+func (m *MasterAPI) Setup() {
 
-	staticServer := http.FileServer(http.Dir("./gui/"))
-	router.Handle("/", staticServer)
-	router.PathPrefix("/static/").Handler(staticServer)
-	router.PathPrefix("/pages/").Handler(staticServer)
-	router.Methods("GET").Path("/api/slaves").Name("SlaveIndex").HandlerFunc(SlaveIndex)
-	router.Methods("GET").Path("/api/slaves/{slaveId}").Name("SlaveById").HandlerFunc(SlaveById)
-	router.Methods("PUT").Path("/api/slaves").Name("SlavePut").HandlerFunc(SlavePut)
-	router.Methods("POST").Path("/api/slaves/{slaveId}").Name("SlaveUpdate").HandlerFunc(SlaveUpdate)
-	router.Methods("DELETE").Path("/api/slaves/{slaveId}").Name("SlaveDelete").HandlerFunc(SlaveDelete)
-	router.Methods("GET").Path("/api/replicasets").Name("ReplicaSetIndex").HandlerFunc(ReplicaSetIndex)
-	router.Methods("GET").Path("/api/riskgroups").Name("RiskGroupIndex").HandlerFunc(RiskGroupIndex)
+	m.Router.Methods("GET").Path("/slaves").Name("SlaveIndex").HandlerFunc(m.SlaveIndex)
+	m.Router.Methods("GET").Path("/slaves/{slaveId}").Name("SlaveById").HandlerFunc(m.SlaveById)
+	m.Router.Methods("PUT").Path("/slaves").Name("SlavePut").HandlerFunc(m.SlavePut)
+	m.Router.Methods("POST").Path("/slaves/{slaveId}").Name("SlaveUpdate").HandlerFunc(m.SlaveUpdate)
+	m.Router.Methods("DELETE").Path("/slaves/{slaveId}").Name("SlaveDelete").HandlerFunc(m.SlaveDelete)
+	m.Router.Methods("GET").Path("/replicasets").Name("ReplicaSetIndex").HandlerFunc(m.ReplicaSetIndex)
+	m.Router.Methods("GET").Path("/riskgroups").Name("RiskGroupIndex").HandlerFunc(m.RiskGroupIndex)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
 }

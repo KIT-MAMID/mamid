@@ -10,7 +10,7 @@ type RiskGroup struct {
 	Name string `json:"name"`
 }
 
-func RiskGroupIndex(w http.ResponseWriter, r *http.Request) {
+func (m *MasterAPI) RiskGroupIndex(w http.ResponseWriter, r *http.Request) {
 	riskGroups := []RiskGroup{
 		RiskGroup{Id: 1, Name: "Rack A"},
 		RiskGroup{Id: 2, Name: "Rack B"},
