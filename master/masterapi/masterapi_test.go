@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"fmt"
 )
 
 func createDBAndMasterAPI() (db *gorm.DB, mainRouter *mux.Router, err error) {
@@ -111,11 +112,14 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
 
-	assert.Equal(t, 200, resp.Code)
+	if !assert.Equal(t, 200, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
 
 	var createdSlave model.Slave
 	db.First(&createdSlave, "hostname = ?", "createdhost")
 
+	//Check created database entry
 	assert.NotEmpty(t, createdSlave.ID)
 	assert.Equal(t, "createdhost", createdSlave.Hostname)
 	assert.EqualValues(t, 1912, createdSlave.Port)
@@ -123,6 +127,14 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	assert.EqualValues(t, 20001, createdSlave.MongodPortRangeEnd)
 	assert.Equal(t, false, createdSlave.PersistentStorage)
 	assert.Equal(t, model.SlaveStateDisabled, createdSlave.ConfiguredState)
+
+	//Check returned object
+	var getSlaveResult Slave
+	err = json.NewDecoder(resp.Body).Decode(&getSlaveResult)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, getSlaveResult.ID)
+	assert.Equal(t, "createdhost", getSlaveResult.Hostname)
 }
 
 func TestMasterAPI_SlavePut_invalid(t *testing.T) {

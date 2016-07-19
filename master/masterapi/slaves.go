@@ -87,14 +87,16 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	err = m.DB.Create(modelSlave).Error
+	err = m.DB.Create(&modelSlave).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
 
-	// TODO set location header. Would it be better to return the ID? YES.
+	// Return created slave
+
+	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(modelSlave))
 
 	return
 }
