@@ -1,0 +1,104 @@
+<h1 class="page-header">Edit Replica Set</h1>
+<div class="bs-callout bs-callout-{{ state }}" ng-if="!is_create_view">
+    <h4><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> {{ replicaset.name }} is in
+        <b>$state</b>
+        state.</h4>
+</div>
+<div class="panel panel-default" ng-if="!is_create_view">
+    <div class="panel-heading">
+        <h3 class="panel-title">Replica Set Overview</h3>
+    </div>
+    <div class="panel-body">
+        <h4>Slaves</h4>
+        <table class="table" width="100%">
+            <tr ng-repeat="slave in replicaset_slaves">
+                <td>
+                    <div class="bs-callout bs-callout-{{ slave.state }}">
+                        <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true"></span> {{ slave.hostname }} - <b>
+                            {{ slave.state }}</b>
+                        </h4>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Edit Replica Set</h3>
+    </div>
+    <div class="panel-body">
+        <form ng-submit="updateReplicaSet()">
+            <table width="100%">
+                <tr>
+                    <th>Replica set name</th>
+                    <td colspan="2">
+                        <input ng-disabled="!is_create_view" type="text" class="form-control" ng-model="edit_replicaset.name"/>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Persistent nodes</th>
+                    <td colspan="2">
+                        <input type="number" class="form-control" ng-model="edit_replicaset.persistent_node_count"/>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Volatile nodes</th>
+                    <td colspan="2">
+                        <input type="number" class="form-control" ng-model="edit_replicaset.volatile_node_count"/>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Sharding configuration server
+                    </th>
+                    <td colspan="2">
+                        <input ng-disabled="!is_create_view" type="checkbox" class="form-control" ng-model="edit_replicaset.configure_as_sharding_config_server"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2"></td>
+                    <td>
+                        <button type="submit" class="btn btn-primary pull-right">Apply</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
+
+<div class="panel panel-danger" ng-if="!is_create_view">
+    <div class="panel-heading">
+        <h3 class="panel-title">Remove Replica Set</h3>
+    </div>
+    <div class="panel-body">
+        <button type="button" role="button" class="btn btn-danger"
+                data-toggle="modal" data-target="#confirm_remove">Remove Replica Set '{{ replicaset.name }}' from system</button>
+    </div>
+</div>
+<div class="modal fade" id="confirm_remove" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" ng-if="!is_create_view">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cancel"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">Confirm Replica Set Removal</h4>
+            </div>
+            <div class="modal-body">
+                You are about to remove the replica set {{ replicaset.name }}. By doing so, all the data of this
+                replica set will be unrecoverably removed.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" ng-click="deleteReplicaSet()">Remove Replica Set '{{ replicaset.name }}'</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var url = window.location + "";
+    idx = url.indexOf("#");
+    var hash = idx != -1 ? url.substring(idx + 1) : "";
+    if (hash == 'modal') {
+        $('#confirm_remove').modal();
+    }
+</script>

@@ -18,6 +18,10 @@ mamidApp.config(function ($routeProvider) {
            templateUrl: 'pages/replicasets.html',
            controller: 'replicasetIndexController'
        })
+       .when('/replicasets/:replicasetId', {
+           templateUrl: 'pages/replicaset.html',
+           controller: 'replicasetByIdController'
+       })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
@@ -84,4 +88,40 @@ mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams,
 
 mamidApp.controller('replicasetIndexController', function($scope, $http, ReplicaSetService) {
     $scope.replicasets = ReplicaSetService.query()
+});
+
+mamidApp.controller('replicasetByIdController',
+    function($scope, $http, $routeParams, $location, SlaveService, ReplicaSetService) {
+    var replicasetId = $routeParams['replicasetId'];
+    $scope.is_create_view = replicasetId === "new";
+    if ($scope.is_create_view) {
+        $scope.replicaset = new ReplicaSetService();
+
+        //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
+        $scope.edit_replicaset = angular.copy($scope.replicaset);
+    } else {
+        $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
+        $scope.replicaset_slaves = SlaveService.queryByReplicaSet({replicaset: replicasetId});
+
+        //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
+        $scope.replicaset.$promise.then(function(){
+            $scope.edit_replicaset = angular.copy($scope.replicaset);
+        });
+    }
+
+    $scope.updateReplicaSet = function () {
+        angular.copy($scope.edit_replicaset, $scope.replicaset);
+        if ($scope.is_create_view) {
+            $scope.replicaset.$create();
+        } else {
+            $scope.replicaset.$save();
+        }
+        $location.path("/replicasets");
+    };
+
+    $scope.deleteReplicaSet = function () {
+        $scope.replicaset.$delete();
+        $('#confirm_remove').modal('hide');
+        $location.path("/replicasets");
+    };
 });
