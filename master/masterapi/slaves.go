@@ -137,7 +137,36 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelSlave, err := ProjectSlaveToModelSlave(&postSlave)
+	// Only allow changes to both observed and desired disabled slaves
+
+	var modelSlave model.Slave
+	if err = m.DB.First(&modelSlave, id).Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	if modelSlave.ConfiguredState != model.SlaveStateDisabled {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprintf(w, "slave's desired state must be = disabled")
+		return
+	}
+
+	if err = m.DB.Model(&modelSlave).Related(&modelSlave.Mongods, "Mongods").Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	if len(modelSlave.Mongods) != 0 {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprintf(w, "slave has active Mongods")
+		return
+	}
+
+	// Allow update
+
+	save, err := ProjectSlaveToModelSlave(&postSlave)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
@@ -146,7 +175,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	m.DB.Model(&modelSlave).Updates(&modelSlave)
+	m.DB.Model(&modelSlave).Updates(&save)
 }
 
 func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
