@@ -23,7 +23,7 @@ type Slave struct {
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
 
 	var slaves []model.Slave
-	err := m.DB.Find(&slaves).Error
+	err := m.DB.Order("id", false).Find(&slaves).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
