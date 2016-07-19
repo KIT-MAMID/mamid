@@ -297,7 +297,7 @@ func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
 
-	assert.Equal(t, 400, resp.Code)
+	assert.Equal(t, 403, resp.Code)
 
 	var updatedSlave model.Slave
 	db.First(&updatedSlave, 1)
