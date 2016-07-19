@@ -1,4 +1,6 @@
-<h1 class="page-header">Edit Replica Set</h1>
+<h1 class="page-header" ng-if="is_create_view">New Replica Set</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Replica Set</h1>
+
 <div class="bs-callout bs-callout-{{ state }}" ng-if="!is_create_view">
     <h4><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> {{ replicaset.name }} is in
         <b>$state</b>
@@ -25,7 +27,7 @@
 </div>
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3 class="panel-title">Edit Replica Set</h3>
+        <h3 class="panel-title">Replica Set Settings</h3>
     </div>
     <div class="panel-body">
         <form ng-submit="updateReplicaSet()">
