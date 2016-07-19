@@ -8,7 +8,7 @@ TESTBED_SLAVE_COUNT 	?= 3
 ########################################################################################################################
 
 ## Commands
-GOFILES_IN_DIR_CMD = $(shell find $(1) -name '*.go')
+GOFILES_IN_DIR_CMD = $(shell find $(1) -type f \( -iname '*.go' ! -iname '.*' \))
 GOFILES_IN_DIRS = $(foreach dir,$(1),$(call GOFILES_IN_DIR_CMD,$(dir)))
 
 ## Onetimers
