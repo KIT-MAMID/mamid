@@ -70,9 +70,9 @@ func TestMasterAPI_SlaveIndex(t *testing.T) {
 
 	assert.Equal(t, 2, len(getSlaveResult))
 	assert.Equal(t, "host1", getSlaveResult[0].Hostname)
-	assert.Equal(t, 1, getSlaveResult[0].Port)
-	assert.Equal(t, 2, getSlaveResult[0].MongodPortRangeBegin)
-	assert.Equal(t, 3, getSlaveResult[0].MongodPortRangeEnd)
+	assert.EqualValues(t, 1, getSlaveResult[0].Port)
+	assert.EqualValues(t, 2, getSlaveResult[0].MongodPortRangeBegin)
+	assert.EqualValues(t, 3, getSlaveResult[0].MongodPortRangeEnd)
 	assert.Equal(t, true, getSlaveResult[0].PersistentStorage)
 	assert.Equal(t, "active", getSlaveResult[0].ConfiguredState)
 }
