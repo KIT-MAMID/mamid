@@ -15,7 +15,7 @@ func concatErrors(err1, err2 error) error {
 
 func assertIsPortNumber(u uint) error {
 	if u < uint(model.PortNumberMin) || u > uint(model.PortNumberMax) {
-		return fmt.Errorf("a port number must be in [%d, %d]", model.PortNumberMin, model.PortNumberMin)
+		return fmt.Errorf("a port number must be in [%d, %d]", model.PortNumberMin, model.PortNumberMax)
 	}
 	return nil
 }
