@@ -209,3 +209,36 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 	assert.Equal(t, sdb.ReplicaSetMembers[0].Hostname, m.Hostname)
 
 }
+
+func TestDeleteBehavior(t *testing.T) {
+
+	db, _ := InitializeInMemoryDB("")
+
+	m := fixtureEmptyMongod()
+	m.ID = 1000
+
+	// Create it
+	db.Create(&m)
+
+	var mdb Mongod
+
+	// Read it once
+	d := db.First(&mdb)
+
+	assert.NoError(t, d.Error)
+	assert.Equal(t, mdb.ID, m.ID)
+
+	// Destroy it once, by ID
+	d = db.Delete(&Mongod{ID: 1000})
+
+	assert.NoError(t, d.Error)
+	assert.EqualValues(t, 1, d.RowsAffected)
+
+	// Destroy it a second time.
+	// No Error will occur, have to check RowsAffected if we deleted something
+	d = db.Delete(&Mongod{ID: 1000})
+
+	assert.NoError(t, d.Error)
+	assert.EqualValues(t, 0, d.RowsAffected)
+
+}
