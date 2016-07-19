@@ -1,0 +1,15 @@
+<h1 class="page-header">Replica Sets</h1>
+<h2 class="sub-header">Some State</h2>
+<div class="bs-callout bs-callout-unknown" ng-repeat="replicaset in replicasets">
+    <h4>
+        <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+        {{ replicaset.name }}
+        <span class="pull-right">
+            <a href="#/replicasets/{{replicaset.id}}" class="btn btn-default">
+                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+            </a>
+        </span>
+
+    </h4>
+    <p>Slave <a href="/slave/mksuns11/edit/unknown">mksuns11</a> is not active. (TODO)</p>
+</div>
