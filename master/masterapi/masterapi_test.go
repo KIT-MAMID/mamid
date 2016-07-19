@@ -106,7 +106,7 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	//Test correct put
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":0,\"hostname\":\"createdhost\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistant_storage\":false,\"configured_state\":\"disabled\"}"
+	req_body := "{\"id\":0,\"hostname\":\"createdhost\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
 	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -131,7 +131,7 @@ func TestMasterAPI_SlavePut_invalid(t *testing.T) {
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id_invalid_blabla\":0,\"hostname\":\"createdhost_invalid\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistant_storage\":false,\"configured_state\":\"disabled\"}"
+	req_body := "{\"id_invalid_blabla\":0,\"hostname\":\"createdhost_invalid\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
 	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -151,7 +151,7 @@ func TestMasterAPI_SlaveUpdate(t *testing.T) {
 	//Test valid update
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":2,\"hostname\":\"updHost\",\"slave_port\":2,\"mongod_port_range_begin\":101,\"mongod_port_range_end\":201,\"persistant_storage\":true,\"configured_state\":\"disabled\"}"
+	req_body := "{\"id\":2,\"hostname\":\"updHost\",\"slave_port\":2,\"mongod_port_range_begin\":101,\"mongod_port_range_end\":201,\"persistent_storage\":true,\"configured_state\":\"disabled\"}"
 	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -176,7 +176,7 @@ func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 	//Test invalid update (slave is in active state)
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":1,\"hostname\":\"updHost\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistant_storage\":false,\"configured_state\":\"active\"}"
+	req_body := "{\"id\":1,\"hostname\":\"updHost\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistent_storage\":false,\"configured_state\":\"active\"}"
 	req, err := http.NewRequest("POST", "/api/slaves/1", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -201,7 +201,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	//Test valid state change
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":200,\"persistant_storage\":false,\"configured_state\":\"active\"}"
+	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":200,\"persistent_storage\":false,\"configured_state\":\"active\"}"
 	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -221,7 +221,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state_invalid(t *testing.T) {
 	//Test invalid state change (should not be able to change state while changing another parameter)
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":150,\"persistant_storage\":false,\"configured_state\":\"active\"}"
+	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":150,\"persistent_storage\":false,\"configured_state\":\"active\"}"
 	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
