@@ -137,6 +137,7 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	assert.Equal(t, "createdhost", getSlaveResult.Hostname)
 }
 
+
 func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
 	_, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
@@ -152,13 +153,32 @@ func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
 	assert.Equal(t, 400, resp.Code)
 }
 
-func TestMasterAPI_SlavePut_invalid(t *testing.T) {
+func TestMasterAPI_SlavePut_additionalUnknownField(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id_invalid_blabla\":0,\"hostname\":\"createdhost_invalid\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
+	// additional unknown field:  id_invalid_blabla
+	req_body := "{\"hostname\":\"createdhost\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20002,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
+	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+	var invalidSlave model.Slave
+	assert.NoError(t, db.First(&invalidSlave, "hostname = ?", "createdhost").Error)
+}
+
+func TestMasterAPI_SlavePut_missingField(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+	//Test invalid put (non existing field)
+	resp := httptest.NewRecorder()
+
+	// additional unknown field:  id_invalid_blabla
+	// missing field: mongod_port_range_begin
+	req_body := "{\"hostname\":\"createdhost_invalid\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
 	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -166,9 +186,7 @@ func TestMasterAPI_SlavePut_invalid(t *testing.T) {
 	assert.Equal(t, 400, resp.Code)
 
 	var invalidSlave model.Slave
-	db.First(&invalidSlave, "hostname = ?", "createdhost_invalid")
-
-	assert.Empty(t, invalidSlave.ID)
+	assert.Error(t, db.First(&invalidSlave, "hostname = ?", "createdhost_invalid").Error)
 }
 
 func TestMasterAPI_SlaveUpdate(t *testing.T) {
