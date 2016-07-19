@@ -13,6 +13,7 @@ func ProjectModelSlaveToSlave(m *model.Slave) *Slave {
 		Port:                 uint(m.Port),
 		MongodPortRangeBegin: uint(m.MongodPortRangeBegin),
 		MongodPortRangeEnd:   uint(m.MongodPortRangeEnd),
+		PersistentStorage:    m.PersistentStorage,
 		ConfiguredState:      SlaveStateToJSONRepresentation(m.ConfiguredState),
 	}
 }
@@ -38,6 +39,7 @@ func ProjectSlaveToModelSlave(s *Slave) (*model.Slave, error) {
 		Port:                 model.PortNumber(s.Port),
 		MongodPortRangeBegin: model.PortNumber(s.MongodPortRangeBegin),
 		MongodPortRangeEnd:   model.PortNumber(s.MongodPortRangeEnd),
+		PersistentStorage:    s.PersistentStorage,
 		ConfiguredState:      state,
 	}, nil
 }
