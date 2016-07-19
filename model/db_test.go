@@ -242,3 +242,21 @@ func TestDeleteBehavior(t *testing.T) {
 	assert.EqualValues(t, 0, d.RowsAffected)
 
 }
+
+func TestGormFirstBehavior(t *testing.T) {
+	db, _ := InitializeInMemoryDB("")
+	var m Mongod
+	assert.Error(t, db.First(&m).Error)
+}
+
+func TestGormFindBehavior(t *testing.T) {
+	db, _ := InitializeInMemoryDB("")
+
+	var ms []Mongod
+	d := db.Find(&ms)
+
+	assert.NoError(t, d.Error)
+	assert.EqualValues(t, 0, d.RowsAffected) // RowsAffected does NOT indicate "nothing found"!!!!
+	assert.Equal(t, 0, len(ms))              // Use this instead
+
+}
