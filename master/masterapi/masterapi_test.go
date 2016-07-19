@@ -92,9 +92,9 @@ func TestMasterAPI_SlaveById(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "host1", getSlaveResult.Hostname)
-	assert.Equal(t, 1, getSlaveResult.Port)
-	assert.Equal(t, 2, getSlaveResult.MongodPortRangeBegin)
-	assert.Equal(t, 3, getSlaveResult.MongodPortRangeEnd)
+	assert.EqualValues(t, 1, getSlaveResult.Port)
+	assert.EqualValues(t, 2, getSlaveResult.MongodPortRangeBegin)
+	assert.EqualValues(t, 3, getSlaveResult.MongodPortRangeEnd)
 	assert.Equal(t, true, getSlaveResult.PersistentStorage)
 	assert.Equal(t, "active", getSlaveResult.ConfiguredState)
 }
@@ -118,9 +118,9 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 
 	assert.NotEmpty(t, createdSlave.ID)
 	assert.Equal(t, "createdhost", createdSlave.Hostname)
-	assert.Equal(t, 1912, createdSlave.Port)
-	assert.Equal(t, 20000, createdSlave.MongodPortRangeBegin)
-	assert.Equal(t, 20001, createdSlave.MongodPortRangeEnd)
+	assert.EqualValues(t, 1912, createdSlave.Port)
+	assert.EqualValues(t, 20000, createdSlave.MongodPortRangeBegin)
+	assert.EqualValues(t, 20001, createdSlave.MongodPortRangeEnd)
 	assert.Equal(t, false, createdSlave.PersistentStorage)
 	assert.Equal(t, model.SlaveStateDisabled, createdSlave.ConfiguredState)
 }
@@ -162,9 +162,9 @@ func TestMasterAPI_SlaveUpdate(t *testing.T) {
 	db.First(&updatedSlave, 2)
 
 	assert.Equal(t, "updHost", updatedSlave.Hostname)
-	assert.Equal(t, 2, updatedSlave.Port)
-	assert.Equal(t, 101, updatedSlave.MongodPortRangeBegin)
-	assert.Equal(t, 201, updatedSlave.MongodPortRangeEnd)
+	assert.EqualValues(t, 2, updatedSlave.Port)
+	assert.EqualValues(t, 101, updatedSlave.MongodPortRangeBegin)
+	assert.EqualValues(t, 201, updatedSlave.MongodPortRangeEnd)
 	assert.Equal(t, true, updatedSlave.PersistentStorage)
 	assert.Equal(t, model.SlaveStateDisabled, updatedSlave.ConfiguredState)
 }
@@ -187,9 +187,9 @@ func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 	db.First(&updatedSlave, 1)
 
 	assert.Equal(t, "host1", updatedSlave.Hostname)
-	assert.Equal(t, 1, updatedSlave.Port)
-	assert.Equal(t, 2, updatedSlave.MongodPortRangeBegin)
-	assert.Equal(t, 3, updatedSlave.MongodPortRangeEnd)
+	assert.EqualValues(t, 1, updatedSlave.Port)
+	assert.EqualValues(t, 2, updatedSlave.MongodPortRangeBegin)
+	assert.EqualValues(t, 3, updatedSlave.MongodPortRangeEnd)
 	assert.Equal(t, true, updatedSlave.PersistentStorage)
 	assert.Equal(t, model.SlaveStateActive, updatedSlave.ConfiguredState)
 }
