@@ -2,6 +2,7 @@ package masterapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
@@ -11,7 +12,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"fmt"
 )
 
 func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, err error) {
@@ -144,7 +144,6 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	assert.NotEmpty(t, getSlaveResult.ID)
 	assert.Equal(t, "createdhost", getSlaveResult.Hostname)
 }
-
 
 func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
 	_, mainRouter, err := createDBAndMasterAPI(t)
