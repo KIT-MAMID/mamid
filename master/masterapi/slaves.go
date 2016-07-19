@@ -17,7 +17,7 @@ type Slave struct {
 	MongodPortRangeBegin uint   `json:"mongod_port_range_begin"` //inclusive
 	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
 	PersistentStorage    bool   `json:"persistent_storage"`
-	ConfiguredState      string `json:"state"`
+	ConfiguredState      string `json:"configured_state"`
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
