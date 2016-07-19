@@ -18,6 +18,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 	// Setup database
 	db, err = model.InitializeInMemoryDB("")
 	dbSlave := model.Slave{
+		ID:                   1,
 		Hostname:             "host1",
 		Port:                 1,
 		MongodPortRangeBegin: 2,
@@ -27,8 +28,15 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		ConfiguredState:      model.SlaveStateActive,
 	}
 	assert.NoError(t, db.Create(&dbSlave).Error)
+	m1 := model.Mongod{
+		Port:          5001,
+		ReplSetName:   "repl1",
+		ParentSlaveID: 1,
+	}
+	assert.NoError(t, db.Create(&m1).Error)
 
 	dbSlave2 := model.Slave{
+		ID:                   2,
 		Hostname:             "host2",
 		Port:                 1,
 		MongodPortRangeBegin: 100,
