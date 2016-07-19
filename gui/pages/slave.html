@@ -1,5 +1,7 @@
-<h1 class="page-header">Edit slave</h1>
-<div class="bs-callout bs-callout-{{ slave.state }}">
+<h1 class="page-header" ng-if="!is_create_view">Edit slave</h1>
+<h1 class="page-header" ng-if="is_create_view">New slave</h1>
+
+<div class="bs-callout bs-callout-{{ slave.state }}" ng-if="!is_create_view">
     <h4>{{ slave.hostname }} is in
         <b>{{ slave.state }}</b>
         state.</h4>
@@ -15,35 +17,35 @@
                     <tr>
                         <th>Hostname</th>
                         <td colspan="2">
-                            <input type="text" class="form-control" ng-model="slave.hostname"/>
+                            <input type="text" class="form-control" ng-model="edit_slave.hostname"/>
                         </td>
                     </tr>
                     <tr>
                         <th>Slave port</th>
                         <td colspan="2">
-                            <input type="number" class="form-control" ng-model="slave.slave_port"/>
+                            <input type="number" class="form-control" ng-model="edit_slave.slave_port"/>
                         </td>
                     </tr>
                     <tr>
                         <th>mongod port range</th>
                         <td>
-                            <input type="number" class="form-control" ng-model="slave.mongod_port_range_begin"/>
+                            <input type="number" class="form-control" ng-model="edit_slave.mongod_port_range_begin"/>
                         </td>
                         <td>
-                            <input type="number" class="form-control" ng-model="slave.mongod_port_range_end"/>
+                            <input type="number" class="form-control" ng-model="edit_slave.mongod_port_range_end"/>
                         </td>
                     </tr>
                     <tr>
                         <th>Slave with persistent storage <span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>
                         </th>
                         <td colspan="2">
-                            <input type="checkbox" class="form-control" ng-model="slave.persistant_storage"/>
+                            <input type="checkbox" class="form-control" ng-model="edit_slave.persistant_storage"/>
                         </td>
                     </tr>
                     <tr>
                         <th>Root data directory</th>
                         <td colspan="2">
-                            <input type="text" class="form-control" ng-model="slave.root_data_directory"/>
+                            <input type="text" class="form-control" ng-model="edit_slave.root_data_directory"/>
                         </td>
                     </tr>
                     <tr>
