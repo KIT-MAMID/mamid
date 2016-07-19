@@ -3,37 +3,32 @@ package masterapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/KIT-MAMID/mamid/master"
+	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
+	"log"
 	"net/http"
 	"strconv"
 )
 
-var slaves = []Slave{
-	Slave{Id: 0, Hostname: "mksuns31", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20100, PersistantStorage: true, RootDataDirectory: "/home/mongo/data", State: "active"},
-	Slave{Id: 1, Hostname: "mksuns32", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
-	Slave{Id: 2, Hostname: "mksuns33", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
-	Slave{Id: 3, Hostname: "mksuns34", Port: 1912, MongodPortRangeBegin: 20000, MongodPortRangeEnd: 20001, PersistantStorage: false, RootDataDirectory: "/home/mongo/data", State: "active"},
-}
-
-type SlaveAPI struct {
-	DB               *gorm.DB
-	ClusterAllocator *master.ClusterAllocator
-}
-
 type Slave struct {
-	Id                   uint   `json:"id"`
+	ID                   uint   `json:"id"`
 	Hostname             string `json:"hostname"`
 	Port                 uint   `json:"slave_port"`
 	MongodPortRangeBegin uint   `json:"mongod_port_range_begin"` //inclusive
 	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
-	PersistantStorage    bool   `json:"persistant_storage"`
-	RootDataDirectory    string `json:"root_data_directory"`
-	State                string `json:"state"`
+	PersistentStorage    bool   `json:"persistent_storage"`
+	ConfiguredState      string `json:"state"`
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
+
+	var slaves []model.Slave
+	err := m.DB.Find(&slaves).Error
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
 	json.NewEncoder(w).Encode(slaves)
 }
 
@@ -45,13 +40,24 @@ func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := uint(id64)
-	for _, slave := range slaves {
-		if slave.Id == id {
-			json.NewEncoder(w).Encode(slave)
-			return
-		}
+
+	var slaves []model.Slave
+	err = m.DB.Find(&slaves, &model.Slave{ID: id}).Error
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
 	}
-	w.WriteHeader(http.StatusNotFound)
+	if len(slaves) == 0 { // Not found?
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if len(slaves) > 1 {
+		log.Printf("inconsistency: multiple slaves for slave.ID = %d found in database", len(slaves))
+	}
+	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(&slaves[0]))
 	return
 }
 
@@ -60,19 +66,36 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&postSlave)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Could not parse object (%s)", err.Error())
+		fmt.Fprintf(w, "cannot parse object (%s)", err.Error())
 		return
 	}
 
-	var maxId uint = 0
-	for _, slave := range slaves {
-		if slave.Id > maxId {
-			maxId = slave.Id
-		}
-	}
-	postSlave.Id = maxId + 1
+	// Validation
 
-	slaves = append(slaves, postSlave)
+	if postSlave.ID != 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "must not change the slave ID in PUT request")
+		return
+	}
+
+	modelSlave, err := ProjectSlaveToModelSlave(&postSlave)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Persist to database
+
+	err = m.DB.Create(modelSlave).Error
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// TODO set location header. Would it be better to return the ID? YES.
+
 	return
 }
 
@@ -89,24 +112,34 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&postSlave)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Could not parse object (%s)", err.Error())
+		fmt.Fprintf(w, "cannot parse object (%s)", err.Error())
 		return
 	}
 
-	for idx, slave := range slaves {
-		if slave.Id == id {
-			if postSlave.Id != id {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "You can not change the id of an object")
-				return
-			}
-			slaves[idx] = postSlave
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// Validation
+
+	if postSlave.ID != id {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "must not change the id of an object")
+		return
 	}
-	w.WriteHeader(http.StatusNotFound)
-	return
+
+	if err = postSlave.assertNoZeroFieldsSet(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "must not POST JSON with zero values in any field: %s", err.Error())
+		return
+	}
+
+	modelSlave, err := ProjectSlaveToModelSlave(&postSlave)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// Persist to database
+
+	m.DB.Model(&modelSlave).Updates(&modelSlave)
 }
 
 func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
@@ -118,15 +151,17 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	var slaveIdx int = -1
-	for idx, slave := range slaves {
-		if slave.Id == id {
-			slaveIdx = idx
-		}
-	}
-	if slaveIdx == -1 {
-		w.WriteHeader(http.StatusNotFound)
+	s := m.DB.Delete(&model.Slave{ID: id})
+	if s.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
-	slaves = append(slaves[:slaveIdx], slaves[slaveIdx+1:]...)
+	if s.RowsAffected == 0 {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+	if s.RowsAffected > 1 {
+		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
+	}
 }
