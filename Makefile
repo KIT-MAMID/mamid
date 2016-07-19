@@ -108,7 +108,7 @@ TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
 testbed_up: testbed_down testbed_net docker/testbed_images.depend
 
-	sudo docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master mamid/master
+	sudo docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/gui:/mamid/gui mamid/master
 	sudo docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
