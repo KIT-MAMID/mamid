@@ -267,26 +267,6 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	assert.Equal(t, model.SlaveStateActive, updatedSlave.ConfiguredState)
 }
 
-func TestMasterAPI_SlaveUpdate_change_desired_state_invalid(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI(t)
-	assert.NoError(t, err)
-
-	//Test invalid state change (should not be able to change state while changing another parameter)
-	resp := httptest.NewRecorder()
-
-	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":150,\"persistent_storage\":false,\"configured_state\":\"active\"}"
-	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
-	assert.NoError(t, err)
-	mainRouter.ServeHTTP(resp, req)
-
-	assert.Equal(t, 400, resp.Code)
-
-	var updatedSlave model.Slave
-	db.First(&updatedSlave, 2)
-
-	assert.Equal(t, model.SlaveStateDisabled, updatedSlave.ConfiguredState)
-}
-
 func TestMasterAPI_SlaveDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
