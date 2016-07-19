@@ -137,6 +137,21 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	assert.Equal(t, "createdhost", getSlaveResult.Hostname)
 }
 
+func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test invalid put (slave with same hostname exists)
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"hostname\":\"host1\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"mongod_port_range_end\":20001,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
+	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 400, resp.Code)
+}
+
 func TestMasterAPI_SlavePut_invalid(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
