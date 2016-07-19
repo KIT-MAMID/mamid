@@ -14,7 +14,7 @@ import (
 	"fmt"
 )
 
-func createDBAndMasterAPI() (db *gorm.DB, mainRouter *mux.Router, err error) {
+func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, err error) {
 	// Setup database
 	db, err = model.InitializeInMemoryDB("")
 	dbSlave := model.Slave{
@@ -26,7 +26,7 @@ func createDBAndMasterAPI() (db *gorm.DB, mainRouter *mux.Router, err error) {
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
 	}
-	db.Create(&dbSlave)
+	assert.NoError(t, db.Create(&dbSlave).Error)
 
 	dbSlave2 := model.Slave{
 		Hostname:             "host2",
@@ -37,7 +37,7 @@ func createDBAndMasterAPI() (db *gorm.DB, mainRouter *mux.Router, err error) {
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
 	}
-	db.Create(&dbSlave2)
+	assert.NoError(t, db.Create(&dbSlave2).Error)
 
 	// Setup masterapi
 	clusterAllocator := &master.ClusterAllocator{}
@@ -54,7 +54,7 @@ func createDBAndMasterAPI() (db *gorm.DB, mainRouter *mux.Router, err error) {
 }
 
 func TestMasterAPI_SlaveIndex(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI()
+	_, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -78,7 +78,7 @@ func TestMasterAPI_SlaveIndex(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveById(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI()
+	_, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -101,7 +101,7 @@ func TestMasterAPI_SlaveById(t *testing.T) {
 }
 
 func TestMasterAPI_SlavePut(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test correct put
@@ -138,7 +138,7 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 }
 
 func TestMasterAPI_SlavePut_invalid(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
@@ -157,7 +157,7 @@ func TestMasterAPI_SlavePut_invalid(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test valid update
@@ -182,7 +182,7 @@ func TestMasterAPI_SlaveUpdate(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test invalid update (slave is in active state)
@@ -207,7 +207,7 @@ func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test valid state change
@@ -227,7 +227,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate_change_desired_state_invalid(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test invalid state change (should not be able to change state while changing another parameter)
@@ -247,7 +247,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state_invalid(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveDelete(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test valid delete
@@ -266,7 +266,7 @@ func TestMasterAPI_SlaveDelete(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI()
+	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
 
 	//Test invalid delete (active slave)
