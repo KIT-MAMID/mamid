@@ -13,7 +13,7 @@ func fixtureEmptySlave() *Slave {
 		MongodPortRangeEnd:   3,
 		PersistentStorage:    true,
 		Mongods:              []*Mongod{},
-		ConfiguedState:       SlaveStateActive,
+		ConfiguredState:      SlaveStateActive,
 	}
 }
 

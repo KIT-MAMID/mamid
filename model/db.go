@@ -49,7 +49,7 @@ type Slave struct {
 	MongodPortRangeEnd   PortNumber
 	PersistentStorage    bool
 	Mongods              []*Mongod `gorm:"ForeignKey:ParentSlaveID"`
-	ConfiguedState       SlaveState
+	ConfiguredState      SlaveState
 
 	// Foreign keys
 	RiskGroupID uint
