@@ -57,6 +57,11 @@ type Slave struct {
 
 type PortNumber uint16
 
+const (
+	PortNumberMin PortNumber = 1
+	PortNumberMax            = 65535
+)
+
 type SlaveState uint
 
 const (

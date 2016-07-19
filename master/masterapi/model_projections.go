@@ -2,6 +2,7 @@ package masterapi
 
 import (
 	"fmt"
+	"github.com/KIT-MAMID/mamid/model"
 )
 
 func (s *Slave) assertNoZeroFieldsSet() error {
@@ -13,8 +14,7 @@ func concatErrors(err1, err2 error) error {
 }
 
 func assertIsPortNumber(u uint) error {
-	// TODO nicer way to get number of bits in PortNumber?
-	if u < 1 || u > 2^16-1 {
+	if u < uint(model.PortNumberMin) || u > uint(model.PortNumberMax) {
 		return fmt.Errorf("a port number must be in [%d, %d]", 1, 2^16-1)
 	}
 	return nil
