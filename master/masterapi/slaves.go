@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
 	"strconv"
@@ -79,7 +80,7 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 
 	if postSlave.ID != 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "must not change the slave ID in PUT request")
+		fmt.Fprintf(w, "must not specify the slave ID in PUT request")
 		return
 	}
 
@@ -146,21 +147,15 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if modelSlave.ConfiguredState != model.SlaveStateDisabled {
-		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, "slave's desired state must be = disabled")
-		return
-	}
-
-	if err = m.DB.Model(&modelSlave).Related(&modelSlave.Mongods, "Mongods").Error; err != nil {
+	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, postSlave)
+	if dbError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
+		fmt.Fprint(w, dbError)
 		return
 	}
-
-	if len(modelSlave.Mongods) != 0 {
+	if permissionError != nil {
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, "slave has active Mongods")
+		fmt.Fprint(w, permissionError)
 		return
 	}
 
@@ -187,6 +182,22 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
+	// Can only delete disabled slaves
+	var currentSlave model.Slave
+	if err = m.DB.First(&currentSlave, id).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	if len(currentSlave.Mongods) != 0 {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprintf(w, "slave with id %d has active Mongods", currentSlave.ID)
+		return
+	}
+
+	// Allow delete
+
 	s := m.DB.Delete(&model.Slave{ID: id})
 	if s.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -200,4 +211,22 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	if s.RowsAffected > 1 {
 		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
 	}
+}
+
+func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave Slave) (permissionError, dbError error) {
+
+	if currentSlave.ConfiguredState != model.SlaveStateDisabled {
+		return fmt.Errorf("slave's desired state must be = disabled"), nil
+	}
+
+	if err := db.Model(&currentSlave).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
+		return nil, err
+	}
+
+	if len(currentSlave.Mongods) != 0 {
+		return fmt.Errorf("slave has active Mongods"), nil
+	}
+
+	return nil, nil
+
 }
