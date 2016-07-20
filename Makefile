@@ -86,6 +86,7 @@ release:
 
 clean_testbed: testbed_down
 	rm -f docker/*.depend
+	rm -rf docker/.dockergopath
 	-sudo docker rmi mamid/master
 	-sudo docker rmi mamid/slave
 	-sudo docker rmi mamid/notifier
@@ -99,27 +100,34 @@ docker/testbed_builder.depend: docker/builder.dockerfile
 	sudo docker build -f=docker/builder.dockerfile -t=mamid/builder .
 	touch docker/testbed_builder.depend
 
-.dockergopath:
+docker/.dockergopath:
 	mkdir -p $@
 
+DOCKERBUILD_GOPATH = /gopath
+DOCKERBUILD_SRCDIR = $(DOCKERBUILD_GOPATH)/src/github.com/KIT-MAMID/mamid
+
 # build using this makefile and custom suffix inside the docker container
-dockerbuild: .dockergopath
-	@echo [ INFO ] Starting buil inside docker container.
+dockerbuild: docker/.dockergopath
+	@echo [ INFO ] Starting build inside docker container.
 	@sudo docker run -it \
-		-v=`pwd`/.dockergopath \
-	       	-v=`pwd`:/gopath/src/github.com/KIT-MAMID/mamid \
+		-v=`pwd`/docker/.dockergopath:$(DOCKERBUILD_GOPATH) \
+	       	-v=`pwd`:$(DOCKERBUILD_SRCDIR) \
 		mamid/builder \
-		make -C /gopath/src/github.com/KIT-MAMID/mamid BUILD_SUFFIX=docker
+		/gopath/src/github.com/KIT-MAMID/mamid/docker/buildDockerBinaries.bash $(DOCKERBUILD_SRCDIR)
+	# docker runs as root, hence all build products are owned by root = not good
+	sudo chown `id -u`:`id -g` -R docker/.dockergopath
+	sudo chown `id -u`:`id -g` build/*_docker
 	@echo [ INFO ] Finished build inside docker container.
 
 docker/testbed_images.depend: dockerbuild | \
+		docker/buildDockerBinaries.bash \
 		build/master_docker build/slave_docker build/notifier_docker  \
 		docker/master.dockerfile docker/slave.dockerfile docker/notifier.dockerfile \
 		$(shell find gui/)
 	sudo docker build -f=docker/slave.dockerfile -t=mamid/slave .
 	sudo docker build -f=docker/master.dockerfile -t=mamid/master .
 	sudo docker build -f=docker/notifier.dockerfile -t=mamid/notifier .
-	touch docker/testbed_images.depend
+	@touch docker/testbed_images.depend
 
 TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
