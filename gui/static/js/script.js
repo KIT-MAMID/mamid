@@ -51,7 +51,7 @@ mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams,
     if ($scope.is_create_view) {
         $scope.slave = new SlaveService();
 
-        $scope.slave.state = "disabled";
+        $scope.slave.configured_state = "disabled";
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.edit_slave = angular.copy($scope.slave);
@@ -81,7 +81,7 @@ mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams,
     };
 
     $scope.setSlaveState = function (state) {
-        $scope.slave.state = state;
+        $scope.slave.configured_state = state;
         $scope.slave.$save();
     }
 });

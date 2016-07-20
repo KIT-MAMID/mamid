@@ -1,9 +1,9 @@
 <h1 class="page-header" ng-if="!is_create_view">Edit slave</h1>
 <h1 class="page-header" ng-if="is_create_view">New slave</h1>
 
-<div class="bs-callout bs-callout-{{ slave.state }}" ng-if="!is_create_view">
+<div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view">
     <h4>{{ slave.hostname }} is in
-        <b>{{ slave.state }}</b>
+        <b>{{ slave.configured_state }}</b>
         state.</h4>
 </div>
 <div class="panel panel-default">
@@ -12,7 +12,7 @@
     </div>
     <div class="panel-body">
         <form ng-submit="updateSlave()">
-            <fieldset ng-disabled="slave.state != 'disabled'">
+            <fieldset ng-disabled="slave.configured_state != 'disabled'">
                 <table width="100%">
                     <tr>
                         <th>Hostname</th>
@@ -68,17 +68,17 @@
     <div class="panel-body">
         <div class="btn-group btn-group-justified" role="group">
             <div class="btn-group" role="group">
-                <button ng-disabled="slave.state == 'unknown'" ng-class="{active: slave.state == 'active'}"
+                <button ng-disabled="slave.configured_state == 'unknown'" ng-class="{active: slave.configured_state == 'active'}"
                    class="btn btn-default" ng-click="setSlaveState('active')">Active</button>
             </div>
             <div class="btn-group" role="group">
-                <button ng-disabled="slave.state == 'unknown'" ng-class="{active: slave.state == 'maintenance'}" class="btn btn-default" ng-click="setSlaveState('maintenance')">Maintenance mode</button>
+                <button ng-disabled="slave.configured_state == 'unknown'" ng-class="{active: slave.configured_state == 'maintenance'}" class="btn btn-default" ng-click="setSlaveState('maintenance')">Maintenance mode</button>
             </div>
             <div  class="btn-group" role="group">
-                <button ng-disabled="slave.state == 'unknown'" class="btn btn-default" ng-class="{active: slave.state == 'disabled'}" ng-click="setSlaveState('disabled')">Disabled</button>
+                <button ng-disabled="slave.configured_state == 'unknown'" class="btn btn-default" ng-class="{active: slave.configured_state == 'disabled'}" ng-click="setSlaveState('disabled')">Disabled</button>
             </div>
             <div class="btn-group" role="group">
-                <button ng-disabled="slave.state != 'unknown'" class="btn btn-default" ng-class="{active: slave.state == 'unknown'}">Unknown</button>
+                <button ng-disabled="slave.configured_state != 'unknown'" class="btn btn-default" ng-class="{active: slave.configured_state == 'unknown'}">Unknown</button>
             </div>
         </div>
     </div>
@@ -89,7 +89,7 @@
     </div>
     <div class="panel-body">
         <p>Removal is only possible with the slave in disabled mode.</p>
-        <button ng-disabled="slave.state != 'disabled'" type="button" role="button" class="btn btn-danger"
+        <button ng-disabled="slave.configured_state != 'disabled'" type="button" role="button" class="btn btn-danger"
            data-toggle="modal" data-target="#confirm_remove">Remove slave '{{ slave.hostname }}' from system</button>
     </div>
 </div>
