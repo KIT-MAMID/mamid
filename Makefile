@@ -87,6 +87,7 @@ release:
 clean_testbed: testbed_down
 	rm -f docker/*.depend
 	rm -rf docker/.dockergopath
+	-sudo docker rmi mamid/builder
 	-sudo docker rmi mamid/master
 	-sudo docker rmi mamid/slave
 	-sudo docker rmi mamid/notifier
