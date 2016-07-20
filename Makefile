@@ -13,7 +13,7 @@ GOFILES_IN_DIRS = $(foreach dir,$(1),$(call GOFILES_IN_DIR_CMD,$(dir)))
 
 ## Onetimers
 GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
-BUILD_SUFFIX = $(GOOS)_$(GOARCH)
+BUILD_SUFFIX  ?= $(GOOS)_$(GOARCH)
 pkgs          = $(shell $(GO) list ./... | grep -v /vendor/)
 pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
 
@@ -95,8 +95,22 @@ testbed_net:
 	-sudo docker network create \
 		--gateway=10.101.202.254 --subnet 10.101.202.0/24 mamidnet0 >/dev/null 2>&1
 
+docker/testbed_builder.depend: docker/builder.dockerfile
+	sudo docker build -f=docker/builder.dockerfile -t=mamid/builder .
+	touch docker/testbed_builder.depend
+
+.dockergopath:
+	mkdir -p $@
+
+dockerbuild:
+	sudo docker run -it
+		-v=`pwd`/.dockergopath \
+	       	-v=`pwd`:/gopath/src/github.com/KIT-MAMID/mamid \
+		mamid/builder \
+		make -C /gopath/src/github.com/KIT-MAMID/mamid BUILD_SUFFIX=docker
+
 docker/testbed_images.depend: \
-		build/master_linux_amd64 build/slave_linux_amd64 build/notifier_linux_amd64 \
+		build/master_docker build/slave_docker build/notifier_docker  \
 		docker/master.dockerfile docker/slave.dockerfile docker/notifier.dockerfile \
 		$(shell find gui/)
 	sudo docker build -f=docker/slave.dockerfile -t=mamid/slave .
@@ -117,6 +131,7 @@ testbed_up: testbed_down testbed_net docker/testbed_images.depend
 
 testbed_down:
 	# ignore errors for idempotence
+	-sudo docker rm -f builder
 	-sudo docker rm -f master
 	-sudo docker rm -f notifier
 
