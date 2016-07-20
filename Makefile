@@ -4,7 +4,7 @@ GOFMT 			?= $(shell which gofmt)
 GREP 			?= $(shell which grep)
 GOOS 			?= $(shell uname | tr A-Z a-z)
 TESTBED_SLAVE_COUNT 	?= 3
-SUDO 			?= $(shell if [[ $(GOOS) != "darwin" ]]; then which sudo; fi)
+SUDO 			?= $(shell if [ "$(GOOS)" != "darwin" ]; then which sudo; fi)
 
 ########################################################################################################################
 
