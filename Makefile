@@ -102,7 +102,7 @@ docker/testbed_builder.depend: docker/builder.dockerfile
 .dockergopath:
 	mkdir -p $@
 
-dockerbuild:
+dockerbuild: .dockergopath
 	sudo docker run -it
 		-v=`pwd`/.dockergopath \
 	       	-v=`pwd`:/gopath/src/github.com/KIT-MAMID/mamid \
