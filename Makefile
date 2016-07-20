@@ -118,7 +118,7 @@ dockerbuild: docker/.dockergopath docker/testbed_builder.depend
 		mamid/builder \
 		/gopath/src/github.com/KIT-MAMID/mamid/docker/buildDockerBinaries.bash $(DOCKERBUILD_SRCDIR)
 	# docker runs as root, hence all build products are owned by root = not good
-	$(SUDO) chown `id -u`:`id -g` -R docker/.dockergopath
+	$(SUDO) chown -R `id -u`:`id -g` docker/.dockergopath
 	$(SUDO) chown `id -u`:`id -g` build/*_docker
 	@echo [ INFO ] Finished build inside docker container.
 
