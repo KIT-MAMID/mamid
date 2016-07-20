@@ -18,6 +18,8 @@ BUILD_SUFFIX  ?= $(GOOS)_$(GOARCH)
 pkgs          = $(shell $(GO) list ./... | grep -v /vendor/)
 pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
 
+.DEFAULT_GOAL := build
+
 ########################################################################################################################
 
 .PHONY: all
@@ -25,6 +27,9 @@ all: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$(B
 
 .PHONY: clean
 clean: clean_master clean_slave clean_testbed
+
+.PHONY: build
+build: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$(BUILD_SUFFIX)
 
 ########################################################################################################################
 
