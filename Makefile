@@ -82,7 +82,7 @@ release:
 
 # The docker-based local staging environment
 
-.PHONY: testbed_up testbed_down testbed_net
+.PHONY: testbed_up testbed_down testbed_net clean_testbed dockerbuild
 
 clean_testbed: testbed_down
 	rm -f docker/*.depend
@@ -102,14 +102,17 @@ docker/testbed_builder.depend: docker/builder.dockerfile
 .dockergopath:
 	mkdir -p $@
 
+# build using this makefile and custom suffix inside the docker container
 dockerbuild: .dockergopath
-	sudo docker run -it
+	@echo [ INFO ] Starting buil inside docker container.
+	@sudo docker run -it \
 		-v=`pwd`/.dockergopath \
 	       	-v=`pwd`:/gopath/src/github.com/KIT-MAMID/mamid \
 		mamid/builder \
 		make -C /gopath/src/github.com/KIT-MAMID/mamid BUILD_SUFFIX=docker
+	@echo [ INFO ] Finished build inside docker container.
 
-docker/testbed_images.depend: \
+docker/testbed_images.depend: dockerbuild | \
 		build/master_docker build/slave_docker build/notifier_docker  \
 		docker/master.dockerfile docker/slave.dockerfile docker/notifier.dockerfile \
 		$(shell find gui/)
