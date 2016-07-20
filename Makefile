@@ -107,7 +107,7 @@ DOCKERBUILD_GOPATH = /gopath
 DOCKERBUILD_SRCDIR = $(DOCKERBUILD_GOPATH)/src/github.com/KIT-MAMID/mamid
 
 # build using this makefile and custom suffix inside the docker container
-dockerbuild: docker/.dockergopath
+dockerbuild: docker/.dockergopath docker/testbed_builder.depend
 	@echo [ INFO ] Starting build inside docker container.
 	@sudo docker run -it \
 		-v=`pwd`/docker/.dockergopath:$(DOCKERBUILD_GOPATH) \
