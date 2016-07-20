@@ -111,6 +111,7 @@ DOCKERBUILD_SRCDIR = $(DOCKERBUILD_GOPATH)/src/github.com/KIT-MAMID/mamid
 dockerbuild: docker/.dockergopath docker/testbed_builder.depend
 	@echo [ INFO ] Starting build inside docker container.
 	@sudo docker run -it \
+		--rm=true \
 		-v=`pwd`/docker/.dockergopath:$(DOCKERBUILD_GOPATH) \
 	       	-v=`pwd`:$(DOCKERBUILD_SRCDIR) \
 		mamid/builder \
