@@ -6,6 +6,7 @@ import (
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+	"github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 	"strconv"
@@ -94,6 +95,16 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 	// Persist to database
 
 	err = m.DB.Create(&modelSlave).Error
+
+	//Check db specific errors
+	if driverErr, ok := err.(sqlite3.Error); ok {
+		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, driverErr.Error())
+			return
+		}
+	}
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -171,6 +182,15 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	// Persist to database
 
 	m.DB.Model(&modelSlave).Updates(&save)
+
+	//Check db specific errors
+	if driverErr, ok := err.(sqlite3.Error); ok {
+		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, driverErr.Error())
+			return
+		}
+	}
 }
 
 func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {

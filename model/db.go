@@ -42,8 +42,8 @@ import (
 */
 
 type Slave struct {
-	ID                   uint `gorm:"primary_key"`
-	Hostname             string
+	ID                   uint   `gorm:"primary_key"`
+	Hostname             string `gorm:"unique_index"`
 	Port                 PortNumber
 	MongodPortRangeBegin PortNumber
 	MongodPortRangeEnd   PortNumber
