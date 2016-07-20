@@ -4,6 +4,7 @@ GOFMT 			?= $(shell which gofmt)
 GREP 			?= $(shell which grep)
 GOOS 			?= $(shell uname | tr A-Z a-z)
 TESTBED_SLAVE_COUNT 	?= 3
+SUDO 			?= $(shell if [[ $(GOOS) != "darwin" ]]; then which sudo; fi)
 
 ########################################################################################################################
 
@@ -87,18 +88,18 @@ release:
 clean_testbed: testbed_down
 	rm -f docker/*.depend
 	rm -rf docker/.dockergopath
-	-sudo docker rmi mamid/builder
-	-sudo docker rmi mamid/master
-	-sudo docker rmi mamid/slave
-	-sudo docker rmi mamid/notifier
+	-$(SUDO) docker rmi mamid/builder
+	-$(SUDO) docker rmi mamid/master
+	-$(SUDO) docker rmi mamid/slave
+	-$(SUDO) docker rmi mamid/notifier
 
 testbed_net:
 	# ignore all errors for idempotence
-	-sudo docker network create \
+	-$(SUDO) docker network create \
 		--gateway=10.101.202.254 --subnet 10.101.202.0/24 mamidnet0 >/dev/null 2>&1
 
 docker/testbed_builder.depend: docker/builder.dockerfile
-	sudo docker build -f=docker/builder.dockerfile -t=mamid/builder .
+	$(SUDO) docker build -f=docker/builder.dockerfile -t=mamid/builder .
 	touch docker/testbed_builder.depend
 
 docker/.dockergopath:
@@ -110,15 +111,15 @@ DOCKERBUILD_SRCDIR = $(DOCKERBUILD_GOPATH)/src/github.com/KIT-MAMID/mamid
 # build using this makefile and custom suffix inside the docker container
 dockerbuild: docker/.dockergopath docker/testbed_builder.depend
 	@echo [ INFO ] Starting build inside docker container.
-	@sudo docker run -it \
+	@$(SUDO) docker run -it \
 		--rm=true \
 		-v=`pwd`/docker/.dockergopath:$(DOCKERBUILD_GOPATH) \
 	       	-v=`pwd`:$(DOCKERBUILD_SRCDIR) \
 		mamid/builder \
 		/gopath/src/github.com/KIT-MAMID/mamid/docker/buildDockerBinaries.bash $(DOCKERBUILD_SRCDIR)
 	# docker runs as root, hence all build products are owned by root = not good
-	sudo chown `id -u`:`id -g` -R docker/.dockergopath
-	sudo chown `id -u`:`id -g` build/*_docker
+	$(SUDO) chown `id -u`:`id -g` -R docker/.dockergopath
+	$(SUDO) chown `id -u`:`id -g` build/*_docker
 	@echo [ INFO ] Finished build inside docker container.
 
 docker/testbed_images.depend: dockerbuild | \
@@ -126,30 +127,30 @@ docker/testbed_images.depend: dockerbuild | \
 		build/master_docker build/slave_docker build/notifier_docker  \
 		docker/master.dockerfile docker/slave.dockerfile docker/notifier.dockerfile \
 		$(shell find gui/)
-	sudo docker build -f=docker/slave.dockerfile -t=mamid/slave .
-	sudo docker build -f=docker/master.dockerfile -t=mamid/master .
-	sudo docker build -f=docker/notifier.dockerfile -t=mamid/notifier .
+	$(SUDO) docker build -f=docker/slave.dockerfile -t=mamid/slave .
+	$(SUDO) docker build -f=docker/master.dockerfile -t=mamid/master .
+	$(SUDO) docker build -f=docker/notifier.dockerfile -t=mamid/notifier .
 	@touch docker/testbed_images.depend
 
 TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
 testbed_up: testbed_down testbed_net docker/testbed_images.depend
 
-	sudo docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/gui:/mamid/gui mamid/master
-	sudo docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
+	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/gui:/mamid/gui mamid/master
+	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
-		sudo docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" --name=slave$$i mamid/slave; \
+		$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" --name=slave$$i mamid/slave; \
 	done
 
 testbed_down:
 	# ignore errors for idempotence
-	-sudo docker rm -f builder
-	-sudo docker rm -f master
-	-sudo docker rm -f notifier
+	-$(SUDO) docker rm -f builder
+	-$(SUDO) docker rm -f master
+	-$(SUDO) docker rm -f notifier
 
 	-for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
-		sudo docker rm -f slave$$i; \
+		$(SUDO) docker rm -f slave$$i; \
 	done
 
 ########################################################################################################################
