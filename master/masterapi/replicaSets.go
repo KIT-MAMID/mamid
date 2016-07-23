@@ -36,7 +36,7 @@ func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *MasterAPI) ReplicaSetById(w http.ResponseWriter, r *http.Request) {
-	idStr := mux.Vars(r)["slaveId"]
+	idStr := mux.Vars(r)["replicasetId"]
 	id64, err := strconv.ParseUint(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -107,4 +107,68 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ProjectModelReplicaSetToReplicaSet(modelReplSet))
 
 	return
+}
+
+func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["replicasetId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	id := uint(id64)
+
+	var postReplSet ReplicaSet
+	err = json.NewDecoder(r.Body).Decode(&postReplSet)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "cannot parse object (%s)", err.Error())
+		return
+	}
+
+	// Validation
+
+	if postReplSet.ID != id {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "must not change the id of an object")
+		return
+	}
+
+	var modelReplSet model.ReplicaSet
+	dbRes := m.DB.First(&modelReplSet, id)
+	if dbRes.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err = dbRes.Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	replSet := ProjectReplicaSetToModelReplicaSet(&postReplSet)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	if replSet.ConfigureAsShardingConfigServer != modelReplSet.ConfigureAsShardingConfigServer ||
+		replSet.Name != modelReplSet.Name {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "name and configure_as_sharding_server may not be changed")
+		return
+	}
+
+	// Persist to database
+
+	m.DB.Model(&modelReplSet).Updates(replSet)
+
+	//Check db specific errors
+	if driverErr, ok := err.(sqlite3.Error); ok {
+		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, driverErr.Error())
+			return
+		}
+	}
 }
