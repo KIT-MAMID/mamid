@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
+	"github.com/gorilla/mux"
 	"github.com/mattn/go-sqlite3"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type ReplicaSet struct {
@@ -30,6 +33,35 @@ func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
 		out[i] = ProjectModelReplicaSetToReplicaSet(v)
 	}
 	json.NewEncoder(w).Encode(out)
+}
+
+func (m *MasterAPI) ReplicaSetById(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["slaveId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	id := uint(id64)
+
+	var replSets []model.ReplicaSet
+	err = m.DB.Find(&replSets, &model.Slave{ID: id}).Error
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if len(replSets) == 0 { // Not found?
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if len(replSets) > 1 {
+		log.Printf("inconsistency: multiple slaves for slave.ID = %d found in database", len(replSets))
+	}
+	json.NewEncoder(w).Encode(ProjectModelReplicaSetToReplicaSet(&replSets[0]))
+	return
 }
 
 func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {

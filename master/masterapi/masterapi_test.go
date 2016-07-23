@@ -335,6 +335,47 @@ func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
 	assert.EqualValues(t, false, getReplsetResult[0].ConfigureAsShardingConfigServer)
 }
 
+func TestMasterAPI_ReplicaSetById(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	// Test correct get
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets/1", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 200, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+
+	var getReplSetResult ReplicaSet
+	err = json.NewDecoder(resp.Body).Decode(&getReplSetResult)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, 1, getReplSetResult.ID)
+	assert.Equal(t, "repl1", getReplSetResult.Name)
+	assert.EqualValues(t, 1, getReplSetResult.PersistentNodeCount)
+	assert.EqualValues(t, 2, getReplSetResult.VolatileNodeCount)
+	assert.Equal(t, false, getReplSetResult.ConfigureAsShardingConfigServer)
+}
+
+func TestMasterAPI_ReplicaSetById_not_existing(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets/9000", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 404, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+}
+
 func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
