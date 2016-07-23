@@ -28,4 +28,6 @@ func (m *MasterAPI) Setup() {
 
 	m.Router.Methods("GET").Path("/riskgroups").Name("RiskGroupIndex").HandlerFunc(m.RiskGroupIndex)
 
+	m.Router.Methods("GET").Path("/problems").Name("ProblemIndex").HandlerFunc(m.ProblemIndex)
+
 }

@@ -154,9 +154,15 @@ type Problem struct {
 	ProblemType     uint
 	FirstOccurred   time.Time
 	LastUpdated     time.Time
-	Slave           *Slave
-	ReplicaSet      *ReplicaSet
-	Mongod          *Mongod
+
+	Slave   *Slave
+	SlaveID uint
+
+	ReplicaSet   *ReplicaSet
+	ReplicaSetID uint
+
+	Mongod   *Mongod
+	MongodID uint
 }
 
 func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
