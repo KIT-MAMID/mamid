@@ -192,7 +192,6 @@ func TestMasterAPI_SlavePut_missingField(t *testing.T) {
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
 
-	// additional unknown field:  id_invalid_blabla
 	// missing field: mongod_port_range_begin
 	req_body := "{\"hostname\":\"createdhost_invalid\",\"slave_port\":1912,\"mongod_port_range_begin\":20000,\"persistent_storage\":false,\"configured_state\":\"disabled\"}"
 	req, err := http.NewRequest("PUT", "/api/slaves", strings.NewReader(req_body))
