@@ -172,3 +172,32 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["replicasetId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	id := uint(id64)
+
+	// Allow delete
+
+	s := m.DB.Delete(&model.ReplicaSet{ID: id})
+
+	if s.RowsAffected == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if s.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	if s.RowsAffected > 1 {
+		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
+	}
+}

@@ -442,8 +442,36 @@ func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	req_body := "{\"id\":9000,\"name\":\"repl1\",\"persistent_node_count\":1," +
-	"\"volatile_node_count\":4,\"configure_as_sharding_config_server\":false}"
+		"\"volatile_node_count\":4,\"configure_as_sharding_config_server\":false}"
 	req, err := http.NewRequest("POST", "/api/replicasets/9000", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 404, resp.Code)
+}
+
+func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("DELETE", "/api/replicasets/1", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+
+	assert.True(t, db.First(&model.ReplicaSet{}, 1).RecordNotFound())
+}
+
+func TestMasterAPI_ReplicaSetDelete_not_existing(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("DELETE", "/api/replicasets/9000", nil)
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
 
