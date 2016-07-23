@@ -66,3 +66,36 @@ func (m *MasterAPI) ProblemById(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ProjectModelProblemToProblem(&problems[0]))
 	return
 }
+
+func (m *MasterAPI) ProblemBySlave(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["slaveId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	slaveId := uint(id64)
+
+	var slave model.Slave
+	getSlaveRes := m.DB.First(&slave, slaveId)
+	if getSlaveRes.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err := getSlaveRes.Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	if err := m.DB.Model(&slave).Order("id", false).Related(&slave.Problems, "Problems").Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	out := make([]*Problem, len(slave.Problems))
+	for i, v := range slave.Problems {
+		out[i] = ProjectModelProblemToProblem(v)
+	}
+	json.NewEncoder(w).Encode(out)
+}

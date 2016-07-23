@@ -51,6 +51,8 @@ type Slave struct {
 	Mongods              []*Mongod `gorm:"ForeignKey:ParentSlaveID"`
 	ConfiguredState      SlaveState
 
+	Problems []*Problem
+
 	// Foreign keys
 	RiskGroupID uint
 }

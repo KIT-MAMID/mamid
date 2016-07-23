@@ -64,8 +64,16 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		ID:            1,
 		Description:   "foo",
 		FirstOccurred: time.Date(2000, time.January, 1, 0, 0, 0, 0, utc),
+		SlaveID:       1,
 	}
 	assert.NoError(t, db.Create(&dbProblem).Error)
+
+	dbProblem2 := model.Problem{
+		ID:            2,
+		Description:   "bar",
+		FirstOccurred: time.Date(2010, time.January, 1, 0, 0, 0, 0, utc),
+	}
+	assert.NoError(t, db.Create(&dbProblem2).Error)
 
 	// Setup masterapi
 	clusterAllocator := &master.ClusterAllocator{}
@@ -502,7 +510,7 @@ func TestMasterAPI_ProblemIndex(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&getProblemsResult)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(getProblemsResult))
+	assert.Equal(t, 2, len(getProblemsResult))
 	assert.Equal(t, "foo", getProblemsResult[0].Description)
 }
 
@@ -523,4 +531,24 @@ func TestMasterAPI_ProblemById(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "foo", getProblemsResult.Description)
+}
+
+func TestMasterAPI_ProblemBySlave(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/slaves/1/problems", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getProblemsResult []Problem
+	err = json.NewDecoder(resp.Body).Decode(&getProblemsResult)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(getProblemsResult))
+	assert.Equal(t, "foo", getProblemsResult[0].Description)
 }
