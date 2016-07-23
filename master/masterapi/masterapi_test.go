@@ -47,6 +47,15 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 	}
 	assert.NoError(t, db.Create(&dbSlave2).Error)
 
+	dbReplicaset := model.ReplicaSet{
+		ID:   1,
+		Name: "repl1",
+		PersistentMemberCount:           1,
+		VolatileMemberCount:             2,
+		ConfigureAsShardingConfigServer: false,
+	}
+	assert.NoError(t, db.Create(&dbReplicaset).Error)
+
 	// Setup masterapi
 	clusterAllocator := &master.ClusterAllocator{}
 
@@ -302,4 +311,26 @@ func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
 	db.First(&updatedSlave, 1)
 
 	assert.NotEmpty(t, updatedSlave.ID)
+}
+
+// Test correct get of replica sets
+func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	var getReplsetResult []ReplicaSet
+	err = json.NewDecoder(resp.Body).Decode(&getReplsetResult)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(getReplsetResult))
+	assert.Equal(t, "repl1", getReplsetResult[0].Name)
+	assert.EqualValues(t, 1, getReplsetResult[0].PersistentNodeCount)
+	assert.EqualValues(t, 2, getReplsetResult[0].VolatileNodeCount)
+	assert.EqualValues(t, false, getReplsetResult[0].ConfigureAsShardingConfigServer)
 }

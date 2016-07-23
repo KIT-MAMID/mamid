@@ -2,20 +2,31 @@ package masterapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/KIT-MAMID/mamid/model"
 	"net/http"
 )
 
 type ReplicaSet struct {
-	Id                              uint   `json:"id"`
+	ID                              uint   `json:"id"`
 	Name                            string `json:"name"`
-	PersistentNodeCunt              uint   `json:"presistent_node_count"`
+	PersistentNodeCount             uint   `json:"presistent_node_count"`
 	VolatileNodeCount               uint   `json:"volatile_node_count"`
 	ConfigureAsShardingConfigServer bool   `json:"configure_as_sharding_config_server"`
 }
 
 func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
-	replicaSets := []ReplicaSet{
-		ReplicaSet{Id: 1, Name: "meterologic_data", PersistentNodeCunt: 1, VolatileNodeCount: 2, ConfigureAsShardingConfigServer: false},
+	var replicasets []*model.ReplicaSet
+	err := m.DB.Order("id", false).Find(&replicasets).Error
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
 	}
-	json.NewEncoder(w).Encode(replicaSets)
+
+	out := make([]*ReplicaSet, len(replicasets))
+	for i, v := range replicasets {
+		out[i] = ProjectModelReplicaSetToReplicaSet(v)
+	}
+	json.NewEncoder(w).Encode(out)
 }
