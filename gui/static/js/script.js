@@ -22,12 +22,21 @@ mamidApp.config(function ($routeProvider) {
            templateUrl: 'pages/replicaset.html',
            controller: 'replicasetByIdController'
        })
+       .when('/problems', {
+           templateUrl: 'pages/problems.html',
+           controller: 'problemIndexController'
+       })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
     return $resource('/api/slaves/:slave', {slave: "@id"}, {
         create: {method: 'put'},
         queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/'}
+    });
+});
+
+mamidApp.factory('ProblemService', function ($resource) {
+    return $resource('/api/problems/:problem', {problem: "@id"}, {
     });
 });
 
@@ -44,6 +53,11 @@ mamidApp.controller('mainController', function($scope) {
 mamidApp.controller('slaveIndexController', function($scope, $http, SlaveService) {
     $scope.slaves = SlaveService.query()
 });
+
+mamidApp.controller('problemIndexController', function($scope, $http, SlaveService) {
+    $scope.problems = ProblemService.query()
+});
+
 
 mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams, $location, SlaveService) {
     var slaveId = $routeParams['slaveId'];
