@@ -99,3 +99,36 @@ func (m *MasterAPI) ProblemBySlave(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(out)
 }
+
+func (m *MasterAPI) ProblemByReplicaSet(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["replicasetId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	replicaSetId := uint(id64)
+
+	var replicaSet model.ReplicaSet
+	getReplicaSetRes := m.DB.First(&replicaSet, replicaSetId)
+	if getReplicaSetRes.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err := getReplicaSetRes.Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	if err := m.DB.Model(&replicaSet).Order("id", false).Related(&replicaSet.Problems, "Problems").Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	out := make([]*Problem, len(replicaSet.Problems))
+	for i, v := range replicaSet.Problems {
+		out[i] = ProjectModelProblemToProblem(v)
+	}
+	json.NewEncoder(w).Encode(out)
+}

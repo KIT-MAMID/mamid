@@ -72,6 +72,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		ID:            2,
 		Description:   "bar",
 		FirstOccurred: time.Date(2010, time.January, 1, 0, 0, 0, 0, utc),
+		ReplicaSetID:  1,
 	}
 	assert.NoError(t, db.Create(&dbProblem2).Error)
 
@@ -551,4 +552,24 @@ func TestMasterAPI_ProblemBySlave(t *testing.T) {
 
 	assert.Equal(t, 1, len(getProblemsResult))
 	assert.Equal(t, "foo", getProblemsResult[0].Description)
+}
+
+func TestMasterAPI_ProblemByReplicaSet(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets/1/problems", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getProblemsResult []Problem
+	err = json.NewDecoder(resp.Body).Decode(&getProblemsResult)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(getProblemsResult))
+	assert.Equal(t, "bar", getProblemsResult[0].Description)
 }

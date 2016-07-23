@@ -31,5 +31,6 @@ func (m *MasterAPI) Setup() {
 	m.Router.Methods("GET").Path("/problems").Name("ProblemIndex").HandlerFunc(m.ProblemIndex)
 	m.Router.Methods("GET").Path("/problems/{problemId}").Name("ProblemById").HandlerFunc(m.ProblemById)
 	m.Router.Methods("GET").Path("/slaves/{slaveId}/problems").Name("ProblemBySlave").HandlerFunc(m.ProblemBySlave)
+	m.Router.Methods("GET").Path("/replicasets/{replicasetId}/problems").Name("ProblemByReplicaSet").HandlerFunc(m.ProblemByReplicaSet)
 
 }

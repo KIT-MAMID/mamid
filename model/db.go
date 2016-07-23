@@ -80,6 +80,8 @@ type ReplicaSet struct {
 	VolatileMemberCount             uint
 	ConfigureAsShardingConfigServer bool
 	Mongods                         []*Mongod
+
+	Problems []*Problem
 }
 
 type RiskGroup struct {
