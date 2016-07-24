@@ -2,18 +2,28 @@ package masterapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/KIT-MAMID/mamid/model"
 	"net/http"
 )
 
 type RiskGroup struct {
-	Id   uint   `json:"id"`
+	ID   uint   `json:"id"`
 	Name string `json:"name"`
 }
 
 func (m *MasterAPI) RiskGroupIndex(w http.ResponseWriter, r *http.Request) {
-	riskGroups := []RiskGroup{
-		RiskGroup{Id: 1, Name: "Rack A"},
-		RiskGroup{Id: 2, Name: "Rack B"},
+	var riskGroups []*model.RiskGroup
+	err := m.DB.Order("id", false).Find(&riskGroups).Error
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
 	}
-	json.NewEncoder(w).Encode(riskGroups)
+
+	out := make([]*RiskGroup, len(riskGroups))
+	for i, v := range riskGroups {
+		out[i] = ProjectModelRiskGroupToRiskGroup(v)
+	}
+	json.NewEncoder(w).Encode(out)
 }

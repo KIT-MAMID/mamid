@@ -18,6 +18,13 @@ import (
 func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, err error) {
 	// Setup database
 	db, err = model.InitializeInMemoryDB("")
+
+	dbRiskGroup := model.RiskGroup{
+		ID:   1,
+		Name: "risk1",
+	}
+	assert.NoError(t, db.Create(&dbRiskGroup).Error)
+
 	dbSlave := model.Slave{
 		ID:                   1,
 		Hostname:             "host1",
@@ -45,6 +52,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
+		RiskGroupID:          1,
 	}
 	assert.NoError(t, db.Create(&dbSlave2).Error)
 
@@ -572,4 +580,24 @@ func TestMasterAPI_ProblemByReplicaSet(t *testing.T) {
 
 	assert.Equal(t, 1, len(getProblemsResult))
 	assert.Equal(t, "bar", getProblemsResult[0].Description)
+}
+
+func TestMasterAPI_RiskGroupIndex(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/riskgroups", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getRiskGroupsResult []RiskGroup
+	err = json.NewDecoder(resp.Body).Decode(&getRiskGroupsResult)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(getRiskGroupsResult))
+	assert.Equal(t, "risk1", getRiskGroupsResult[0].Name)
 }
