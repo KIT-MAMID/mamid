@@ -11,3 +11,13 @@ func ProjectModelReplicaSetToReplicaSet(m *model.ReplicaSet) *ReplicaSet {
 		ConfigureAsShardingConfigServer: m.ConfigureAsShardingConfigServer,
 	}
 }
+
+func ProjectReplicaSetToModelReplicaSet(r *ReplicaSet) *model.ReplicaSet {
+	return &model.ReplicaSet{
+		ID:   r.ID,
+		Name: r.Name,
+		PersistentMemberCount:           r.PersistentNodeCount,
+		VolatileMemberCount:             r.VolatileNodeCount,
+		ConfigureAsShardingConfigServer: r.ConfigureAsShardingConfigServer,
+	}
+}

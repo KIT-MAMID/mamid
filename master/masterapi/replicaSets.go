@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
+	"github.com/mattn/go-sqlite3"
 	"net/http"
 )
 
 type ReplicaSet struct {
 	ID                              uint   `json:"id"`
 	Name                            string `json:"name"`
-	PersistentNodeCount             uint   `json:"presistent_node_count"`
+	PersistentNodeCount             uint   `json:"persistent_node_count"`
 	VolatileNodeCount               uint   `json:"volatile_node_count"`
 	ConfigureAsShardingConfigServer bool   `json:"configure_as_sharding_config_server"`
 }
@@ -29,4 +30,49 @@ func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
 		out[i] = ProjectModelReplicaSetToReplicaSet(v)
 	}
 	json.NewEncoder(w).Encode(out)
+}
+
+func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
+	var postReplSet ReplicaSet
+	err := json.NewDecoder(r.Body).Decode(&postReplSet)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "cannot parse object (%s)", err.Error())
+		return
+	}
+
+	// Validation
+
+	if postReplSet.ID != 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "must not specify the slave ID in PUT request")
+		return
+	}
+
+	modelReplSet := ProjectReplicaSetToModelReplicaSet(&postReplSet)
+
+	// Persist to database
+
+	err = m.DB.Create(&modelReplSet).Error
+
+	//Check db specific errors
+	if driverErr, ok := err.(sqlite3.Error); ok {
+		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, driverErr.Error())
+			return
+		}
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Return created slave
+
+	json.NewEncoder(w).Encode(ProjectModelReplicaSetToReplicaSet(modelReplSet))
+
+	return
 }

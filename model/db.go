@@ -72,8 +72,8 @@ const (
 )
 
 type ReplicaSet struct {
-	ID                              uint `gorm:"primary_key"`
-	Name                            string
+	ID                              uint   `gorm:"primary_key"`
+	Name                            string `gorm:"unique_index"`
 	PersistentMemberCount           uint
 	VolatileMemberCount             uint
 	ConfigureAsShardingConfigServer bool

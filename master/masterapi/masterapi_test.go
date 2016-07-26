@@ -334,3 +334,39 @@ func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
 	assert.EqualValues(t, 2, getReplsetResult[0].VolatileNodeCount)
 	assert.EqualValues(t, false, getReplsetResult[0].ConfigureAsShardingConfigServer)
 }
+
+func TestMasterAPI_ReplicaSetPut(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test correct put
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"name\":\"repl2\",\"persistent_node_count\":2," +
+		"\"volatile_node_count\":2,\"configure_as_sharding_config_server\":true}"
+	req, err := http.NewRequest("PUT", "/api/replicasets", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 200, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+
+	var createdReplSet model.ReplicaSet
+	db.First(&createdReplSet, "name = ?", "repl2")
+
+	//Check created database entry
+	assert.NotEmpty(t, createdReplSet.ID)
+	assert.Equal(t, "repl2", createdReplSet.Name)
+	assert.EqualValues(t, 2, createdReplSet.PersistentMemberCount)
+	assert.EqualValues(t, 2, createdReplSet.VolatileMemberCount)
+	assert.Equal(t, true, createdReplSet.ConfigureAsShardingConfigServer)
+
+	//Check returned object
+	var getReplicaSetResult ReplicaSet
+	err = json.NewDecoder(resp.Body).Decode(&getReplicaSetResult)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, getReplicaSetResult.ID)
+	assert.Equal(t, "repl2", getReplicaSetResult.Name)
+}
