@@ -150,7 +150,11 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var modelSlave model.Slave
-	if err = m.DB.First(&modelSlave, id).Error; err != nil {
+	modelSlaveRes := m.DB.First(&modelSlave, id)
+	if modelSlaveRes.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err = modelSlaveRes.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -179,7 +183,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	m.DB.Model(&modelSlave).Updates(&updatedModelSlave)
+	m.DB.Save(&updatedModelSlave)
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {

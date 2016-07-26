@@ -475,6 +475,29 @@ func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 	assert.Equal(t, false, updateReplSet.ConfigureAsShardingConfigServer)
 }
 
+func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":0," +
+		"\"volatile_node_count\":4,\"configure_as_sharding_config_server\":false}"
+	req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+
+	var updateReplSet model.ReplicaSet
+	db.First(&updateReplSet, 1)
+
+	assert.Equal(t, "repl1", updateReplSet.Name)
+	assert.EqualValues(t, 0, updateReplSet.PersistentMemberCount)
+	assert.EqualValues(t, 4, updateReplSet.VolatileMemberCount)
+	assert.Equal(t, false, updateReplSet.ConfigureAsShardingConfigServer)
+}
+
 func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
 	_, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
@@ -681,7 +704,6 @@ func TestMasterAPI_RiskGroupPut_existing_name(t *testing.T) {
 
 	assert.Equal(t, 400, resp.Code)
 }
-
 
 func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
