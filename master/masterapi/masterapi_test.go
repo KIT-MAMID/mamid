@@ -886,3 +886,21 @@ func TestMasterAPI_RiskGroupGetSlaves(t *testing.T) {
 	assert.Equal(t, 1, len(getSlaveResult))
 	assert.Equal(t, "host2", getSlaveResult[0].Hostname)
 }
+
+func TestMasterAPI_ReplicaSetPut_missingField(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test correct put
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"name\":\"repl2\",\"persistent_node_count\":2," +
+		"\"configure_as_sharding_config_server\":true}"
+	req, err := http.NewRequest("PUT", "/api/replicasets", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 400, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+}
