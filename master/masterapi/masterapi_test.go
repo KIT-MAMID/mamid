@@ -705,6 +705,19 @@ func TestMasterAPI_RiskGroupPut_existing_name(t *testing.T) {
 	assert.Equal(t, 400, resp.Code)
 }
 
+func TestMasterAPI_RiskGroupPut_empty_name(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"name\":\"\"}"
+	req, err := http.NewRequest("PUT", "/api/riskgroups", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 400, resp.Code)
+}
+
 func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)
