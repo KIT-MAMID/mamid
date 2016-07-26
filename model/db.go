@@ -85,8 +85,8 @@ type ReplicaSet struct {
 }
 
 type RiskGroup struct {
-	ID     uint `gorm:"primary_key"`
-	Name   string
+	ID     uint   `gorm:"primary_key"`
+	Name   string `gorm:"unique_index"`
 	Slaves []*Slave
 }
 

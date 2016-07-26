@@ -9,7 +9,7 @@ func ProjectModelRiskGroupToRiskGroup(m *model.RiskGroup) *RiskGroup {
 	}
 }
 
-func ProjectRiskGroupToModelRiskGroup(r RiskGroup) *model.RiskGroup {
+func ProjectRiskGroupToModelRiskGroup(r *RiskGroup) *model.RiskGroup {
 	return &model.RiskGroup{
 		ID:   r.ID,
 		Name: r.Name,

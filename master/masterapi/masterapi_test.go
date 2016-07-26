@@ -25,6 +25,18 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 	}
 	assert.NoError(t, db.Create(&dbRiskGroup).Error)
 
+	dbRiskGroup2 := model.RiskGroup{
+		ID:   2,
+		Name: "risk2",
+	}
+	assert.NoError(t, db.Create(&dbRiskGroup2).Error)
+
+	dbRiskGroup3 := model.RiskGroup{
+		ID:   3,
+		Name: "risk3",
+	}
+	assert.NoError(t, db.Create(&dbRiskGroup3).Error)
+
 	dbSlave := model.Slave{
 		ID:                   1,
 		Hostname:             "host1",
@@ -34,6 +46,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		PersistentStorage:    true,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
+		RiskGroupID:          2,
 	}
 	assert.NoError(t, db.Create(&dbSlave).Error)
 	m1 := model.Mongod{
@@ -598,6 +611,142 @@ func TestMasterAPI_RiskGroupIndex(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&getRiskGroupsResult)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(getRiskGroupsResult))
+	assert.Equal(t, 3, len(getRiskGroupsResult))
 	assert.Equal(t, "risk1", getRiskGroupsResult[0].Name)
+}
+
+func TestMasterAPI_RiskGroupById(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	// Test correct get
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/riskgroups/1", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getRiskGroupResult RiskGroup
+	err = json.NewDecoder(resp.Body).Decode(&getRiskGroupResult)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, 1, getRiskGroupResult.ID)
+	assert.Equal(t, "risk1", getRiskGroupResult.Name)
+}
+
+func TestMasterAPI_RiskGroupPut(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test correct put
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"name\":\"newrisk\"}"
+	req, err := http.NewRequest("PUT", "/api/riskgroups", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 200, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+
+	var createdRiskGroup model.RiskGroup
+	db.First(&createdRiskGroup, "name = ?", "newrisk")
+
+	//Check created database entry
+	assert.NotEmpty(t, createdRiskGroup.ID)
+	assert.Equal(t, "newrisk", createdRiskGroup.Name)
+
+	//Check returned object
+	var getRiskGroupResult RiskGroup
+	err = json.NewDecoder(resp.Body).Decode(&getRiskGroupResult)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, getRiskGroupResult.ID)
+	assert.Equal(t, "newrisk", getRiskGroupResult.Name)
+}
+
+func TestMasterAPI_RiskGroupPut_existing_name(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":0,\"name\":\"risk1\"}"
+	req, err := http.NewRequest("PUT", "/api/riskgroups", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 400, resp.Code)
+}
+
+
+func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":1,\"name\":\"foo\"}"
+	req, err := http.NewRequest("POST", "/api/riskgroups/1", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+
+	var updatedRiskGroup model.RiskGroup
+	db.First(&updatedRiskGroup, 1)
+
+	assert.Equal(t, "foo", updatedRiskGroup.Name)
+}
+
+func TestMasterAPI_RiskGroupDelete(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("DELETE", "/api/riskgroups/3", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+
+	var deletedRiskGroup model.RiskGroup
+	db.First(&deletedRiskGroup, 3)
+
+	assert.Empty(t, deletedRiskGroup.ID)
+}
+
+func TestMasterAPI_RiskGroupDelete_has_slaves(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("DELETE", "/api/riskgroups/1", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 403, resp.Code)
+
+	var deletedRiskGroup model.Slave
+	db.First(&deletedRiskGroup, 1)
+
+	assert.NotEmpty(t, deletedRiskGroup.ID)
+}
+
+func TestMasterAPI_RiskGroupDelete_not_existing(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("DELETE", "/api/riskgroups/9000", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 404, resp.Code)
 }

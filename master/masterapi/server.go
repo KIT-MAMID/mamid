@@ -27,6 +27,10 @@ func (m *MasterAPI) Setup() {
 	m.Router.Methods("DELETE").Path("/replicasets/{replicasetId}").Name("ReplicaSetDelete").HandlerFunc(m.ReplicaSetDelete)
 
 	m.Router.Methods("GET").Path("/riskgroups").Name("RiskGroupIndex").HandlerFunc(m.RiskGroupIndex)
+	m.Router.Methods("GET").Path("/riskgroups/{riskgroupId}").Name("RiskGroupById").HandlerFunc(m.RiskGroupById)
+	m.Router.Methods("PUT").Path("/riskgroups").Name("RiskGroupPut").HandlerFunc(m.RiskGroupPut)
+	m.Router.Methods("POST").Path("/riskgroups/{riskgroupId}").Name("RiskGroupUpdate").HandlerFunc(m.RiskGroupUpdate)
+	m.Router.Methods("DELETE").Path("/riskgroups/{riskgroupId}").Name("RiskGroupDelete").HandlerFunc(m.RiskGroupDelete)
 
 	m.Router.Methods("GET").Path("/problems").Name("ProblemIndex").HandlerFunc(m.ProblemIndex)
 	m.Router.Methods("GET").Path("/problems/{problemId}").Name("ProblemById").HandlerFunc(m.ProblemById)
