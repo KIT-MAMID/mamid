@@ -149,8 +149,6 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only allow changes to both observed and desired disabled slaves
-
 	var modelSlave model.Slave
 	if err = m.DB.First(&modelSlave, id).Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -158,7 +156,16 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, postSlave)
+	updatedModelSlave, err := ProjectSlaveToModelSlave(&postSlave)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// Only allow changes to both observed and desired disabled slaves
+
+	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, updatedModelSlave)
 	if dbError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, dbError)
@@ -170,18 +177,9 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Allow update
-
-	save, err := ProjectSlaveToModelSlave(&postSlave)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
-		return
-	}
-
 	// Persist to database
 
-	m.DB.Model(&modelSlave).Updates(&save)
+	m.DB.Model(&modelSlave).Updates(&updatedModelSlave)
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {
@@ -233,7 +231,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave Slave) (permissionError, dbError error) {
+func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
 
 	if currentSlave.ConfiguredState != model.SlaveStateDisabled {
 		return fmt.Errorf("slave's desired state must be = disabled"), nil
