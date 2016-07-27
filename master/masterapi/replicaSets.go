@@ -191,14 +191,18 @@ func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Allow delete
 
-	s := m.DB.Delete(&model.ReplicaSet{ID: id})
+	tx := m.DB.Begin()
+
+	s := tx.Delete(&model.ReplicaSet{ID: id})
 
 	if s.RowsAffected == 0 {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if s.Error != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -207,6 +211,17 @@ func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 	if s.RowsAffected > 1 {
 		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
 	}
+
+	// Trigger cluster allocator
+	// TODO having removed the replica set, the cluster allocator should mark the
+	// affected mongod's desired state as deleted
+	// check issue #9
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
+
 }
 
 func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) {
