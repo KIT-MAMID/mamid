@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 )
@@ -255,4 +256,17 @@ func initializeDB(dsn string) (db *gorm.DB, err error) {
 
 func migrateDB(db *gorm.DB) {
 	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{}, &CommunicationError{}, &SlaveError{})
+}
+
+func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
+	switch e := recover(); e {
+	case e == gorm.ErrInvalidTransaction:
+		log.Printf("ClusterAllocator: rolling back transaction after error: %v", e)
+		*rollbackError = tx.Rollback().Error
+		if *rollbackError != nil {
+			log.Printf("ClusterAllocator: failed rolling back transaction: %v", *rollbackError)
+		}
+	default:
+		panic(e)
+	}
 }

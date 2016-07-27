@@ -19,9 +19,7 @@ func main() {
 	db, err := model.InitializeFileFromFile("mamid.sqlite3")
 	dieOnError(err)
 
-	clusterAllocator := &master.ClusterAllocator{
-		DB: db,
-	}
+	clusterAllocator := &master.ClusterAllocator{}
 
 	mainRouter := mux.NewRouter().StrictSlash(true)
 
