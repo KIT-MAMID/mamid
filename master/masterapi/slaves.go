@@ -98,22 +98,31 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	err = m.DB.Create(&modelSlave).Error
+	tx := m.DB.Begin()
+
+	err = tx.Create(&modelSlave).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		tx.Rollback()
+		return
 	}
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		tx.Rollback()
 		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 
 	// Return created slave
 
@@ -153,14 +162,19 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only allow changes to both observed and desired disabled slaves
+
+	tx := m.DB.Begin()
+
 	var modelSlave model.Slave
-	modelSlaveRes := m.DB.First(&modelSlave, id)
+	modelSlaveRes := tx.First(&modelSlave, id)
 	if modelSlaveRes.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err = modelSlaveRes.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		tx.Rollback()
 		return
 	}
 
@@ -173,30 +187,40 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Only allow changes to both observed and desired disabled slaves
 
-	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, updatedModelSlave)
+	permissionError, dbError := changeToSlaveAllowed(tx, &modelSlave, updatedModelSlave)
 	if dbError != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, dbError)
+		tx.Rollback()
 		return
 	}
 	if permissionError != nil {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, permissionError)
+		tx.Rollback()
 		return
 	}
 
 	// Persist to database
-
-	err = m.DB.Save(&updatedModelSlave).Error
+	err = tx.Save(&updatedModelSlave).Error
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {
 		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, driverErr.Error())
+			tx.Rollback()
 			return
 		}
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
+
 }
 
 func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
@@ -208,35 +232,50 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
+	tx := m.DB.Begin()
+
 	// Can only delete disabled slaves
 	var currentSlave model.Slave
-	if err = m.DB.First(&currentSlave, id).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
+	if err = tx.First(&currentSlave, id).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		tx.Rollback()
 		return
 	}
 
 	if len(currentSlave.Mongods) != 0 {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprintf(w, "slave with id %d has active Mongods", currentSlave.ID)
+		tx.Rollback()
 		return
 	}
 
 	// Allow delete
 
-	s := m.DB.Delete(&model.Slave{ID: id})
+	s := tx.Delete(&model.Slave{ID: id})
 	if s.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		tx.Rollback()
 		return
-	}
-	if s.RowsAffected == 0 {
-		w.WriteHeader(http.StatusNotFound)
 	}
 
 	if s.RowsAffected > 1 {
 		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
 	}
+
+	if s.RowsAffected == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		tx.Rollback()
+		return
+	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 }
 
 func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
@@ -265,4 +304,16 @@ func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *
 
 	return nil, nil
 
+}
+
+func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {
+	err = m.ClusterAllocator.CompileMongodLayout(tx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cluster allocator failure: %s\n", err)
+		if err = tx.Rollback().Error; err != nil {
+			fmt.Fprintf(w, "cluster allocator rollback failure: %s\n", err)
+		}
+	}
+	return err
 }
