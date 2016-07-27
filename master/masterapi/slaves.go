@@ -305,15 +305,3 @@ func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *
 	return nil, nil
 
 }
-
-func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {
-	err = m.ClusterAllocator.CompileMongodLayout(tx)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "cluster allocator failure: %s\n", err)
-		if err = tx.Rollback().Error; err != nil {
-			fmt.Fprintf(w, "cluster allocator rollback failure: %s\n", err)
-		}
-	}
-	return err
-}
