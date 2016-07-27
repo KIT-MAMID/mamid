@@ -89,20 +89,29 @@ func (m *MasterAPI) RiskGroupPut(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	err = m.DB.Create(&modelRiskGroup).Error
+	tx := m.DB.Begin()
+
+	err = tx.Create(&modelRiskGroup).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		return
 	} else if err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 
 	// Return created risk group
 
@@ -138,12 +147,16 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Check if risk group with id exists
 
+	tx := m.DB.Begin()
+
 	var modelRiskGroup model.RiskGroup
-	findRes := m.DB.First(&modelRiskGroup, id)
+	findRes := tx.First(&modelRiskGroup, id)
 	if findRes.RecordNotFound() {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err = findRes.Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -160,16 +173,23 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	err = m.DB.Save(&save).Error
+	err = tx.Save(&save).Error
 
 	// Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
+
 }
 
 func (m *MasterAPI) RiskGroupDelete(w http.ResponseWriter, r *http.Request) {
@@ -181,42 +201,58 @@ func (m *MasterAPI) RiskGroupDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
+	tx := m.DB.Begin()
+
 	// Can only delete risk groups without slaves
 	var currentRiskGroup model.RiskGroup
-	findRes := m.DB.First(&currentRiskGroup, id)
+	findRes := tx.First(&currentRiskGroup, id)
 	if findRes.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
+		tx.Rollback()
 		return
 	} else if err = findRes.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		tx.Rollback()
 		fmt.Fprint(w, err.Error())
 		return
 	}
 
-	if err = m.DB.First(&currentRiskGroup, id).Related(&currentRiskGroup.Slaves, "Slaves").Error; err != nil {
+	if err = tx.First(&currentRiskGroup, id).Related(&currentRiskGroup.Slaves, "Slaves").Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		tx.Rollback()
 		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	if len(currentRiskGroup.Slaves) != 0 {
 		w.WriteHeader(http.StatusForbidden)
+		tx.Rollback()
 		fmt.Fprintf(w, "riskgroup with id %d has assigned slaves", currentRiskGroup.ID)
 		return
 	}
 
 	// Allow delete
 
-	s := m.DB.Delete(&model.RiskGroup{ID: id})
+	s := tx.Delete(&model.RiskGroup{ID: id})
 	if s.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		tx.Rollback()
 		return
 	}
 	if s.RowsAffected == 0 {
 		w.WriteHeader(http.StatusNotFound)
+		tx.Rollback()
 		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
+
 }
 
 func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
@@ -228,11 +264,14 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	// Check if risk group exists
 	// Special case: id == 0 => Get unassigned slaves
 	if id != 0 {
 		var riskgroup model.RiskGroup
-		riskgroupRes := m.DB.First(&riskgroup, id)
+		riskgroupRes := tx.First(&riskgroup, id)
 		if riskgroupRes.RecordNotFound() {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Riskgroup not found")
@@ -245,7 +284,7 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var slaves []*model.Slave
-	err = m.DB.Where("risk_group_id = ?", id).Find(&slaves).Error
+	err = tx.Where("risk_group_id = ?", id).Find(&slaves).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
@@ -282,13 +321,17 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	tx := m.DB.Begin()
+
 	var riskgroup model.RiskGroup
-	riskgroupRes := m.DB.First(&riskgroup, riskgroupId)
+	riskgroupRes := tx.First(&riskgroup, riskgroupId)
 	if riskgroupRes.RecordNotFound() {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Riskgroup not found")
 		return
 	} else if err = riskgroupRes.Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
 		return
@@ -297,7 +340,8 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 	// Only allow changes to both observed and desired disabled slaves
 
 	var modelSlave model.Slave
-	if err = m.DB.First(&modelSlave, slaveId).Error; err != nil {
+	if err = tx.First(&modelSlave, slaveId).Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -306,13 +350,15 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 	updatedSlave := modelSlave
 	updatedSlave.RiskGroupID = riskgroupId
 
-	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, &updatedSlave)
+	permissionError, dbError := changeToSlaveAllowed(tx, &modelSlave, &updatedSlave)
 	if dbError != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, dbError)
 		return
 	}
 	if permissionError != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, permissionError)
 		return
@@ -320,17 +366,16 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 
 	// Persist to database
 
-	err = m.DB.Save(&updatedSlave).Error
+	err = tx.Save(&updatedSlave).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
 	}
-	return
+
+	tx.Commit()
 }
 
 func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request) {
@@ -356,13 +401,17 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	tx := m.DB.Begin()
+
 	var riskgroup model.RiskGroup
-	riskgroupRes := m.DB.First(&riskgroup, riskgroupId)
+	riskgroupRes := tx.First(&riskgroup, riskgroupId)
 	if riskgroupRes.RecordNotFound() {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Riskgroup not found")
 		return
 	} else if err = riskgroupRes.Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
 		return
@@ -371,13 +420,15 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 	// Only allow changes to both observed and desired disabled slaves
 
 	var modelSlave model.Slave
-	if err = m.DB.First(&modelSlave, slaveId).Error; err != nil {
+	if err = tx.First(&modelSlave, slaveId).Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	if modelSlave.RiskGroupID != riskgroupId {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Slave not found in this riskgroup. (Slave is in other riskgroup)")
 		return
@@ -386,13 +437,15 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 	updatedSlave := modelSlave
 	updatedSlave.RiskGroupID = 0
 
-	permissionError, dbError := changeToSlaveAllowed(m.DB, &modelSlave, &updatedSlave)
+	permissionError, dbError := changeToSlaveAllowed(tx, &modelSlave, &updatedSlave)
 	if dbError != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, dbError)
 		return
 	}
 	if permissionError != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, permissionError)
 		return
@@ -400,15 +453,20 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 
 	// Persist to database
 
-	m.DB.Model(&modelSlave).Update("RiskGroupID", 0)
+	tx.Model(&modelSlave).Update("RiskGroupID", 0)
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		return
 	}
-	return
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 }
