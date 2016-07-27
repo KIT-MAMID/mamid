@@ -3,7 +3,6 @@ package master
 import (
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/jinzhu/gorm"
-	"log"
 )
 
 type ClusterAllocator struct {
@@ -18,23 +17,39 @@ const (
 
 type memberCountTuple map[persistence]uint
 
-func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) {
+func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 
-	replicaSets, err := c.replicaSets(tx)
-	_, _ = err.(error)
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		switch r {
+		case r == nil:
+			return
+		case r == gorm.ErrInvalidTransaction:
+			err = r.(error)
+		default:
+			panic(r)
+		}
+	}()
+
+	replicaSets := c.replicaSets(tx)
 	for _, r := range replicaSets {
 		c.removeUnneededMembers(tx, r)
 		c.addMembers(tx, r)
 	}
+
+	return err
 }
 
-func (c *ClusterAllocator) replicaSets(tx *gorm.DB) (replicaSets []ReplicaSet, err error) {
-	return []ReplicaSet{}, nil
+func (c *ClusterAllocator) replicaSets(tx *gorm.DB) []ReplicaSet {
+	return []ReplicaSet{}
 }
 
 func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r ReplicaSet) {
 	for persistence, count := range c.effectiveMemberCount(tx, r) {
-		c.removeUnneededMembersByPersistence(r, persistence, count)
+		c.removeUnneededMembersByPersistence(tx, r, persistence, count)
 	}
 }
 
@@ -46,7 +61,7 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r ReplicaSet) membe
 }
 
 func (c *ClusterAllocator) addMembers(tx *gorm.DB, r ReplicaSet) {
-	for persistence, count := range c.alreadyAddedMemberCount(r) {
+	for persistence, count := range c.alreadyAddedMemberCount(tx, r) {
 		c.addMembersByPersistence(tx, r, persistence, count)
 	}
 }
