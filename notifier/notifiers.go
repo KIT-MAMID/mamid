@@ -8,10 +8,6 @@ type Notifier interface {
 	SendProblem(problem Problem) error
 }
 
-type EmailContact struct {
-	Address string
-}
-
 type EmailNotifier struct {
 	Contacts []*EmailContact
 }

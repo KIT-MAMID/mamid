@@ -10,6 +10,7 @@ var lastProblems []Problem
 var notifiers []Notifier
 
 func main() {
+	//TODO
 	//notifiers[0] = email
 	// Wait forever
 	c := make(chan os.Signal, 1)

@@ -13,3 +13,9 @@ type Problem struct {
 	Slave uint
 	ReplicaSet uint
 }
+
+func (apiclient *APIClient) Receive (host string) []Problem {
+	var problems []Problem
+	//[GET]
+	return  problems
+}
