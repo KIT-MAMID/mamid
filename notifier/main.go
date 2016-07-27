@@ -3,20 +3,15 @@ package main
 import (
 	"os"
 	"os/signal"
-	"fmt"
+	//"fmt"
 )
 var email EmailNotifier
 var lastProblems []Problem
-//var notifiers []Notifier
-type Problem struct{
-
-}
+var notifiers []Notifier
 
 func main() {
+	//notifiers[0] = email
 	// Wait forever
-	//Test
-	var problem Problem
-	notify(problem)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	var currentProblems []Problem
@@ -25,9 +20,7 @@ func main() {
                 notify(currentProblems[i])
         }
 	<-c
-	fmt.Println("A1");
 	os.Exit(0)
-	fmt.Println("B");
 	//receive Problems through API
 }
 func diffProblems(received []Problem) []Problem {
@@ -42,6 +35,8 @@ func diffProblems(received []Problem) []Problem {
 }
 
 func notify(problem Problem){
-	email.SendProblem(problem)
+	for i :=0; i < len(notifiers); i++{
+		notifiers[i].SendProblem(problem)
+	}
 }
 
