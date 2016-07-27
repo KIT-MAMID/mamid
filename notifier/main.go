@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	//"fmt"
 )
+var p Parser
 var email EmailNotifier
 var lastProblems []Problem
 var notifiers []Notifier
@@ -13,6 +14,7 @@ func main() {
 	//TODO
 	//notifiers[0] = email
 	// Wait forever
+	p.Parse("/home/niklas/GoWorkspace/src/github.com/KIT-MAMID/mamid/notifier")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	var currentProblems []Problem
