@@ -69,11 +69,12 @@ mamidApp.controller('problemIndexController', function($scope, $http, SlaveServi
 });
 
 mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGroupService) {
-    $scope.problems = RiskGroupService.query();
+    $scope.riskgroups = RiskGroupService.query();
     $scope.new_riskgroup = new RiskGroupService();
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create();
         $scope.new_riskgroup = null;
+        $scope.riskgroups = RiskGroupService.query();
     };
 });
 
