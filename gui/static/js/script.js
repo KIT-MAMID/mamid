@@ -1,35 +1,35 @@
 var mamidApp = angular.module('mamidApp', ['ngRoute', 'ngResource']);
 
 mamidApp.config(function ($routeProvider) {
-   $routeProvider
-       .when('/', {
-           templateUrl: 'pages/home.html',
-           controller: 'mainController'
-       })
-       .when('/slaves', {
-           templateUrl: 'pages/slaves.html',
-           controller: 'slaveIndexController'
-       })
-       .when('/slaves/:slaveId', {
-           templateUrl: 'pages/slave.html',
-           controller: 'slaveByIdController'
-       })
-       .when('/replicasets', {
-           templateUrl: 'pages/replicasets.html',
-           controller: 'replicasetIndexController'
-       })
-       .when('/replicasets/:replicasetId', {
-           templateUrl: 'pages/replicaset.html',
-           controller: 'replicasetByIdController'
-       })
-       .when('/problems', {
-           templateUrl: 'pages/problems.html',
-           controller: 'problemIndexController'
-       })
-       .when('/riskgroups', {
-           templateUrl: 'pages/riskgroups.html',
-           controller: 'riskGroupIndexController'
-       })
+    $routeProvider
+        .when('/', {
+            templateUrl: 'pages/home.html',
+            controller: 'mainController'
+        })
+        .when('/slaves', {
+            templateUrl: 'pages/slaves.html',
+            controller: 'slaveIndexController'
+        })
+        .when('/slaves/:slaveId', {
+            templateUrl: 'pages/slave.html',
+            controller: 'slaveByIdController'
+        })
+        .when('/replicasets', {
+            templateUrl: 'pages/replicasets.html',
+            controller: 'replicasetIndexController'
+        })
+        .when('/replicasets/:replicasetId', {
+            templateUrl: 'pages/replicaset.html',
+            controller: 'replicasetByIdController'
+        })
+        .when('/problems', {
+            templateUrl: 'pages/problems.html',
+            controller: 'problemIndexController'
+        })
+        .when('/riskgroups', {
+            templateUrl: 'pages/riskgroups.html',
+            controller: 'riskGroupIndexController'
+        })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
@@ -40,8 +40,7 @@ mamidApp.factory('SlaveService', function ($resource) {
 });
 
 mamidApp.factory('ProblemService', function ($resource) {
-    return $resource('/api/problems/:problem', {problem: "@id"}, {
-    });
+    return $resource('/api/problems/:problem', {problem: "@id"}, {});
 });
 
 mamidApp.factory('ReplicaSetService', function ($resource) {
@@ -53,23 +52,28 @@ mamidApp.factory('ReplicaSetService', function ($resource) {
 mamidApp.factory('RiskGroupService', function ($resource) {
     return $resource('/api/riskgroups/:riskgroup', {riskgroup: "@id"}, {
         create: {method: 'put'},
-        getUnassignedSlaves: {method: 'get', url: '/api/riskgroups/0/slaves/', isArray:true}
+        getUnassignedSlaves: {method: 'get', url: '/api/riskgroups/0/slaves/', isArray: true},
+        assignToRiskGroup: {
+            method: 'put',
+            url: '/api/riskgroups/:riskgroup/slaves/:slave',
+            params: {riskgroup: "@riskgroup", slave: "@slave"}
+        }
     });
 });
 
-mamidApp.controller('mainController', function($scope) {
+mamidApp.controller('mainController', function ($scope) {
     $scope.message = 'Greetings from the controller';
 });
 
-mamidApp.controller('slaveIndexController', function($scope, $http, SlaveService) {
+mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
     $scope.slaves = SlaveService.query()
 });
 
-mamidApp.controller('problemIndexController', function($scope, $http, SlaveService) {
+mamidApp.controller('problemIndexController', function ($scope, $http, SlaveService) {
     $scope.problems = ProblemService.query()
 });
 
-mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGroupService) {
+mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGroupService) {
     $scope.riskgroups = RiskGroupService.query();
     $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     $scope.new_riskgroup = new RiskGroupService();
@@ -78,12 +82,16 @@ mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGrou
         $scope.new_riskgroup = null;
         $scope.riskgroups = RiskGroupService.query();
     };
+    $scope.assignToRiskGroup = function (slave) {
+        window.console.log(slave);
+        RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup})
+    };
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
     })
 });
 
-mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams, $location, SlaveService) {
+mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService) {
     var slaveId = $routeParams['slaveId'];
     $scope.is_create_view = slaveId === "new";
     if ($scope.is_create_view) {
@@ -97,7 +105,7 @@ mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams,
         $scope.slave = SlaveService.get({slave: slaveId});
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
-        $scope.slave.$promise.then(function(){
+        $scope.slave.$promise.then(function () {
             $scope.edit_slave = angular.copy($scope.slave);
         });
     }
@@ -124,42 +132,42 @@ mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams,
     }
 });
 
-mamidApp.controller('replicasetIndexController', function($scope, $http, ReplicaSetService) {
+mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
     $scope.replicasets = ReplicaSetService.query()
 });
 
 mamidApp.controller('replicasetByIdController',
-    function($scope, $http, $routeParams, $location, SlaveService, ReplicaSetService) {
-    var replicasetId = $routeParams['replicasetId'];
-    $scope.is_create_view = replicasetId === "new";
-    if ($scope.is_create_view) {
-        $scope.replicaset = new ReplicaSetService();
-
-        //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
-        $scope.edit_replicaset = angular.copy($scope.replicaset);
-    } else {
-        $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
-        $scope.replicaset_slaves = SlaveService.queryByReplicaSet({replicaset: replicasetId});
-
-        //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
-        $scope.replicaset.$promise.then(function(){
-            $scope.edit_replicaset = angular.copy($scope.replicaset);
-        });
-    }
-
-    $scope.updateReplicaSet = function () {
-        angular.copy($scope.edit_replicaset, $scope.replicaset);
+    function ($scope, $http, $routeParams, $location, SlaveService, ReplicaSetService) {
+        var replicasetId = $routeParams['replicasetId'];
+        $scope.is_create_view = replicasetId === "new";
         if ($scope.is_create_view) {
-            $scope.replicaset.$create();
-        } else {
-            $scope.replicaset.$save();
-        }
-        $location.path("/replicasets");
-    };
+            $scope.replicaset = new ReplicaSetService();
 
-    $scope.deleteReplicaSet = function () {
-        $scope.replicaset.$delete();
-        $('#confirm_remove').modal('hide');
-        $location.path("/replicasets");
-    };
-});
+            //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
+            $scope.edit_replicaset = angular.copy($scope.replicaset);
+        } else {
+            $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
+            $scope.replicaset_slaves = SlaveService.queryByReplicaSet({replicaset: replicasetId});
+
+            //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
+            $scope.replicaset.$promise.then(function () {
+                $scope.edit_replicaset = angular.copy($scope.replicaset);
+            });
+        }
+
+        $scope.updateReplicaSet = function () {
+            angular.copy($scope.edit_replicaset, $scope.replicaset);
+            if ($scope.is_create_view) {
+                $scope.replicaset.$create();
+            } else {
+                $scope.replicaset.$save();
+            }
+            $location.path("/replicasets");
+        };
+
+        $scope.deleteReplicaSet = function () {
+            $scope.replicaset.$delete();
+            $('#confirm_remove').modal('hide');
+            $location.path("/replicasets");
+        };
+    });

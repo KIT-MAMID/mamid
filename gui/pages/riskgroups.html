@@ -31,11 +31,12 @@
             <ul class="list-group">
                 <li ng-repeat="slave in unassigned_slaves" class="list-group-item">{{slave.hostname}}
                         <span class="pull-right">Assign to
-                            <select>
-                                <option value="0" selected>Select group..</option>
+                            <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave)">
+                                <option value="" selected>Select group..</option>
                                 <option ng-repeat="riskgroup in riskgroups"
                                         value="{{riskgroup.id}}">{{riskgroup.name}}</option>
                             </select>
+                            <b>{{slave.riskgroup}}</b>
                         </span>
                 </li>
             </ul>
