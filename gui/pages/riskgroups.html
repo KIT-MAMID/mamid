@@ -43,8 +43,9 @@
         </div>
     </div>
     <div ng-repeat="riskgroup in riskgroups" class="panel panel-default">
-        <div class="panel-heading" data-toggle="collapse" role="tab" id="heading{{riskgroup.id}}">
-            <h4 class="panel-title">
+        <div class="panel-heading clearfix" data-toggle="collapse" role="tab" id="heading{{riskgroup.id}}">
+            <span class="pull-right"><button class="btn btn-danger" data-toggle="modal" data-target="#confirm_remove{{riskgroup.id}}"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></span>
+            <h4 class="panel-title" style="padding-top: 7.2px;">
                 <a class="collapsed" role="button" href="" data-toggle="collapse"
                    data-target="#collapse{{riskgroup.id}}" data-parent="#accordion" aria-expanded="false"
                    aria-controls="collapse{{riskgroup.id}}" ng-click="getSlaves(riskgroup)">
@@ -58,6 +59,26 @@
                 <li ng-repeat="slave in riskgroup.slaves" class="list-group-item">{{slave.hostname}}
                 </li>
             </ul>
+        </div>
+    </div>
+</div>
+
+
+<div ng-repeat="riskgroup in riskgroups" class="modal fade" id="confirm_remove{{riskgroup.id}}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel{{riskgroup.id}}">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cancel"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel{{riskgroup.id}}">Confirm Risk Group Removal</h4>
+            </div>
+            <div class="modal-body">
+                You are about to remove the risk group {{riskgroup.name}}.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger">Remove Risk Group {{riskgroup.name}}</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
