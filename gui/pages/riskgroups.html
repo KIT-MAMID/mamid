@@ -18,7 +18,8 @@
     <div class="panel panel-default">
         <div class="panel-heading" role="tab" id="headingOne">
             <h4 class="panel-title">
-                <a role="button" data-toggle="collapse" data-parent="#accordion" data-target="#collapseOne" href="" aria-expanded="true"
+                <a role="button" data-toggle="collapse" data-parent="#accordion" data-target="#collapseOne" href=""
+                   aria-expanded="true"
                    aria-controls="collapseOne">
                     Unassigned slaves
                 </a><span data-toggle="tooltip" data-placement="right"
@@ -27,11 +28,17 @@
             </h4>
         </div>
         <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-            <div class="panel-body">
-                <ul>
-                    <li ng-repeat="slave in unassigned_slaves">{{slave.hostname}}</li>
-                </ul>
-            </div>
+            <ul class="list-group">
+                <li ng-repeat="slave in unassigned_slaves" class="list-group-item">{{slave.hostname}}
+                        <span class="pull-right">Assign to
+                            <select>
+                                <option value="0" selected>Select group..</option>
+                                <option ng-repeat="riskgroup in riskgroups"
+                                        value="{{riskgroup.id}}">{{riskgroup.name}}</option>
+                            </select>
+                        </span>
+                </li>
+            </ul>
         </div>
     </div>
     <div ng-repeat="riskgroup in riskgroups" class="panel panel-default">
