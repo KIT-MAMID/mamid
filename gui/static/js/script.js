@@ -84,8 +84,8 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
         $scope.riskgroups = RiskGroupService.query();
     };
     $scope.assignToRiskGroup = function (slave) {
-        window.console.log(slave);
-        RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup})
+        RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup});
+        $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     };
     $scope.getSlaves = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.getSlaves({riskgroup: riskgroup.id});
