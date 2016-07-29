@@ -44,23 +44,25 @@ func (m *MasterAPI) ReplicaSetById(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	var replSets []model.ReplicaSet
-	err = m.DB.Find(&replSets, &model.Slave{ID: id}).Error
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "id may not be 0")
+		return
+	}
 
-	if err != nil {
+	var replSet model.ReplicaSet
+	res := m.DB.First(&replSet, id)
+
+	if res.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err = res.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	if len(replSets) == 0 { // Not found?
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if len(replSets) > 1 {
-		log.Printf("inconsistency: multiple slaves for slave.ID = %d found in database", len(replSets))
-	}
-	json.NewEncoder(w).Encode(ProjectModelReplicaSetToReplicaSet(&replSets[0]))
+	json.NewEncoder(w).Encode(ProjectModelReplicaSetToReplicaSet(&replSet))
 	return
 }
 

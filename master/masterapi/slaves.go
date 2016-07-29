@@ -49,23 +49,26 @@ func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	var slaves []model.Slave
-	err = m.DB.Find(&slaves, &model.Slave{ID: id}).Error
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "id may not be 0")
+		return
+	}
 
-	if err != nil {
+	var slave model.Slave
+	res := m.DB.First(&slave, id)
+
+	if res.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err = res.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	if len(slaves) == 0 { // Not found?
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 
-	if len(slaves) > 1 {
-		log.Printf("inconsistency: multiple slaves for slave.ID = %d found in database", len(slaves))
-	}
-	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(&slaves[0]))
+	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(&slave))
 	return
 }
 

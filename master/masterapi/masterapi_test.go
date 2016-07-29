@@ -692,6 +692,20 @@ func TestMasterAPI_RiskGroupById(t *testing.T) {
 	assert.Equal(t, "risk1", getRiskGroupResult.Name)
 }
 
+func TestMasterAPI_RiskGroupById_zero(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	// Test correct get
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/riskgroups/0", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 400, resp.Code)
+}
+
 func TestMasterAPI_RiskGroupPut(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)

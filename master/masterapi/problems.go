@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -47,23 +46,25 @@ func (m *MasterAPI) ProblemById(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	var problems []model.Problem
-	err = m.DB.Find(&problems, &model.Slave{ID: id}).Error
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "id may not be 0")
+		return
+	}
 
-	if err != nil {
+	var problem model.Problem
+	res := m.DB.First(&problem, id)
+
+	if res.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err = res.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	if len(problems) == 0 { // Not found?
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if len(problems) > 1 {
-		log.Printf("inconsistency: multiple problems for problem.ID = %d found in database", len(problems))
-	}
-	json.NewEncoder(w).Encode(ProjectModelProblemToProblem(&problems[0]))
+	json.NewEncoder(w).Encode(ProjectModelProblemToProblem(&problem))
 	return
 }
 

@@ -40,20 +40,26 @@ func (m *MasterAPI) RiskGroupById(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	var riskgroups []model.RiskGroup
-	err = m.DB.Find(&riskgroups, &model.RiskGroup{ID: id}).Error
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "id may not be 0")
+		return
+	}
 
-	if err != nil {
+	var riskgroup model.RiskGroup
+	res := m.DB.First(&riskgroup, id)
+
+	if res.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err = res.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	if len(riskgroups) == 0 { // Not found?
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 
-	json.NewEncoder(w).Encode(ProjectModelRiskGroupToRiskGroup(&riskgroups[0]))
+	json.NewEncoder(w).Encode(ProjectModelRiskGroupToRiskGroup(&riskgroup))
 	return
 }
 
