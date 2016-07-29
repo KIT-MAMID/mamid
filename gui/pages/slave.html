@@ -1,5 +1,5 @@
-<h1 class="page-header" ng-if="!is_create_view">Edit slave</h1>
-<h1 class="page-header" ng-if="is_create_view">New slave</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Slave</h1>
+<h1 class="page-header" ng-if="is_create_view">New Slave</h1>
 
 <div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view">
     <h4>{{ slave.hostname }} is in
@@ -8,7 +8,8 @@
 </div>
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3 class="panel-title">Slave Settings</h3>
+        <h3 class="panel-title" ng-if="!is_create_view">Slave Settings</h3>
+        <h3 class="panel-title" ng-if="is_create_view">New Slave</h3>
     </div>
     <div class="panel-body">
         <form ng-submit="updateSlave()">
@@ -52,8 +53,11 @@
                         <td colspan="2"></td>
                         <td>
                             <button type="submit"
-                                    class="btn btn-primary pull-right">
+                                    class="btn btn-primary pull-right" ng-if="!is_create_view">
                                 Apply</button>
+                            <button type="submit"
+                                    class="btn btn-success pull-right" ng-if="is_create_view">
+                                Create Slave</button>
                         </td>
                     </tr>
                 </table>
