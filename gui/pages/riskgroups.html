@@ -76,7 +76,7 @@
                 You are about to remove the risk group {{riskgroup.name}}.
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger">Remove Risk Group {{riskgroup.name}}</button>
+                <button type="button" ng-click="removeRiskGroup(riskgroup)" class="btn btn-danger">Remove Risk Group {{riskgroup.name}}</button>
                 <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
             </div>
         </div>

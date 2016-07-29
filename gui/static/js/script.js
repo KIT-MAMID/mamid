@@ -58,7 +58,8 @@ mamidApp.factory('RiskGroupService', function ($resource) {
             url: '/api/riskgroups/:riskgroup/slaves/:slave',
             params: {riskgroup: "@riskgroup", slave: "@slave"}
         },
-        getSlaves: {method: 'get', url: '/api/riskgroups/:riskgroup/slaves', isArray: true}
+        getSlaves: {method: 'get', url: '/api/riskgroups/:riskgroup/slaves', isArray: true},
+        remove: {method: 'delete'}
     });
 });
 
@@ -89,6 +90,11 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     };
     $scope.getSlaves = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.getSlaves({riskgroup: riskgroup.id});
+    }
+    $scope.removeRiskGroup = function (riskgroup) {
+        riskgroup.slaves = RiskGroupService.remove({riskgroup: riskgroup.id});
+        $scope.riskgroups = RiskGroupService.query();
+        $('#confirm_remove'+riskgroup.id).modal('hide');
     }
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
