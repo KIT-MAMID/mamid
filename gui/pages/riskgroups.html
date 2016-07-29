@@ -1,0 +1,15 @@
+<p>
+    <small>Group your slaves into groups which share an common (physical) fault source to reduce replica set
+        downtimes in case of a fault.
+    </small>
+</p>
+<form ng-submit="createRiskGroup()">
+    <table width="100%">
+        <tr>
+            <td><input type="text" placeholder="New Risk Group Name" class="form-control" ng-model="new_riskgroup.name"/></td>
+            <td>
+                <button class="btn btn-success">Create</button>
+            </td>
+        </tr>
+    </table>
+</form>
