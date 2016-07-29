@@ -212,33 +212,32 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	}
 	id := uint(id64)
 
-	if id == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Id may not be 0")
-		return
+	// Check if risk group exists
+	// Special case: id == 0 => Get unassigned slaves
+	if id != 0 {
+		var riskgroup model.RiskGroup
+		riskgroupRes := m.DB.First(&riskgroup, id)
+		if riskgroupRes.RecordNotFound() {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "Riskgroup not found")
+			return
+		} else if err = riskgroupRes.Error; err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
+			return
+		}
 	}
 
-	var riskgroup model.RiskGroup
-	riskgroupRes := m.DB.First(&riskgroup, id)
-	if riskgroupRes.RecordNotFound() {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Riskgroup not found")
-		return
-	} else if err = riskgroupRes.Error; err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error())
-		return
-	}
-
-	err = m.DB.Model(&riskgroup).Related(&riskgroup.Slaves).Error
+	var slaves []*model.Slave
+	err = m.DB.Where("risk_group_id = ?", id).Find(&slaves).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
 		return
 	}
 
-	out := make([]*Slave, len(riskgroup.Slaves))
-	for i, v := range riskgroup.Slaves {
+	out := make([]*Slave, len(slaves))
+	for i, v := range slaves {
 		out[i] = ProjectModelSlaveToSlave(v)
 	}
 	json.NewEncoder(w).Encode(out)

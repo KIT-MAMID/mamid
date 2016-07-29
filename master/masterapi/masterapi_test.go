@@ -78,6 +78,19 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 	}
 	assert.NoError(t, db.Create(&dbReplicaset).Error)
 
+	dbSlave3 := model.Slave{
+		ID:                   3,
+		Hostname:             "host3",
+		Port:                 1,
+		MongodPortRangeBegin: 100,
+		MongodPortRangeEnd:   200,
+		PersistentStorage:    false,
+		Mongods:              []*model.Mongod{},
+		ConfiguredState:      model.SlaveStateDisabled,
+		RiskGroupID:          0,
+	}
+	assert.NoError(t, db.Create(&dbSlave3).Error)
+
 	utc, err := time.LoadLocation("UTC")
 	assert.NoError(t, err)
 
@@ -126,7 +139,7 @@ func TestMasterAPI_SlaveIndex(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&getSlaveResult)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 2, len(getSlaveResult))
+	assert.Equal(t, 3, len(getSlaveResult))
 	assert.Equal(t, "host1", getSlaveResult[0].Hostname)
 	assert.EqualValues(t, 1, getSlaveResult[0].Port)
 	assert.EqualValues(t, 2, getSlaveResult[0].MongodPortRangeBegin)
@@ -892,4 +905,25 @@ func TestMasterAPI_RiskGroupGetSlaves(t *testing.T) {
 
 	assert.Equal(t, 1, len(getSlaveResult))
 	assert.Equal(t, "host2", getSlaveResult[0].Hostname)
+}
+
+func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	// Test correct get
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/riskgroups/0/slaves", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getSlaveResult []Slave
+	err = json.NewDecoder(resp.Body).Decode(&getSlaveResult)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(getSlaveResult))
+	assert.Equal(t, "host3", getSlaveResult[0].Hostname)
 }
