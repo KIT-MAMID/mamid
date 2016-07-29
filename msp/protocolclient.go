@@ -7,13 +7,17 @@ import (
 	"net/http"
 )
 
-type MSPClient struct {
-	target     HostPort
+type MSPClient interface {
+	RequestStatus(Target HostPort) ([]Mongod, Error)
+	EstablishMongodState(Target HostPort, m Mongod) Error
+}
+
+type MSPClientImpl struct {
 	httpClient http.Client
 }
 
-func (c MSPClient) RequestStatus() ([]Mongod, Error) {
-	resp, err := c.httpClient.Get(fmt.Sprintf("http://%s:%d/msp/status", c.target.Hostname, c.target.Port))
+func (c MSPClientImpl) RequestStatus(Target HostPort) ([]Mongod, Error) {
+	resp, err := c.httpClient.Get(fmt.Sprintf("http://%s:%d/msp/status", Target.Hostname, Target.Port))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			var result []Mongod
@@ -29,10 +33,10 @@ func (c MSPClient) RequestStatus() ([]Mongod, Error) {
 	}
 }
 
-func (c MSPClient) EstablishMongodState(m Mongod) Error {
+func (c MSPClientImpl) EstablishMongodState(Target HostPort, m Mongod) Error {
 	buffer := new(bytes.Buffer)
 	json.NewEncoder(buffer).Encode(m)
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", c.target.Hostname, c.target.Port), buffer)
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", Target.Hostname, Target.Port), buffer)
 	resp, err := c.httpClient.Do(req)
 
 	if err == nil {

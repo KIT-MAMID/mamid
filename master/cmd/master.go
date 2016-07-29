@@ -4,6 +4,7 @@ import (
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/KIT-MAMID/mamid/master/masterapi"
 	"github.com/KIT-MAMID/mamid/model"
+	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -11,6 +12,9 @@ import (
 func main() {
 
 	// Setup controllers
+
+	bus := master.NewBus()
+	go bus.Run()
 
 	db, err := model.InitializeInMemoryDB("")
 	dieOnError(err)
@@ -30,6 +34,13 @@ func main() {
 		Router:           mainRouter.PathPrefix("/api/").Subrouter(),
 	}
 	masterAPI.Setup()
+
+	monitor := master.Monitor{
+		DB:              db,
+		BusWriteChannel: bus.GetNewWriteChannel(),
+		MSPClient:       msp.MSPClientImpl{},
+	}
+	go monitor.Run()
 
 	// Listen
 

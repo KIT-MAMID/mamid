@@ -11,11 +11,11 @@ const (
 
 type HostPort struct {
 	Hostname string
-	Port     uint
+	Port     uint16
 }
 
 type Mongod struct {
-	Port                    uint
+	Port                    uint16
 	ReplicaSetName          string
 	ReplicaSetMembers       []HostPort
 	ShardingConfigServer    bool

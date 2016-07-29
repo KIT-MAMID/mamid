@@ -8,7 +8,7 @@ type StatusMessage interface {
 type ConnectionStatus struct {
 	Unreachable        bool
 	Slave              Slave
-	CommunicationError msp.CommunicationError
+	CommunicationError msp.CommunicationError // Only valid if Unreachable=true
 }
 
 type MongodMatchStatus struct {

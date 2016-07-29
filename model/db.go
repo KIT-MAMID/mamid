@@ -146,9 +146,20 @@ type MSPError struct {
 	// Union type for the different errors returned by msp
 	// Necessary to decouple MSP from ORM / DB logic
 	ID                 uint `gorm:"primary_key"`
-	ReplicaSetMembers  []ReplicaSetMember
-	CommunicationError msp.CommunicationError
-	SlaveError         msp.SlaveError
+	CommunicationError CommunicationError
+	SlaveError         SlaveError
+}
+
+type CommunicationError struct {
+	msp.CommunicationError
+	ID         uint `gorm:"primary_key"`
+	MSPErrorID uint
+}
+
+type SlaveError struct {
+	msp.SlaveError
+	ID         uint `gorm:"primary_key"`
+	MSPErrorID uint
 }
 
 type Problem struct {
@@ -217,5 +228,5 @@ func initializeDB(dsn string) (db *gorm.DB, err error) {
 }
 
 func migrateDB(db *gorm.DB) {
-	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
+	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{}, &CommunicationError{}, &SlaveError{})
 }
