@@ -28,6 +28,9 @@
         </div>
         <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
             <div class="panel-body">
+                <ul>
+                    <li ng-repeat="slave in unassigned_slaves">{{slave.hostname}}</li>
+                </ul>
             </div>
         </div>
     </div>

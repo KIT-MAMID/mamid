@@ -52,7 +52,8 @@ mamidApp.factory('ReplicaSetService', function ($resource) {
 
 mamidApp.factory('RiskGroupService', function ($resource) {
     return $resource('/api/riskgroups/:riskgroup', {riskgroup: "@id"}, {
-        create: {method: 'put'}
+        create: {method: 'put'},
+        getUnassignedSlaves: {method: 'get', url: '/api/riskgroups/0/slaves/', isArray:true}
     });
 });
 
@@ -70,6 +71,7 @@ mamidApp.controller('problemIndexController', function($scope, $http, SlaveServi
 
 mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGroupService) {
     $scope.riskgroups = RiskGroupService.query();
+    $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     $scope.new_riskgroup = new RiskGroupService();
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create();
