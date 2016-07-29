@@ -76,6 +76,9 @@ mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGrou
         $scope.new_riskgroup = null;
         $scope.riskgroups = RiskGroupService.query();
     };
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    })
 });
 
 mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams, $location, SlaveService) {
