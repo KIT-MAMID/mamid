@@ -1,6 +1,7 @@
 package master
 
 import (
+	"log"
 	"reflect"
 	"sync"
 )
@@ -77,8 +78,13 @@ func (b *Bus) Run() {
 			//Send to read channels
 			b.readChannelsMutex.Lock()
 			for _, channel := range b.readChannels {
-				//TODO: Check if channel is full
-				channel <- recv.Interface()
+
+				//Only send to bus if channel is not full
+				select {
+				case channel <- recv.Interface():
+				default:
+					log.Println("Bus channel full - dropping message")
+				}
 			}
 			b.readChannelsMutex.Unlock()
 		}
