@@ -26,6 +26,10 @@ mamidApp.config(function ($routeProvider) {
            templateUrl: 'pages/problems.html',
            controller: 'problemIndexController'
        })
+       .when('/riskgroups', {
+           templateUrl: 'pages/riskgroups.html',
+           controller: 'riskGroupIndexController'
+       })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
@@ -46,6 +50,12 @@ mamidApp.factory('ReplicaSetService', function ($resource) {
     });
 });
 
+mamidApp.factory('RiskGroupService', function ($resource) {
+    return $resource('/api/riskgroups/:riskgroup', {riskgroup: "@id"}, {
+        create: {method: 'put'}
+    });
+});
+
 mamidApp.controller('mainController', function($scope) {
     $scope.message = 'Greetings from the controller';
 });
@@ -58,6 +68,14 @@ mamidApp.controller('problemIndexController', function($scope, $http, SlaveServi
     $scope.problems = ProblemService.query()
 });
 
+mamidApp.controller('riskGroupIndexController', function($scope, $http, RiskGroupService) {
+    $scope.problems = RiskGroupService.query();
+    $scope.new_riskgroup = new RiskGroupService();
+    $scope.createRiskGroup = function () {
+        $scope.new_riskgroup.$create();
+        $scope.new_riskgroup = null;
+    };
+});
 
 mamidApp.controller('slaveByIdController', function($scope, $http, $routeParams, $location, SlaveService) {
     var slaveId = $routeParams['slaveId'];
