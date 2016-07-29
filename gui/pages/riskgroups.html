@@ -47,15 +47,17 @@
             <h4 class="panel-title">
                 <a class="collapsed" role="button" href="" data-toggle="collapse"
                    data-target="#collapse{{riskgroup.id}}" data-parent="#accordion" aria-expanded="false"
-                   aria-controls="collapse{{riskgroup.id}}">
+                   aria-controls="collapse{{riskgroup.id}}" ng-click="getSlaves(riskgroup)">
                     {{riskgroup.name}}
                 </a>
             </h4>
         </div>
         <div id="collapse{{riskgroup.id}}" class="panel-collapse collapse" role="tabpanel"
              aria-labelledby="heading{{riskgroup.id}}">
-            <div class="panel-body">
-            </div>
+            <ul class="list-group">
+                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item">{{slave.hostname}}
+                </li>
+            </ul>
         </div>
     </div>
 </div>

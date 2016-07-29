@@ -57,7 +57,8 @@ mamidApp.factory('RiskGroupService', function ($resource) {
             method: 'put',
             url: '/api/riskgroups/:riskgroup/slaves/:slave',
             params: {riskgroup: "@riskgroup", slave: "@slave"}
-        }
+        },
+        getSlaves: {method: 'get', url: '/api/riskgroups/:riskgroup/slaves', isArray: true}
     });
 });
 
@@ -86,6 +87,9 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
         window.console.log(slave);
         RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup})
     };
+    $scope.getSlaves = function (riskgroup) {
+        riskgroup.slaves = RiskGroupService.getSlaves({riskgroup: riskgroup.id});
+    }
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
     })
