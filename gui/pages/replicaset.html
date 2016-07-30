@@ -27,13 +27,14 @@
 </div>
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3 class="panel-title">Replica Set Settings</h3>
+        <h3 class="panel-title" ng-if="!is_create_view">Replica Set Settings</h3>
+        <h3 class="panel-title" ng-if="is_create_view">New Set Settings</h3>
     </div>
     <div class="panel-body">
         <form ng-submit="updateReplicaSet()">
             <table width="100%">
                 <tr>
-                    <th>Replica set name</th>
+                    <th>Replica Set name</th>
                     <td colspan="2">
                         <input ng-disabled="!is_create_view" type="text" class="form-control" ng-model="edit_replicaset.name"/>
                     </td>
@@ -60,7 +61,8 @@
                 <tr>
                     <td colspan="2"></td>
                     <td>
-                        <button type="submit" class="btn btn-primary pull-right">Apply</button>
+                        <button type="submit" ng-if="!is_create_view" class="btn btn-primary pull-right">Apply</button>
+                        <button type="submit" ng-if="is_create_view" class="btn btn-success pull-right">Create</button>
                     </td>
                 </tr>
             </table>
