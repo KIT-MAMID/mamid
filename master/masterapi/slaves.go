@@ -20,6 +20,7 @@ type Slave struct {
 	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
 	PersistentStorage    bool   `json:"persistent_storage"`
 	ConfiguredState      string `json:"configured_state"`
+	RiskGroupID          uint   `json:"risk_group_id"`
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
@@ -237,6 +238,16 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 
 func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
 
+	//Allow change of state if nothing else is changed
+	if currentSlave.ID == updatedSlave.ID &&
+		currentSlave.Hostname == updatedSlave.Hostname &&
+		currentSlave.Port == updatedSlave.Port &&
+		currentSlave.MongodPortRangeBegin == updatedSlave.MongodPortRangeBegin &&
+		currentSlave.MongodPortRangeEnd == updatedSlave.MongodPortRangeEnd &&
+		currentSlave.PersistentStorage == updatedSlave.PersistentStorage &&
+		currentSlave.RiskGroupID == updatedSlave.RiskGroupID {
+		return nil, nil
+	}
 	if currentSlave.ConfiguredState != model.SlaveStateDisabled {
 		return fmt.Errorf("slave's desired state must be = disabled"), nil
 	}

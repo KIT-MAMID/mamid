@@ -302,7 +302,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	//Test valid state change
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":200,\"persistent_storage\":false,\"configured_state\":\"active\"}"
+	req_body := "{\"id\":2,\"hostname\":\"host2\",\"slave_port\":1,\"mongod_port_range_begin\":100,\"mongod_port_range_end\":200,\"persistent_storage\":false,\"configured_state\":\"active\", \"risk_group_id\":1}"
 	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -313,6 +313,26 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	db.First(&updatedSlave, 2)
 
 	assert.Equal(t, model.SlaveStateActive, updatedSlave.ConfiguredState)
+}
+
+func TestMasterAPI_SlaveUpdate_change_desired_state_disabled(t *testing.T) {
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test valid state change
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":1,\"hostname\":\"host1\",\"slave_port\":1,\"mongod_port_range_begin\":2,\"mongod_port_range_end\":3,\"persistent_storage\":true,\"configured_state\":\"disabled\", \"risk_group_id\":2}"
+	req, err := http.NewRequest("POST", "/api/slaves/1", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 200, resp.Code)
+
+	var updatedSlave model.Slave
+	db.First(&updatedSlave, 2)
+
+	assert.Equal(t, model.SlaveStateDisabled, updatedSlave.ConfiguredState)
 }
 
 func TestMasterAPI_SlaveDelete(t *testing.T) {
