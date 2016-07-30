@@ -149,7 +149,8 @@ mamidApp.config(function ($routeProvider) {
 mamidApp.factory('SlaveService', function ($resource) {
     return $resource('/api/slaves/:slave', {slave: "@id"}, {
         create: {method: 'put'},
-        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/'}
+        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/'},
+        getProblems: {method: 'get', url: '/api/slaves/:slave/problems', isArray: true}
     });
 });
 
@@ -253,6 +254,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         $scope.edit_slave = angular.copy($scope.slave);
     } else {
         $scope.slave = SlaveService.get({slave: slaveId});
+        $scope.problems = SlaveService.getProblems({slave: slaveId});
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.slave.$promise.then(function () {

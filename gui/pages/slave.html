@@ -1,11 +1,17 @@
 <h1 class="page-header" ng-if="!is_create_view">Edit Slave</h1>
 <h1 class="page-header" ng-if="is_create_view">New Slave</h1>
 
+<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
+    <h4>{{problem.description}} <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
+    <p>{{problem.long_description}}</p>
+</div>
+
 <div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view">
     <h4>{{ slave.hostname }} is in
         <b>{{ slave.configured_state }}</b>
         state.</h4>
 </div>
+
 <div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title" ng-if="!is_create_view">Slave Settings</h3>
