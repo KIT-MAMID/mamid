@@ -60,7 +60,7 @@
                         <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave, riskgroup)">
                             <option value="" selected>Select group..</option>
                             <option value="0">Remove from risk group</option>
-                            <option ng-repeat="riskgroup in riskgroups" value="{{riskgroup.id}}">{{riskgroup.name}}</option>
+                            <option ng-repeat="riskgroup_sel in riskgroups" value="{{riskgroup_sel.id}}" ng-if="riskgroup_sel.id!=riskgroup.id">{{riskgroup_sel.name}}</option>
                             </select>
                         </span>
                 </li>
