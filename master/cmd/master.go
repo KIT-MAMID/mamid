@@ -42,6 +42,12 @@ func main() {
 	}
 	go monitor.Run()
 
+	problemManager := master.ProblemManager{
+		DB:             db,
+		BusReadChannel: bus.GetNewReadChannel(),
+	}
+	go problemManager.Run()
+
 	// Listen
 
 	err = http.ListenAndServe(":8080", mainRouter)

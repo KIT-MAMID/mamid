@@ -162,11 +162,21 @@ type SlaveError struct {
 	MSPErrorID uint
 }
 
+type ProblemType uint
+
+const (
+	_                                 = 0
+	ProblemTypeConnection ProblemType = iota
+	ProblemTypeMismatch
+	ProblemTypeDesiredReplicaSetConstraint
+	ProblemTypeObservedReplicaSetConstraint
+)
+
 type Problem struct {
 	ID              uint `gorm:"primary_key"`
 	Description     string
 	LongDescription string
-	ProblemType     uint
+	ProblemType     ProblemType
 	FirstOccurred   time.Time
 	LastUpdated     time.Time
 
