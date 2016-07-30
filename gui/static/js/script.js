@@ -76,7 +76,7 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveServic
     $scope.slaves = SlaveService.query()
 });
 
-mamidApp.controller('problemIndexController', function ($scope, $http, SlaveService) {
+mamidApp.controller('problemIndexController', function ($scope, $http, ProblemService) {
     $scope.problems = ProblemService.query()
 });
 
