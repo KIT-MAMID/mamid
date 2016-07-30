@@ -197,6 +197,9 @@ mamidApp.controller('problemIndexController', function ($scope, $http, $timeout,
             $timeout(tick, 1000 * 5);
         });
     })();
+    $scope.formatDate = function(date) {
+        return String(new Date(Date.parse(date)));
+    }
 });
 
 mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGroupService) {
