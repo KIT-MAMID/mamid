@@ -47,7 +47,7 @@ func (m *Monitor) Run() {
 
 func (m *Monitor) observeSlave(slave model.Slave) {
 	//Request mongod states from slave
-	mongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
+	observedMongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
 
 	//Send connection status to bus
 	commError, isCommError := err.(msp.CommunicationError)
@@ -58,9 +58,10 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 	}
 
 	if err == nil {
-		for _, observedMongod := range mongods {
+		for _, observedMongod := range observedMongods {
+			tx := m.DB.Begin()
 			var modelMongod model.Mongod
-			getOrCreateErr := m.DB.FirstOrCreate(&modelMongod, &model.Mongod{
+			getOrCreateErr := tx.FirstOrCreate(&modelMongod, &model.Mongod{
 				ParentSlaveID: slave.ID,
 				Port:          model.PortNumber(observedMongod.Port),
 				ReplSetName:   observedMongod.ReplicaSetName,
@@ -71,14 +72,14 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//Get desired state if it exists
-			relatedResult := m.DB.Model(&modelMongod).Related(&modelMongod.DesiredState, "DesiredState")
+			relatedResult := tx.Model(&modelMongod).Related(&modelMongod.DesiredState, "DesiredState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
 				return
 			}
 
 			//Get observed state if it exists
-			relatedResult = m.DB.Model(&modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
+			relatedResult = tx.Model(&modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
 				return
@@ -95,10 +96,31 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//TODO Only update observed state and errors to prevent collisions with cluster allocator
-			m.DB.Save(&modelMongod)
+			tx.Save(&modelMongod)
+			tx.Commit()
 
+		}
+
+		//Remove observed state of mongods the slave does not report
+		var modelMongods []model.Mongod
+		m.DB.Model(&slave).Related(&modelMongods, "Mongods")
+	outer:
+		for _, modelMongod := range modelMongods {
+			//Check if slave reported this mongod
+			for _, observedMongod := range observedMongods {
+				if modelMongod.Port == model.PortNumber(observedMongod.Port) &&
+					modelMongod.ReplSetName == observedMongod.ReplicaSetName {
+					continue outer
+				}
+			}
+
+			//Else remove observed state
+			m.DB.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID)
+		}
+
+		//Check every mongod for mismatches
+		for _, modelMongod := range modelMongods {
 			m.BusWriteChannel <- compareStates(modelMongod)
-
 		}
 	} else {
 		if commError, ok := err.(msp.CommunicationError); ok {
