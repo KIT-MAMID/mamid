@@ -36,7 +36,6 @@
                                 <option ng-repeat="riskgroup in riskgroups"
                                         value="{{riskgroup.id}}">{{riskgroup.name}}</option>
                             </select>
-                            <b>{{slave.riskgroup}}</b>
                         </span>
                 </li>
             </ul>
@@ -57,6 +56,12 @@
              aria-labelledby="heading{{riskgroup.id}}">
             <ul class="list-group">
                 <li ng-repeat="slave in riskgroup.slaves" class="list-group-item">{{slave.hostname}}
+                    <span class="pull-right">Assign to
+                        <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave)">
+                            <option value="" selected>Select group..</option>
+                            <option ng-repeat="riskgroup in riskgroups" value="{{riskgroup.id}}">{{riskgroup.name}}</option>
+                            </select>
+                        </span>
                 </li>
             </ul>
         </div>
