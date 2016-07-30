@@ -160,7 +160,8 @@ mamidApp.factory('ProblemService', function ($resource) {
 
 mamidApp.factory('ReplicaSetService', function ($resource) {
     return $resource('/api/replicasets/:replicaset', {replicaset: "@id"}, {
-        create: {method: 'put'}
+        create: {method: 'put'},
+        getProblems: {method: 'get', url: '/api/replicasets/:replicaset/problems', isArray: true}
     });
 });
 
@@ -300,6 +301,7 @@ mamidApp.controller('replicasetByIdController',
         } else {
             $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
             $scope.replicaset_slaves = SlaveService.queryByReplicaSet({replicaset: replicasetId});
+            $scope.problems = ReplicaSetService.getProblems({replicaset: replicasetId});
 
             //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
             $scope.replicaset.$promise.then(function () {
