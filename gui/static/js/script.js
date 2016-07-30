@@ -76,8 +76,12 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveServic
     $scope.slaves = SlaveService.query()
 });
 
-mamidApp.controller('problemIndexController', function ($scope, $http, ProblemService) {
-    $scope.problems = ProblemService.query()
+mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
+    (function tick() {
+        $scope.problems = ProblemService.query(function(){
+            $timeout(tick, 1000*5);
+        });
+    })();
 });
 
 mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGroupService) {
