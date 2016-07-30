@@ -55,14 +55,14 @@
     </div>
 </nav>
 
-<div class="container-fluid">
+<div class="container-fluid" ng-controller="problemIndexController">
     <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
                 <li><a href="/#/"><span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
                     Overview</a></li>
                 <li><a href="/#problems"><span class="glyphicon glyphicon-alert" aria-hidden="true"></span>
-                    Problems <span class="label label-danger">2</span></a>
+                    Problems <span class="label label-danger" ng-if="problems.length > 0">{{problems.length}}</span></a>
                 </li>
                 <li><a href="/#slaves"><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span> Slaves</a>
                 </li>
