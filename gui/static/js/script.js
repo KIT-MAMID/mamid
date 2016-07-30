@@ -191,14 +191,17 @@ mamidApp.controller('mainController', function ($scope) {
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
     $scope.slaves = SlaveService.query()
 });
-
+var problemPolling = false;
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
-    (function tick() {
-        ProblemService.query(function (problems) {
-            $scope.problems = problems;
-            $timeout(tick, 1000 * 5);
-        });
-    })();
+    if(!problemPolling) {
+        (function tick() {
+            ProblemService.query(function (problems) {
+                $scope.problems = problems;
+                $timeout(tick, 1000 * 5);
+                problemPolling = true;
+            });
+        })();
+    }
     $scope.formatDate = function(date) {
         return String(new Date(Date.parse(date)));
     }
