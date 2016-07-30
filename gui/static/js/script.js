@@ -21,8 +21,24 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
             var shouldHandle = (rejection && rejection.config && rejection.config.headers
             && rejection.config.headers[HEADER_NAME]);
             if (shouldHandle) {
+                var root = $('#content')[0];
+                var ediv = document.createElement('div');
+                ediv.setAttribute('class', 'alert alert-danger alert-dismissible fade in');
+                ediv.setAttribute('role', 'alert');
+                var button = document.createElement('button');
+                button.setAttribute('class', 'close');
+                button.setAttribute('data-dismiss', 'alert');
+                button.setAttribute('type', 'button');
+                button.innerHTML = '<span aria-hidden="true">&times;</span>';
+                ediv.appendChild(button);
+                var h4 = document.createElement('h4');
+                h4.innerHTML = 'Houps! An error occurred.';
+                ediv.appendChild(h4);
+                var p = document.createElement('p');
+                p.innerHTML = rejection.data;
+                ediv.appendChild(p);
+                root.insertBefore(ediv, root.firstChild);
                 window.console.error(rejection);
-                window.alert(rejection.data);
             }
 
             return $q.reject(rejection);
