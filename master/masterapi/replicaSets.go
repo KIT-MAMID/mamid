@@ -208,3 +208,47 @@ func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
 	}
 }
+
+func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["replicasetId"]
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	id := uint(id64)
+
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "id may not be 0")
+		return
+	}
+
+	var replSet model.ReplicaSet
+	res := m.DB.First(&replSet, id)
+
+	if res.RecordNotFound() {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err = res.Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	var slaves []*model.Slave
+	res = m.DB.Raw("SELECT s.* FROM slaves s JOIN mongods m ON m.parent_slave_id = s.id WHERE m.replica_set_id = ?", id).Scan(&slaves)
+	if err = res.Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	out := make([]*Slave, len(slaves))
+	for i, v := range slaves {
+		out[i] = ProjectModelSlaveToSlave(v)
+	}
+	json.NewEncoder(w).Encode(out)
+	return
+}

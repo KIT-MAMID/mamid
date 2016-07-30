@@ -49,9 +49,20 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		RiskGroupID:          2,
 	}
 	assert.NoError(t, db.Create(&dbSlave).Error)
+
+	dbReplicaset := model.ReplicaSet{
+		ID:   1,
+		Name: "repl1",
+		PersistentMemberCount:           1,
+		VolatileMemberCount:             2,
+		ConfigureAsShardingConfigServer: false,
+	}
+	assert.NoError(t, db.Create(&dbReplicaset).Error)
+
 	m1 := model.Mongod{
 		Port:          5001,
 		ReplSetName:   "repl1",
+		ReplicaSetID:  1,
 		ParentSlaveID: 1,
 	}
 	assert.NoError(t, db.Create(&m1).Error)
@@ -68,15 +79,6 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		RiskGroupID:          1,
 	}
 	assert.NoError(t, db.Create(&dbSlave2).Error)
-
-	dbReplicaset := model.ReplicaSet{
-		ID:   1,
-		Name: "repl1",
-		PersistentMemberCount:           1,
-		VolatileMemberCount:             2,
-		ConfigureAsShardingConfigServer: false,
-	}
-	assert.NoError(t, db.Create(&dbReplicaset).Error)
 
 	dbSlave3 := model.Slave{
 		ID:                   3,
@@ -589,6 +591,28 @@ func TestMasterAPI_ReplicaSetDelete_not_existing(t *testing.T) {
 	mainRouter.ServeHTTP(resp, req)
 
 	assert.Equal(t, 404, resp.Code)
+}
+
+func TestMasterAPI_ReplicaSetGetSlaves(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets/1/slaves", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	if !assert.Equal(t, 200, resp.Code) {
+		fmt.Println(resp.Body.String())
+	}
+
+	var getSlavesRes []Slave
+	err = json.NewDecoder(resp.Body).Decode(&getSlavesRes)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, 1, len(getSlavesRes))
+	assert.EqualValues(t, 1, getSlavesRes[0].ID)
 }
 
 func TestMasterAPI_ProblemIndex(t *testing.T) {
