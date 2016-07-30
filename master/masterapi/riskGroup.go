@@ -80,7 +80,12 @@ func (m *MasterAPI) RiskGroupPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelRiskGroup := ProjectRiskGroupToModelRiskGroup(&postRiskGroup)
+	modelRiskGroup, err := ProjectRiskGroupToModelRiskGroup(&postRiskGroup)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
 
 	// Persist to database
 
@@ -146,7 +151,12 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Allow update
 
-	save := ProjectRiskGroupToModelRiskGroup(&postRiskGroup)
+	save, err := ProjectRiskGroupToModelRiskGroup(&postRiskGroup)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
 
 	// Persist to database
 

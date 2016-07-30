@@ -1,6 +1,9 @@
 package masterapi
 
-import "github.com/KIT-MAMID/mamid/model"
+import (
+	"fmt"
+	"github.com/KIT-MAMID/mamid/model"
+)
 
 func ProjectModelReplicaSetToReplicaSet(m *model.ReplicaSet) *ReplicaSet {
 	return &ReplicaSet{
@@ -12,12 +15,15 @@ func ProjectModelReplicaSetToReplicaSet(m *model.ReplicaSet) *ReplicaSet {
 	}
 }
 
-func ProjectReplicaSetToModelReplicaSet(r *ReplicaSet) *model.ReplicaSet {
+func ProjectReplicaSetToModelReplicaSet(r *ReplicaSet) (*model.ReplicaSet, error) {
+	if r.Name == "" {
+		return nil, fmt.Errorf("Replica set name may not be empty")
+	}
 	return &model.ReplicaSet{
 		ID:   r.ID,
 		Name: r.Name,
 		PersistentMemberCount:           r.PersistentNodeCount,
 		VolatileMemberCount:             r.VolatileNodeCount,
 		ConfigureAsShardingConfigServer: r.ConfigureAsShardingConfigServer,
-	}
+	}, nil
 }

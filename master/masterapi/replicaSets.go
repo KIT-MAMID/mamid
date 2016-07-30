@@ -83,7 +83,12 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelReplSet := ProjectReplicaSetToModelReplicaSet(&postReplSet)
+	modelReplSet, err := ProjectReplicaSetToModelReplicaSet(&postReplSet)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
 
 	// Persist to database
 
@@ -147,7 +152,7 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replSet := ProjectReplicaSetToModelReplicaSet(&postReplSet)
+	replSet, err := ProjectReplicaSetToModelReplicaSet(&postReplSet)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)

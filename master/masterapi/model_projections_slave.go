@@ -29,6 +29,14 @@ func ProjectSlaveToModelSlave(s *Slave) (*model.Slave, error) {
 		}
 	}
 
+	if s.Hostname == "" {
+		return nil, concatErrors(genericErr, fmt.Errorf("Slaves hostname may not be empty"))
+	}
+
+	if s.MongodPortRangeBegin > s.MongodPortRangeEnd {
+		return nil, concatErrors(genericErr, fmt.Errorf("Port range end may not be smaller than port range begin"))
+	}
+
 	state, stateErr := SlaveJSONRepresentationToStruct(s.ConfiguredState)
 	if stateErr != nil {
 		return nil, concatErrors(genericErr, stateErr)
