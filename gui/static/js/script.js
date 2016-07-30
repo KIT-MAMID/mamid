@@ -78,7 +78,8 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveServic
 
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
     (function tick() {
-        $scope.problems = ProblemService.query(function(){
+        ProblemService.query(function(problems){
+            $scope.problems = problems;
             $timeout(tick, 1000*5);
         });
     })();
