@@ -37,7 +37,12 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 var p = document.createElement('p');
                 p.innerHTML = rejection.data;
                 ediv.appendChild(p);
+                $(ediv).hide();
                 root.insertBefore(ediv, root.firstChild);
+                $(ediv).alert();
+                $(ediv).fadeTo(5000, 500).slideUp(500, function(){
+                    $(ediv).alert('close');
+                    });
                 window.console.error(rejection);
             }
 
