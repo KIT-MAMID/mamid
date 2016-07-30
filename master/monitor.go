@@ -33,7 +33,7 @@ func (m *Monitor) Run() {
 				//Observe active slaves
 				for _, slave := range slaves {
 					if slave.ConfiguredState == model.SlaveStateActive {
-						go m.observeSlave(&slave)
+						go m.observeSlave(slave)
 					}
 				}
 
@@ -45,14 +45,14 @@ func (m *Monitor) Run() {
 	}()
 }
 
-func (m *Monitor) observeSlave(slave *model.Slave) {
+func (m *Monitor) observeSlave(slave model.Slave) {
 	//Request mongod states from slave
 	mongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
 
 	//Send connection status to bus
 	commError, isCommError := err.(msp.CommunicationError)
 	m.BusWriteChannel <- model.ConnectionStatus{
-		Slave:              *slave,
+		Slave:              slave,
 		Unreachable:        isCommError,
 		CommunicationError: commError,
 	}

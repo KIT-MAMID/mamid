@@ -89,7 +89,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 	var slave model.Slave
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
 
 	var mongod model.Mongod
 	db.First(&mongod, 1)
@@ -122,7 +122,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
 
 	db.First(&mongod, 1)
 
@@ -145,7 +145,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
 
 	connStatusX = <-readChannel
 	connStatus, ok = connStatusX.(model.ConnectionStatus)
