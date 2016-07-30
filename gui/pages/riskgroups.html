@@ -55,7 +55,7 @@
         <div id="collapse{{riskgroup.id}}" class="panel-collapse collapse" role="tabpanel"
              aria-labelledby="heading{{riskgroup.id}}">
             <ul class="list-group">
-                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item">{{slave.hostname}}
+                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}">{{slave.hostname}}</a>
                     <span class="pull-right">Assign to
                         <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave, riskgroup)">
                             <option value="" selected>Select group..</option>
