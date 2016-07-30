@@ -1,5 +1,98 @@
 var mamidApp = angular.module('mamidApp', ['ngRoute', 'ngResource']);
 
+
+// http://www.codelord.net/2014/06/25/generic-error-handling-in-angularjs/
+var specificallyHandleInProgress = false;
+var HEADER_NAME = 'MyApp-Handle-Errors-Generically';
+mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
+    return {
+        // --- The user's API for claiming responsiblity for requests ---
+        specificallyHandled: function (specificallyHandledBlock) {
+            specificallyHandleInProgress = true;
+            try {
+                return specificallyHandledBlock();
+            } finally {
+                specificallyHandleInProgress = false;
+            }
+        },
+
+        // --- Response interceptor for handling errors generically ---
+        responseError: function (rejection) {
+            var shouldHandle = (rejection && rejection.config && rejection.config.headers
+            && rejection.config.headers[HEADER_NAME]);
+            if (shouldHandle) {
+                window.console.error(rejection);
+                window.alert(rejection.data);
+            }
+
+            return $q.reject(rejection);
+        }
+    };
+}]);
+mamidApp.config(['$provide', '$httpProvider', function ($provide, $httpProvider) {
+    $httpProvider.interceptors.push('RequestsErrorHandler');
+
+    // --- Decorate $http to add a special header by default ---
+
+    function addHeaderToConfig(config) {
+        config = config || {};
+        config.headers = config.headers || {};
+
+        // Add the header unless user asked to handle errors himself
+        if (!specificallyHandleInProgress) {
+            config.headers[HEADER_NAME] = true;
+        }
+
+        return config;
+    }
+
+    // The rest here is mostly boilerplate needed to decorate $http safely
+    $provide.decorator('$http', ['$delegate', function ($delegate) {
+        function decorateRegularCall(method) {
+            return function (url, config) {
+                return $delegate[method](url, addHeaderToConfig(config));
+            };
+        }
+
+        function decorateDataCall(method) {
+            return function (url, data, config) {
+                return $delegate[method](url, data, addHeaderToConfig(config));
+            };
+        }
+
+        function copyNotOverriddenAttributes(newHttp) {
+            for (var attr in $delegate) {
+                if (!newHttp.hasOwnProperty(attr)) {
+                    if (typeof($delegate[attr]) === 'function') {
+                        newHttp[attr] = function () {
+                            return $delegate[attr].apply($delegate, arguments);
+                        };
+                    } else {
+                        newHttp[attr] = $delegate[attr];
+                    }
+                }
+            }
+        }
+
+        var newHttp = function (config) {
+            return $delegate(addHeaderToConfig(config));
+        };
+
+        newHttp.get = decorateRegularCall('get');
+        newHttp.delete = decorateRegularCall('delete');
+        newHttp.head = decorateRegularCall('head');
+        newHttp.jsonp = decorateRegularCall('jsonp');
+        newHttp.post = decorateDataCall('post');
+        newHttp.put = decorateDataCall('put');
+
+        copyNotOverriddenAttributes(newHttp);
+
+        return newHttp;
+    }]);
+}]);
+
+
+
 mamidApp.config(function ($routeProvider) {
     $routeProvider
         .when('/', {
@@ -78,9 +171,9 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveServic
 
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
     (function tick() {
-        ProblemService.query(function(problems){
+        ProblemService.query(function (problems) {
             $scope.problems = problems;
-            $timeout(tick, 1000*5);
+            $timeout(tick, 1000 * 5);
         });
     })();
 });
@@ -95,7 +188,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
         $scope.riskgroups = RiskGroupService.query();
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
-        if(slave.riskgroup == 0) {
+        if (slave.riskgroup == 0) {
             RiskGroupService.removeFromRiskGroup({slave: slave.id, riskgroup: oldriskgroup.id});
             $scope.riskgroups = RiskGroupService.query();
             $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
@@ -111,9 +204,9 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.removeRiskGroup = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.remove({riskgroup: riskgroup.id});
         $scope.riskgroups = RiskGroupService.query();
-        $('#confirm_remove'+riskgroup.id).modal('hide');
+        $('#confirm_remove' + riskgroup.id).modal('hide');
     }
-    $scope.isDeletable = function(riskgroup) {
+    $scope.isDeletable = function (riskgroup) {
         if (riskgroup.slaves === undefined) {
             $scope.getSlaves(riskgroup);
         }
