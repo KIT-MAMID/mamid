@@ -96,6 +96,12 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
         $scope.riskgroups = RiskGroupService.query();
         $('#confirm_remove'+riskgroup.id).modal('hide');
     }
+    $scope.isDeletable = function(riskgroup) {
+        if (riskgroup.slaves === undefined) {
+            $scope.getSlaves(riskgroup);
+        }
+        return riskgroup.slaves.length == 0;
+    }
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
     })

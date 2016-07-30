@@ -44,7 +44,7 @@
     </div>
     <div ng-repeat="riskgroup in riskgroups" class="panel panel-default">
         <div class="panel-heading clearfix" data-toggle="collapse" role="tab" id="heading{{riskgroup.id}}">
-            <span class="pull-right"><button class="btn btn-danger" data-toggle="modal" data-target="#confirm_remove{{riskgroup.id}}"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></span>
+            <span class="pull-right"><button class="btn btn-danger" ng-disabled="!isDeletable(riskgroup)" data-toggle="modal" data-target="#confirm_remove{{riskgroup.id}}"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></span>
             <h4 class="panel-title" style="padding-top: 7.2px;">
                 <a class="collapsed" role="button" href="" data-toggle="collapse"
                    data-target="#collapse{{riskgroup.id}}" data-parent="#accordion" aria-expanded="false"
