@@ -53,7 +53,66 @@ func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r *ReplicaSet) {
 	}
 }
 
+func slavePersistence(s *Slave) persistence {
+	switch s.PersistentStorage {
+	case true:
+		return Persistent
+	default:
+		return Volatile
+	}
+}
+
 func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
+
+	var configuredMemberCount uint
+	if p == Persistent {
+		configuredMemberCount = r.PersistentMemberCount
+	} else if p == Volatile {
+		configuredMemberCount = r.VolatileMemberCount
+	}
+
+	if err := tx.Model(r).Related(&r.Mongods, "Mongods").Error; err != nil {
+		panic(err)
+	}
+
+	for initialCount > configuredMemberCount {
+		// Destroy any Mongod running on disabled slaves (higher priority)
+		for _, m := range r.Mongods {
+
+			if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+				panic(err)
+			}
+
+			if m.ParentSlave.ConfiguredState == SlaveStateDisabled &&
+				slavePersistence(m.ParentSlave) == p {
+				// destroy
+				panic("not implemented")
+
+				initialCount--
+			}
+		}
+	}
+
+	for initialCount > configuredMemberCount {
+		// Destroy any Mongod (lower priority)
+		for _, m := range r.Mongods {
+
+			// Only fetch ParentSlave where not already fetched
+			if m.ParentSlave == nil {
+				if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+					panic(err)
+				}
+			}
+
+			if slavePersistence(m.ParentSlave) == p {
+				// destroy
+				panic("not implemented")
+			}
+
+		}
+
+	}
+
 }
 
 func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
