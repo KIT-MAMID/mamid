@@ -72,10 +72,13 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memb
 		if err := tx.Related(&m.DesiredState, "DesiredState").Error; err != nil {
 			panic(err)
 		}
+		if err := tx.Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+			panic(err)
+		}
 
 		if m.ObservedState.ExecutionState == MongodExecutionStateRunning &&
 			m.DesiredState.ExecutionState == MongodExecutionStateRunning {
-			if m.PersistentStorage {
+			if m.ParentSlave.PersistentStorage {
 				res[Persistent]++
 			} else {
 				res[Volatile]++
@@ -112,7 +115,7 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) m
 		if m.ParentSlave.ConfiguredState != SlaveStateDisabled &&
 			m.DesiredState.ExecutionState != MongodExecutionStateNotRunning &&
 			m.DesiredState.ExecutionState != MongodExecutionStateDestroyed {
-			if m.PersistentStorage {
+			if m.ParentSlave.PersistentStorage {
 				res[Persistent]++
 			} else {
 				res[Volatile]++

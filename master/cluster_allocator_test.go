@@ -53,7 +53,7 @@ func TestClusterAllocator_pqReplicaSets(t *testing.T) {
 }
 
 func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
-	db := InitializeInMemoryDB("")
+	db, _ := InitializeInMemoryDB("")
 	allocator := &ClusterAllocator{}
 
 	allocator.effectiveMemberCount(db, &ReplicaSet{})
@@ -62,7 +62,7 @@ func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
 }
 
 func TestClusterAllocator_alreadyAddedMemberCount(t *testing.T) {
-	db := InitializeInMemoryDB("")
+	db, _ := InitializeInMemoryDB("")
 	allocator := &ClusterAllocator{}
 
 	allocator.alreadyAddedMemberCount(db, &ReplicaSet{})
