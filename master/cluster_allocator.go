@@ -43,20 +43,20 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	return err
 }
 
-func (c *ClusterAllocator) replicaSets(tx *gorm.DB) []ReplicaSet {
-	return []ReplicaSet{}
+func (c *ClusterAllocator) replicaSets(tx *gorm.DB) []*ReplicaSet {
+	return []*ReplicaSet{}
 }
 
-func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r ReplicaSet) {
+func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r *ReplicaSet) {
 	for persistence, count := range c.effectiveMemberCount(tx, r) {
 		c.removeUnneededMembersByPersistence(tx, r, persistence, count)
 	}
 }
 
-func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r ReplicaSet, p persistence, initialCount uint) {
+func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
 }
 
-func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r ReplicaSet) memberCountTuple {
+func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
 
 	if err := tx.Related(&r.Mongods, "Mongods").Error; err != nil {
 		panic(err)
@@ -86,13 +86,13 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r ReplicaSet) membe
 	return res
 }
 
-func (c *ClusterAllocator) addMembers(tx *gorm.DB, r ReplicaSet) {
+func (c *ClusterAllocator) addMembers(tx *gorm.DB, r *ReplicaSet) {
 	for persistence, count := range c.alreadyAddedMemberCount(tx, r) {
 		c.addMembersByPersistence(tx, r, persistence, count)
 	}
 }
 
-func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r ReplicaSet) memberCountTuple {
+func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
 	if err := tx.Related(&r.Mongods, "Mongods").Error; err != nil {
 		panic(err)
 	}
@@ -123,7 +123,7 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r ReplicaSet) me
 	return res
 }
 
-func (c *ClusterAllocator) addMembersByPersistence(tx *gorm.DB, r ReplicaSet, p persistence, initialCount uint) {
+func (c *ClusterAllocator) addMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
 	replicaSets := c.pqReplicaSets(tx)
 	riskGroups := c.pqRiskGroups(tx)
 	_ = replicaSets
