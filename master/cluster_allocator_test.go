@@ -52,6 +52,11 @@ func TestClusterAllocator_pqReplicaSets(t *testing.T) {
 	t.Error("test not implemented")
 }
 
+// Testing this helper function used in effectiveMemberCount and alreadyAddedMemberCount
+func TestClusterAllocator_traverseReplicaSetMongods(t *testing.T) {
+	t.Error("test not implemented")
+}
+
 func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
 	db, _ := InitializeInMemoryDB("")
 	allocator := &ClusterAllocator{}
