@@ -37,8 +37,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	replicaSets := c.replicaSets(tx)
 	for _, r := range replicaSets {
 		c.removeUnneededMembers(tx, r)
-		c.addMembers(tx, r)
 	}
+
+	addMembers(replicaSets)
 
 	return err
 }
@@ -134,9 +135,38 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memb
 	return res
 }
 
-func (c *ClusterAllocator) addMembers(tx *gorm.DB, r *ReplicaSet) {
-	for persistence, count := range c.alreadyAddedMemberCount(tx, r) {
-		c.addMembersByPersistence(tx, r, persistence, count)
+func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
+
+	for _, persistence := range []persistence{Volatile, Persistent} {
+
+		// build prioritization datastructures
+		// will only return items that match current persistence and actually need more members
+
+		pqReplicaSets := c.pqReplicaSets(replicaSets, persistence)
+		pqRiskGroups := c.pqRiskGroups(tx, persistence)
+
+		for r := pqReplicaSets.Pop(); r != nil; {
+
+			if s := pqRiskGroups.popSlaveinNonconflictingRiskGroup(r); g != nil {
+
+				// spawn new Mongod m on s and add it to r.Mongods
+				// compute MongodState for m and set the DesiredState variable
+				panic("not implemented")
+
+				if replicaSetNeedsMoreMembers(r, p) {
+					pqReplicaSets.Push(r)
+				}
+
+				if slaveHasFreePorts(s) {
+					pqRiskGroups.pushSlave(s)
+				}
+
+			} else {
+				// send constraint not fulfilled notification
+				panic("not implemented")
+			}
+		}
+
 	}
 }
 
@@ -159,13 +189,6 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) m
 	})
 
 	return res
-}
-
-func (c *ClusterAllocator) addMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
-	replicaSets := c.pqReplicaSets(tx)
-	riskGroups := c.pqRiskGroups(tx)
-	_ = replicaSets
-	_ = riskGroups
 }
 
 // Traverse a Replica Set's Mongods, for which the following Attributes have been fetched
