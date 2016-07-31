@@ -1,6 +1,7 @@
 package master
 
 import (
+	. "github.com/KIT-MAMID/mamid/model"
 	_ "github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -48,5 +49,23 @@ Should
   only contain degraded ReplicaSets
 */
 func TestClusterAllocator_pqReplicaSets(t *testing.T) {
+	t.Error("test not implemented")
+}
+
+func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
+	db := InitializeInMemoryDB("")
+	allocator := &ClusterAllocator{}
+
+	allocator.effectiveMemberCount(db, &ReplicaSet{})
+
+	t.Error("test not implemented")
+}
+
+func TestClusterAllocator_alreadyAddedMemberCount(t *testing.T) {
+	db := InitializeInMemoryDB("")
+	allocator := &ClusterAllocator{}
+
+	allocator.alreadyAddedMemberCount(db, &ReplicaSet{})
+
 	t.Error("test not implemented")
 }

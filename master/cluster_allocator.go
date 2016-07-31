@@ -57,7 +57,33 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r Rep
 }
 
 func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r ReplicaSet) memberCountTuple {
-	return nil
+
+	if err := tx.Related(&r.Mongods, "Mongods").Error; err != nil {
+		panic(err)
+	}
+
+	var res memberCountTuple
+
+	for _, m := range r.Mongods {
+
+		if err := tx.Related(&m.ObservedState, "ObservedState").Error; err != nil {
+			panic(err)
+		}
+		if err := tx.Related(&m.DesiredState, "DesiredState").Error; err != nil {
+			panic(err)
+		}
+
+		if m.ObservedState.ExecutionState == MongodExecutionStateRunning &&
+			m.DesiredState.ExecutionState == MongodExecutionStateRunning {
+			if m.PersistentStorage {
+				res[Persistent]++
+			} else {
+				res[Volatile]++
+			}
+		}
+	}
+
+	return res
 }
 
 func (c *ClusterAllocator) addMembers(tx *gorm.DB, r ReplicaSet) {
@@ -67,7 +93,34 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, r ReplicaSet) {
 }
 
 func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r ReplicaSet) memberCountTuple {
-	return nil
+	if err := tx.Related(&r.Mongods, "Mongods").Error; err != nil {
+		panic(err)
+	}
+
+	var res memberCountTuple
+
+	for _, m := range r.Mongods {
+
+		if err := tx.Related(&m.DesiredState, "DesiredState").Error; err != nil {
+			panic(err)
+		}
+
+		if err := tx.Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+			panic(err)
+		}
+
+		if m.ParentSlave.ConfiguredState != SlaveStateDisabled &&
+			m.DesiredState.ExecutionState != MongodExecutionStateNotRunning &&
+			m.DesiredState.ExecutionState != MongodExecutionStateDestroyed {
+			if m.PersistentStorage {
+				res[Persistent]++
+			} else {
+				res[Volatile]++
+			}
+		}
+	}
+
+	return res
 }
 
 func (c *ClusterAllocator) addMembersByPersistence(tx *gorm.DB, r ReplicaSet, p persistence, initialCount uint) {
