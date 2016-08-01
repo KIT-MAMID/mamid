@@ -47,7 +47,7 @@ func (m *Monitor) Run() {
 
 func (m *Monitor) observeSlave(slave *model.Slave) {
 	//Request mongod states from slave
-	mongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
+	mongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
 
 	//Send connection status to bus
 	commError, isCommError := err.(msp.CommunicationError)

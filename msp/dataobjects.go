@@ -9,13 +9,15 @@ const (
 	MongodStateRunning    = "running"
 )
 
+type PortNumber uint16
+
 type HostPort struct {
 	Hostname string
-	Port     uint16
+	Port     PortNumber
 }
 
 type Mongod struct {
-	Port                    uint16
+	Port                    PortNumber
 	ReplicaSetName          string
 	ReplicaSetMembers       []HostPort
 	ShardingConfigServer    bool
@@ -36,5 +38,3 @@ type SlaveError struct {
 type CommunicationError struct {
 	Message string
 }
-
-type PortNumber uint16

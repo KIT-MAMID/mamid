@@ -16,7 +16,7 @@ type Listener struct {
 	router   *mux.Router
 }
 
-func NewMSPServer(listener Consumer) *Listener {
+func NewServer(listener Consumer) *Listener {
 	s := new(Listener)
 	s.listener = listener
 
