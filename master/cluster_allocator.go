@@ -99,17 +99,9 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 		configuredMemberCount = r.VolatileMemberCount
 	}
 
-	if err := tx.Model(r).Related(&r.Mongods, "Mongods").Error; err != nil {
-		panic(err)
-	}
-
 	for initialCount > configuredMemberCount {
 		// Destroy any Mongod running on disabled slaves (higher priority)
 		for _, m := range r.Mongods {
-
-			if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
-				panic(err)
-			}
 
 			if m.ParentSlave.ConfiguredState == SlaveStateDisabled &&
 				slavePersistence(m.ParentSlave) == p {
@@ -124,13 +116,6 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 	for initialCount > configuredMemberCount {
 		// Destroy any Mongod (lower priority)
 		for _, m := range r.Mongods {
-
-			// Only fetch ParentSlave where not already fetched
-			if m.ParentSlave == nil {
-				if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
-					panic(err)
-				}
-			}
 
 			if slavePersistence(m.ParentSlave) == p {
 				// destroy
