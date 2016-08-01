@@ -8,7 +8,7 @@ import (
 type pqSlavesByRiskGroup struct {
 }
 
-func (q *pqSlavesByRiskGroup) pushSlave(s *Slave) {
+func (q *pqSlavesByRiskGroup) PushSlaveIfFreePorts(s *Slave) {
 	// assuming RiskGroupID is set
 }
 

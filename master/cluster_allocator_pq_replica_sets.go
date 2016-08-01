@@ -35,8 +35,11 @@ func (q *pqReplicaSets) Pop() *ReplicaSet {
 	return heap.Pop(&q.slice).(*ReplicaSet)
 }
 
-func (q *pqReplicaSets) Push(r *ReplicaSet) {
-	heap.Push(&q.slice, replicaSetItemFromReplicaSet(r))
+func (q *pqReplicaSets) PushIfDegraded(r *ReplicaSet) {
+	item := replicaSetItemFromReplicaSet(r)
+	if !item.degraded[q.slice.p] {
+		heap.Push(&q.slice, item)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,6 +55,7 @@ type pqReplicaSetItem struct {
 	r               *ReplicaSet
 	p               persistence
 	relMemberCounts map[persistence]float64
+	degraded        map[persistence]bool
 }
 
 func (s pqReplicaSetItemSlice) Len() int {
@@ -67,8 +71,8 @@ func (s *pqReplicaSetItemSlice) Swap(i, j int) {
 }
 
 func (s pqReplicaSetItemSlice) Push(i interface{}) {
-	var item *pqReplicaSetItem
-	if item, ok := i.(*pqReplicaSetItem); !ok {
+	item, ok := i.(*pqReplicaSetItem)
+	if !ok {
 		panic("pqReplicaSetItemSlice should only be used with *ReplicaSet")
 	}
 	s.items = append(s.items, item)
@@ -82,7 +86,7 @@ func (s pqReplicaSetItemSlice) Pop() interface{} {
 
 func replicaSetItemFromReplicaSet(r *ReplicaSet) *pqReplicaSetItem {
 	// Find all persistent
-	desiredCounts := map[persistence]int{
+	desiredCounts := map[persistence]uint{
 		Persistent: 0,
 		Volatile:   0,
 	}
@@ -100,6 +104,10 @@ func replicaSetItemFromReplicaSet(r *ReplicaSet) *pqReplicaSetItem {
 		relMemberCounts: map[persistence]float64{
 			Persistent: float64(desiredCounts[Persistent]) / float64(r.PersistentMemberCount),
 			Volatile:   float64(desiredCounts[Volatile]) / float64(r.VolatileMemberCount),
+		},
+		degraded: map[persistence]bool{
+			Persistent: desiredCounts[Persistent] < r.PersistentMemberCount,
+			Volatile:   desiredCounts[Volatile] < r.VolatileMemberCount,
 		},
 	}
 }

@@ -180,13 +180,8 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 				// compute MongodState for m and set the DesiredState variable
 				panic("not implemented")
 
-				if replicaSetNeedsMoreMembers(r, persistence) {
-					pqReplicaSets.Push(r)
-				}
-
-				if slaveHasFreePorts(s) {
-					pqRiskGroups.pushSlave(s)
-				}
+				pqReplicaSets.PushIfDegraded(r)
+				pqRiskGroups.PushSlaveIfFreePorts(s)
 
 			} else {
 				// send constraint not fulfilled notification
