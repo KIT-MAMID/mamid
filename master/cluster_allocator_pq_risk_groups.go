@@ -8,11 +8,11 @@ import (
 type pqSlavesByRiskGroup struct {
 }
 
-func (q *pqSlavesByRiskGroup) pushSlave(s Slave) {
+func (q *pqSlavesByRiskGroup) pushSlave(s *Slave) {
 	// assuming RiskGroupID is set
 }
 
-func (q *pqSlavesByRiskGroup) popSlaveinNonconflictingRiskGroup() (r *RiskGroup) {
+func (q *pqSlavesByRiskGroup) popSlaveinNonconflictingRiskGroup(r *ReplicaSet) *Slave {
 	return nil
 }
 

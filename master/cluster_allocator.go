@@ -39,7 +39,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		c.removeUnneededMembers(tx, r)
 	}
 
-	addMembers(replicaSets)
+	c.addMembers(tx, replicaSets)
 
 	return err
 }
@@ -174,13 +174,13 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 
 		for r := pqReplicaSets.Pop(); r != nil; {
 
-			if s := pqRiskGroups.popSlaveinNonconflictingRiskGroup(r); g != nil {
+			if s := pqRiskGroups.popSlaveinNonconflictingRiskGroup(r); s != nil {
 
 				// spawn new Mongod m on s and add it to r.Mongods
 				// compute MongodState for m and set the DesiredState variable
 				panic("not implemented")
 
-				if replicaSetNeedsMoreMembers(r, p) {
+				if replicaSetNeedsMoreMembers(r, persistence) {
 					pqReplicaSets.Push(r)
 				}
 
