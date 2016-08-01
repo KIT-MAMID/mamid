@@ -13,24 +13,9 @@ func (q *pqSlavesByRiskGroup) pushSlave(s Slave) {
 }
 
 func (q *pqSlavesByRiskGroup) popSlaveinNonconflictingRiskGroup() (r *RiskGroup) {
-
+	return nil
 }
 
 func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, p persistence) *pqSlavesByRiskGroup {
 	return &pqSlavesByRiskGroup{}
-}
-
-type pqReplicaSets struct {
-}
-
-func (q *pqReplicaSets) Push(r *ReplicaSet) {
-
-}
-
-func (q *pqReplicaSets) Pop() *ReplicaSet {
-
-}
-
-func (c *ClusterAllocator) pqReplicaSets(tx *gorm.DB, p persistence) *pqReplicaSets {
-	return &pqReplicaSets{}
 }
