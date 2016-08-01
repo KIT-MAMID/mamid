@@ -44,8 +44,35 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	return err
 }
 
-func (c *ClusterAllocator) replicaSets(tx *gorm.DB) []*ReplicaSet {
-	return []*ReplicaSet{}
+func (c *ClusterAllocator) replicaSets(tx *gorm.DB) (replicaSets []*ReplicaSet) {
+
+	if err := tx.Where(ReplicaSet{}).Find(&replicaSets).Error; err != nil {
+		panic(err)
+	}
+
+	for _, r := range replicaSets {
+
+		if err := tx.Model(r).Related(&r.Mongods, "Mongods").Error; err != nil {
+			panic(err)
+		}
+
+		for _, m := range r.Mongods {
+
+			if err := tx.Model(m).Related(&m.ObservedState, "ObservedState").Error; err != nil {
+				panic(err)
+			}
+			if err := tx.Model(m).Related(&m.DesiredState, "DesiredState").Error; err != nil {
+				panic(err)
+			}
+			if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+				panic(err)
+			}
+
+		}
+
+	}
+
+	return replicaSets
 }
 
 func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r *ReplicaSet) {
@@ -120,7 +147,7 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memb
 
 	var res memberCountTuple
 
-	traverseReplicaSetMongods(tx, r, func(m *Mongod) {
+	for _, m := range r.Mongods {
 
 		if m.ObservedState.ExecutionState == MongodExecutionStateRunning &&
 			m.DesiredState.ExecutionState == MongodExecutionStateRunning {
@@ -130,7 +157,7 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memb
 				res[Volatile]++
 			}
 		}
-	})
+	}
 
 	return res
 }
@@ -174,7 +201,7 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) m
 
 	var res memberCountTuple
 
-	traverseReplicaSetMongods(tx, r, func(m *Mongod) {
+	for _, m := range r.Mongods {
 
 		if m.ParentSlave.ConfiguredState != SlaveStateDisabled &&
 			m.DesiredState.ExecutionState != MongodExecutionStateNotRunning &&
@@ -186,35 +213,7 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) m
 			}
 		}
 
-	})
+	}
 
 	return res
-}
-
-// Traverse a Replica Set's Mongods, for which the following Attributes have been fetched
-// 	ParentSlave
-//	ObservedState
-// 	DesiredState
-func traverseReplicaSetMongods(tx *gorm.DB, r *ReplicaSet, handler func(m *Mongod)) {
-
-	if err := tx.Model(r).Related(&r.Mongods, "Mongods").Error; err != nil {
-		panic(err)
-	}
-
-	for _, m := range r.Mongods {
-
-		if err := tx.Model(m).Related(&m.ObservedState, "ObservedState").Error; err != nil {
-			panic(err)
-		}
-		if err := tx.Model(m).Related(&m.DesiredState, "DesiredState").Error; err != nil {
-			panic(err)
-		}
-		if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
-			panic(err)
-		}
-
-		handler(m)
-
-	}
-
 }
