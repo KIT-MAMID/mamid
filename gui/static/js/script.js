@@ -183,37 +183,38 @@ mamidApp.factory('RiskGroupService', function ($resource) {
     });
 });
 
-mamidApp.controller('mainController', function ($scope, filterFilter, SlaveService) {
-    $scope.message = 'Greetings from the controller';
-    SlaveService.query(function(slaves) {
-        $scope.slaves = slaves;
-        var chart = c3.generate({
-                bindto: '#slaves',
-                data: {
-                    columns: [
-                        ['Active', $scope.getStateCount('active')],
-                        ['Maintenance', $scope.getStateCount('maintenance')],
-                        ['Disabled', $scope.getStateCount('disabled')],
-                    ],
-                    type: 'donut',
-                },
-                donut: {
-                    title: "Slave states"
-                }
-                ,
-                color: {
-                    pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
-                }
-                ,
-            })
-            ;
+mamidApp.controller('mainController', function ($scope, filterFilter, SlaveService, ProblemService) {
+        $scope.message = 'Greetings from the controller';
+        $scope.problems = ProblemService.query();
+        SlaveService.query(function (slaves) {
+            $scope.slaves = slaves;
+            var chart = c3.generate({
+                    bindto: '#slaves',
+                    data: {
+                        columns: [
+                            ['Active', $scope.getStateCount('active')],
+                            ['Maintenance', $scope.getStateCount('maintenance')],
+                            ['Disabled', $scope.getStateCount('disabled')],
+                        ],
+                        type: 'donut',
+                    },
+                    donut: {
+                        title: "Slave states"
+                    }
+                    ,
+                    color: {
+                        pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+                    }
+                    ,
+                })
+                ;
+        });
+
+        $scope.getStateCount = function (state) {
+            return filterFilter($scope.slaves, {configured_state: state}).length;
+        }
+
     });
-
-    $scope.getStateCount = function (state) {
-        return filterFilter($scope.slaves, {configured_state: state}).length;
-    }
-
-});
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
     $scope.slaves = SlaveService.query()
