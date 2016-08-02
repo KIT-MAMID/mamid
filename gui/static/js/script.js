@@ -242,19 +242,17 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create();
         $scope.new_riskgroup = new RiskGroupService();
-        RiskGroupService.query(function(riskgroups) {
-            $scope.riskgroups = riskgroups;
-        });
+        $scope.refreshRiskGroups();
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
         if (slave.riskgroup == 0) {
             RiskGroupService.removeFromRiskGroup({slave: slave.id, riskgroup: oldriskgroup.id});
-            $scope.riskgroups = RiskGroupService.query();
+            $scope.refreshRiskGroups();
             $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
             return;
         }
         RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup});
-        $scope.riskgroups = RiskGroupService.query();
+        $scope.refreshRiskGroups();
         $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     };
     $scope.getSlaves = function (riskgroup) {
@@ -262,7 +260,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     }
     $scope.removeRiskGroup = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.remove({riskgroup: riskgroup.id});
-        $scope.riskgroups = RiskGroupService.query();
+        $scope.refreshRiskGroups();
         $('#confirm_remove' + riskgroup.id).modal('hide');
     }
     $scope.isDeletable = function (riskgroup) {
@@ -274,6 +272,12 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
     })
+
+    $scope.refreshRiskGroups = function () {
+        RiskGroupService.query(function(riskgroups) {
+            $scope.riskgroups = riskgroups;
+        });
+    }
 });
 
 mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService) {
