@@ -303,11 +303,13 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     $scope.updateSlave = function () {
         angular.copy($scope.edit_slave, $scope.slave);
         if ($scope.is_create_view) {
-            $scope.slave.$create();
+            $scope.slave.$create(function(){
+                $location.path("/slaves");
+            });
         } else {
             $scope.slave.$save();
         }
-        $location.path("/slaves");
+
     };
 
     $scope.deleteSlave = function () {
