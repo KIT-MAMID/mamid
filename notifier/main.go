@@ -11,10 +11,9 @@ var lastProblems []Problem
 var notifiers []Notifier
 
 func main() {
-	//TODO
+	p.Parse("/home/niklas/GO/src/github.com/KIT-MAMID/mamid/notifier/contacts.txt")
 	notifiers = append(notifiers, &email)
 	// Wait forever
-	p.Parse("/home/niklas/GO/src/github.com/KIT-MAMID/mamid/notifier")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	var currentProblems []Problem
