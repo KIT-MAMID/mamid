@@ -40,9 +40,9 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 $(ediv).hide();
                 root.insertBefore(ediv, root.firstChild);
                 $(ediv).alert();
-                $(ediv).fadeTo(5000, 500).slideUp(500, function(){
+                $(ediv).fadeTo(5000, 500).slideUp(500, function () {
                     $(ediv).alert('close');
-                    });
+                });
                 window.console.error(rejection);
             }
 
@@ -111,7 +111,6 @@ mamidApp.config(['$provide', '$httpProvider', function ($provide, $httpProvider)
         return newHttp;
     }]);
 }]);
-
 
 
 mamidApp.config(function ($routeProvider) {
@@ -184,8 +183,36 @@ mamidApp.factory('RiskGroupService', function ($resource) {
     });
 });
 
-mamidApp.controller('mainController', function ($scope) {
+mamidApp.controller('mainController', function ($scope, filterFilter, SlaveService) {
     $scope.message = 'Greetings from the controller';
+    SlaveService.query(function(slaves) {
+        $scope.slaves = slaves;
+        var chart = c3.generate({
+                bindto: '#slaves',
+                data: {
+                    columns: [
+                        ['Active', $scope.getStateCount('active')],
+                        ['Maintenance', $scope.getStateCount('maintenance')],
+                        ['Disabled', $scope.getStateCount('disabled')],
+                    ],
+                    type: 'donut',
+                },
+                donut: {
+                    title: "Slave states"
+                }
+                ,
+                color: {
+                    pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+                }
+                ,
+            })
+            ;
+    });
+
+    $scope.getStateCount = function (state) {
+        return filterFilter($scope.slaves, {configured_state: state}).length;
+    }
+
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
@@ -193,7 +220,7 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveServic
 });
 var problemPolling = false;
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
-    if(!problemPolling) {
+    if (!problemPolling) {
         (function tick() {
             ProblemService.query(function (problems) {
                 $scope.problems = problems;
@@ -202,7 +229,7 @@ mamidApp.controller('problemIndexController', function ($scope, $http, $timeout,
             });
         })();
     }
-    $scope.formatDate = function(date) {
+    $scope.formatDate = function (date) {
         return String(new Date(Date.parse(date)));
     }
 });
