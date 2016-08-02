@@ -241,7 +241,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.new_riskgroup = new RiskGroupService();
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create();
-        $scope.new_riskgroup = null;
+        $scope.new_riskgroup = new RiskGroupService();
         $scope.riskgroups = RiskGroupService.query();
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
