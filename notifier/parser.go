@@ -30,10 +30,10 @@ func (p *Parser) Parse(path string) ([]Contact, error){
 	for i := 0; scan.Scan(); i++{
 		input = append(input, scan.Text())
 	}
-	for i := 0; i < len(input); i++ {
-                split := strings.Split(input[i], ";")
-                for j := 0; j < len(split); j++ {
-			x := strings.Split(split[j], ":")
+	//for i := 0; i < len(input); i++ {
+                //split := strings.Split(input[i], ";")
+                for j := 0; j < len(input); j++ {
+			x := strings.Split(input[j], ":")
 			switch x[0]{
 			case "email":
 				var newContact EmailContact
@@ -43,7 +43,7 @@ func (p *Parser) Parse(path string) ([]Contact, error){
 				panic("unrecknoized input")
 			}
                 }
-        }
+        //}
 	return contacts, nil
 }
 
