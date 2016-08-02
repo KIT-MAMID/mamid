@@ -18,11 +18,14 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 		   "Slave: " + fmt.Sprint( problem.Slave) + "\r\n" +
 		   "long Description:" + problem.LongDescription) + "\r\n"
 	subject := ("Subject:" + "KIT-MAMID: Problem in " + fmt.Sprint(problem.ReplicaSet) + "/" + fmt.Sprint(problem.Slave))
-	msg := []byte("To: niklas.fuhrberg@gmx.de\r\n"+
-                        "From: kit.mamid@gmail.com\r\n"+
+	msg := []byte("From: kit.mamid@gmail.com\r\n"+
                         subject + "\r\n" +
 			content)
-	return n.sendMailToContacts(msg)
+		err := n.sendMailToContacts(msg)
+		if err != nil{
+			return err
+		}
+	return nil
 }
 func (n *EmailNotifier) sendMailToContacts(msg []byte) error{
 	auth := smtp.PlainAuth("", "kit.mamid@gmail.com", "uwsngsdlsnh", "smtp.gmail.com")
@@ -34,7 +37,7 @@ func (n *EmailNotifier) sendMailToContacts(msg []byte) error{
 		"smtp.gmail.com:587",
 		auth,
 		"kit.mamid@gmail.com",
-		[]string{"niklas.fuhrberg@gmx.de"},
+		to,
 		msg)
 	return err
 }
