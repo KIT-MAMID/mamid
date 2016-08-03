@@ -160,7 +160,7 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	m.DB.Save(&save)
+	err = m.DB.Save(&save).Error
 
 	// Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {
@@ -320,7 +320,7 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 
 	// Persist to database
 
-	m.DB.Save(&updatedSlave)
+	err = m.DB.Save(&updatedSlave).Error
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {

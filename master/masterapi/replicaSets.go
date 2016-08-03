@@ -168,7 +168,7 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	m.DB.Save(replSet)
+	err = m.DB.Save(replSet).Error
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {

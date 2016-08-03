@@ -187,7 +187,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	m.DB.Save(&updatedModelSlave)
+	err = m.DB.Save(&updatedModelSlave).Error
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok {
