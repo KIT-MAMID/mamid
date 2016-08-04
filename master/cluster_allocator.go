@@ -99,8 +99,8 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 		configuredMemberCount = r.VolatileMemberCount
 	}
 
+	// Destroy any Mongod running on disabled slaves (no specific priority)
 	for initialCount > configuredMemberCount {
-		// Destroy any Mongod running on disabled slaves (higher priority)
 		for _, m := range r.Mongods {
 
 			if m.ParentSlave.ConfiguredState == SlaveStateDisabled &&
@@ -113,16 +113,20 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 		}
 	}
 
+	// Remove superfluous Mongods on busiest slaves first
+	removalPQ := c.pqMongods(r.Mongods, p)
 	for initialCount > configuredMemberCount {
 		// Destroy any Mongod (lower priority)
-		for _, m := range r.Mongods {
+		m := removalPQ.PopMongodOnBusiestSlave()
 
-			if slavePersistence(m.ParentSlave) == p {
-				// destroy
-				panic("not implemented")
-			}
-
+		if m == nil {
+			break
 		}
+
+		// destroy
+		panic("not implemented")
+
+		initialCount--
 
 	}
 
