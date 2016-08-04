@@ -1,6 +1,7 @@
 package master
 
 import (
+	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/jinzhu/gorm"
 )
@@ -178,18 +179,87 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 
 				// spawn new Mongod m on s and add it to r.Mongods
 				// compute MongodState for m and set the DesiredState variable
-				panic("not implemented")
+				_ = c.spawnMongodOnSlave(tx, s, r)
+				// TODO send DesiredReplicaSetConstraintStatus
 
 				pqReplicaSets.PushIfDegraded(r)
 				pqRiskGroups.PushSlaveIfFreePorts(s)
 
 			} else {
-				// send constraint not fulfilled notification
+
+				// TODO send DesiredReplicaSetConstraintStatus
 				panic("not implemented")
+
 			}
 		}
 
 	}
+}
+
+func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaSet) *Mongod {
+
+	// Get a port number, validates expected invariant that there's a free port as a side effect
+	portNumber, err := c.slaveNextMongodPort(tx, s)
+	if err != nil {
+		panic(err)
+	}
+
+	m := &Mongod{
+		Port:        portNumber,
+		ReplSetName: r.Name,
+		ParentSlave: s,
+		ReplicaSet:  r,
+		DesiredState: MongodState{ // TODO verify this nested initialization works with gorm
+			IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
+			ExecutionState:         MongodExecutionStateRunning,
+		},
+	}
+
+	if err := tx.Create(&m).Error; err != nil {
+		panic(err)
+	}
+
+	return m
+
+}
+
+func (c *ClusterAllocator) slaveNextMongodPort(tx *gorm.DB, s *Slave) (portNumber PortNumber, err error) {
+
+	var mongods []*Mongod
+
+	if err = tx.Model(s).Related(&mongods).Error; err != nil {
+		return PortNumber(0), err
+	}
+
+	maxMongodCount := slaveMaxNumberOfMongods(s)
+	if len(mongods) >= int(maxMongodCount) {
+		return PortNumber(0), fmt.Errorf("slave '%s' is full or is running more than maximum of '%d' Mongods", s.Hostname, maxMongodCount)
+	}
+
+	if len(mongods) <= 0 {
+		return s.MongodPortRangeBegin, nil
+	}
+
+	portsUsed := make([]bool, maxMongodCount)
+	for _, m := range mongods {
+		portsUsed[m.Port-s.MongodPortRangeBegin] = true
+	}
+	for i := PortNumber(0); i < maxMongodCount; i++ {
+		if !portsUsed[i] {
+			return s.MongodPortRangeBegin + i, nil
+		}
+	}
+
+	panic("algorithm invariant violated: this code should not be reached")
+	return PortNumber(0), nil
+}
+
+func slaveMaxNumberOfMongods(s *Slave) PortNumber {
+	res := s.MongodPortRangeEnd - s.MongodPortRangeBegin + PortNumber(1)
+	if res <= 0 {
+		panic("datastructure invariant violated: the range of Mongod ports for a slave must be sized greater than 0")
+	}
+	return res
 }
 
 func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
