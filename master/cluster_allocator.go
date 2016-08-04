@@ -105,9 +105,8 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 
 			if m.ParentSlave.ConfiguredState == SlaveStateDisabled &&
 				slavePersistence(m.ParentSlave) == p {
-				// destroy
-				panic("not implemented")
 
+				c.destroyMongod(tx, m)
 				initialCount--
 			}
 		}
@@ -124,11 +123,23 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 		}
 
 		// destroy
-		panic("not implemented")
-
+		c.destroyMongod(tx, m)
 		initialCount--
 
 	}
+
+}
+
+func (c *ClusterAllocator) destroyMongod(tx *gorm.DB, m *Mongod) {
+
+	// Set the desired execution state to disabled
+
+	m.DesiredState.ExecutionState = MongodExecutionStateDestroyed
+	if err := tx.Model(&m.DesiredState).Update("execution_state", MongodExecutionStateDestroyed); err != nil {
+		panic(err)
+	}
+
+	// TODO MongodMatchStatus
 
 }
 
