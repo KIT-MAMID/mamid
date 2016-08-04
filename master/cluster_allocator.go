@@ -163,7 +163,7 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 
 		for r := pqReplicaSets.Pop(); r != nil; {
 
-			if s := pqRiskGroups.popSlaveinNonconflictingRiskGroup(r); s != nil {
+			if s := pqRiskGroups.PopSlaveinNonconflictingRiskGroup(r); s != nil {
 
 				// spawn new Mongod m on s and add it to r.Mongods
 				// compute MongodState for m and set the DesiredState variable

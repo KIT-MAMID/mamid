@@ -12,7 +12,7 @@ func (q *pqSlavesByRiskGroup) PushSlaveIfFreePorts(s *Slave) {
 	// assuming RiskGroupID is set
 }
 
-func (q *pqSlavesByRiskGroup) popSlaveinNonconflictingRiskGroup(r *ReplicaSet) *Slave {
+func (q *pqSlavesByRiskGroup) PopSlaveinNonconflictingRiskGroup(r *ReplicaSet) *Slave {
 	return nil
 }
 
