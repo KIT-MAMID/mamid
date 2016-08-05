@@ -283,8 +283,11 @@ func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) m
 	return res
 }
 
+func slaveUsage(s *Slave) (runningMongods, maxMongods uint) {
+	return uint(len(s.Mongods)), uint(slaveMaxNumberOfMongods(s))
+}
+
 func slaveBusyRate(s *Slave) float64 {
-	maxMongods := float64(slaveMaxNumberOfMongods(s))
-	runningMongods := float64(len(s.Mongods))
-	return runningMonods / maxMonogds
+	runningMongods, maxMongods := slaveUsage(s)
+	return float64(runningMongods) / float64(maxMongods)
 }
