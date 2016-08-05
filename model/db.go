@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -192,6 +193,21 @@ type Problem struct {
 
 func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
 
+	db, err = initializeDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	migrateDB(db)
+
+	return db, nil
+
+}
+
+func InitializeTestDB() (db *gorm.DB, err error) {
+
+	path := "/tmp/mamid_test.db"
+	os.Remove(path)
 	db, err = initializeDB(path)
 	if err != nil {
 		return nil, err

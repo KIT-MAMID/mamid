@@ -11,7 +11,7 @@ import (
 
 func createDB(t *testing.T) (db *gorm.DB, err error) {
 	// Setup database
-	db, err = model.InitializeInMemoryDB("")
+	db, err = model.InitializeTestDB()
 
 	dbSlave := model.Slave{
 		ID:                   1,
