@@ -16,7 +16,7 @@ func main() {
 	bus := master.NewBus()
 	go bus.Run()
 
-	db, err := model.InitializeInMemoryDB("")
+	db, err := model.InitializeFileFromFile("mamid.sqlite3")
 	dieOnError(err)
 
 	clusterAllocator := &master.ClusterAllocator{}
