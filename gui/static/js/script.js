@@ -217,9 +217,9 @@ mamidApp.controller('mainController', function ($scope, filterFilter, SlaveServi
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
-    SlaveService.query(function(slaves){
+    SlaveService.query(function (slaves) {
         $scope.slaves = slaves;
-        for(var i=0;i<$scope.slaves.length;i++) {
+        for (var i = 0; i < $scope.slaves.length; i++) {
             $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id});
         }
     });
@@ -309,7 +309,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     $scope.updateSlave = function () {
         angular.copy($scope.edit_slave, $scope.slave);
         if ($scope.is_create_view) {
-            $scope.slave.$create(function(){
+            $scope.slave.$create(function () {
                 $location.path("/slaves");
             });
         } else {
@@ -331,7 +331,12 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 });
 
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
-    $scope.replicasets = ReplicaSetService.query()
+    ReplicaSetService.query(function (replicasets) {
+        $scope.replicasets = replicasets;
+        for (var i = 0; i < $scope.replicasets.length; i++) {
+            $scope.replicasets[i].problems = ReplicaSetService.getProblems({replicaset: $scope.replicasets[i].id});
+        }
+    });
 });
 
 mamidApp.controller('replicasetByIdController',
