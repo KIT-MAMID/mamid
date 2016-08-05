@@ -217,7 +217,13 @@ mamidApp.controller('mainController', function ($scope, filterFilter, SlaveServi
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
-    $scope.slaves = SlaveService.query()
+    SlaveService.query(function(slaves){
+        $scope.slaves = slaves;
+        for(var i=0;i<$scope.slaves.length;i++) {
+            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id});
+        }
+    });
+
 });
 var problemPolling = false;
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
