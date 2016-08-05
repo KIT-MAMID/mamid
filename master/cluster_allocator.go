@@ -171,11 +171,12 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 		// will only return items that match current persistence and actually need more members
 
 		pqReplicaSets := c.pqReplicaSets(replicaSets, persistence)
-		pqRiskGroups := c.pqRiskGroups(tx, persistence)
 
 		for r := pqReplicaSets.Pop(); r != nil; {
 
-			if s := pqRiskGroups.PopSlaveinNonconflictingRiskGroup(r); s != nil {
+			pqRiskGroups := c.pqRiskGroups(tx, r, persistence)
+
+			if s := pqRiskGroups.PopSlaveInNonconflictingRiskGroup(); s != nil {
 
 				// spawn new Mongod m on s and add it to r.Mongods
 				// compute MongodState for m and set the DesiredState variable
@@ -183,7 +184,6 @@ func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 				// TODO send DesiredReplicaSetConstraintStatus
 
 				pqReplicaSets.PushIfDegraded(r)
-				pqRiskGroups.PushSlaveIfFreePorts(s)
 
 			} else {
 
