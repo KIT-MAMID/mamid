@@ -91,6 +91,17 @@ func slavePersistence(s *Slave) persistence {
 	}
 }
 
+func (p persistence) PersistentStorage() bool {
+	switch p {
+	case Persistent:
+		return true
+	case Volatile:
+		return false
+	default:
+		panic("invalid value for persistence")
+	}
+}
+
 func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
 
 	var configuredMemberCount uint
