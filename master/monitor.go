@@ -58,8 +58,8 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 	}
 
 	if err == nil {
+		tx := m.DB.Begin()
 		for _, observedMongod := range observedMongods {
-			tx := m.DB.Begin()
 			var modelMongod model.Mongod
 			getOrCreateErr := tx.FirstOrCreate(&modelMongod, &model.Mongod{
 				ParentSlaveID: slave.ID,
@@ -68,6 +68,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}).Error
 			if getOrCreateErr != nil {
 				log.Println(getOrCreateErr.Error())
+				tx.Rollback()
 				return
 			}
 
@@ -75,6 +76,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			relatedResult := tx.Model(&modelMongod).Related(&modelMongod.DesiredState, "DesiredState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
+				tx.Rollback()
 				return
 			}
 
@@ -82,6 +84,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			relatedResult = tx.Model(&modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
+				tx.Rollback()
 				return
 			}
 
@@ -96,14 +99,23 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//TODO Only update observed state and errors to prevent collisions with cluster allocator
-			tx.Save(&modelMongod)
-			tx.Commit()
+			saveErr := tx.Save(&modelMongod).Error
+			if saveErr != nil {
+				log.Println(saveErr.Error())
+				tx.Rollback()
+				return
+			}
 
 		}
 
 		//Remove observed state of mongods the slave does not report
 		var modelMongods []model.Mongod
-		m.DB.Model(&slave).Related(&modelMongods, "Mongods")
+		getMongodsErr := tx.Model(&slave).Related(&modelMongods, "Mongods").Error
+		if getMongodsErr != nil {
+			log.Println(getMongodsErr.Error())
+			tx.Rollback()
+			return
+		}
 	outer:
 		for _, modelMongod := range modelMongods {
 			//Check if slave reported this mongod
@@ -115,8 +127,15 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//Else remove observed state
-			m.DB.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID)
+			deleteErr := tx.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID).Error
+			if deleteErr != nil {
+				log.Println(deleteErr.Error())
+				tx.Rollback()
+				return
+			}
 		}
+
+		tx.Commit()
 
 		//Check every mongod for mismatches
 		for _, modelMongod := range modelMongods {
