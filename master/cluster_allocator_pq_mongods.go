@@ -15,13 +15,9 @@ type pqMongodItem struct {
 }
 
 func pqMongodItemFromMongod(mongod *Mongod) *pqMongodItem {
-
-	maxMongods := float64(slaveMaxNumberOfMongods(mongod.ParentSlave))
-	runningMongods := float64(len(mongod.ParentSlave.Mongods))
-
 	return &pqMongodItem{
 		Mongod:         mongod,
-		ParentBusyRate: runningMongods / maxMongods,
+		ParentBusyRate: slaveBusyRate(mongod.ParentSlave),
 	}
 }
 
