@@ -42,16 +42,6 @@ func TestClusterAllocator_pqRiskGroups(t *testing.T) {
 	t.Error("test not implemented")
 }
 
-/*
-Should
-  prioritize ReplicaSets heavy-degraded replica sets
-    (meaning relative amount of missing persistent/volatile members)
-  only contain degraded ReplicaSets
-*/
-func TestClusterAllocator_pqReplicaSets(t *testing.T) {
-	t.Error("test not implemented")
-}
-
 // Testing this helper function used in effectiveMemberCount and alreadyAddedMemberCount
 func TestClusterAllocator_traverseReplicaSetMongods(t *testing.T) {
 	t.Error("test not implemented")
