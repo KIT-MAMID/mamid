@@ -2,7 +2,6 @@ package master
 
 import (
 	"container/heap"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -31,7 +30,6 @@ func TestClusterAllocator_pqSlice(t *testing.T) {
 		if !ok {
 			panic("unexpected type")
 		}
-		fmt.Printf("%#v\n", slice)
 		return popped
 	}
 
