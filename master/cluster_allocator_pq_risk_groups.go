@@ -8,7 +8,6 @@ import (
 
 type pqSlavesByRiskGroup struct {
 	slaveQueues map[uint]pqSlice
-	p           persistence
 }
 
 func (q *pqSlavesByRiskGroup) PopSlaveInNonconflictingRiskGroup() *Slave {
