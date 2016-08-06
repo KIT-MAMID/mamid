@@ -273,27 +273,6 @@ func slaveMaxNumberOfMongods(s *Slave) PortNumber {
 	return res
 }
 
-func (c *ClusterAllocator) alreadyAddedMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
-
-	var res memberCountTuple
-
-	for _, m := range r.Mongods {
-
-		if m.ParentSlave.ConfiguredState != SlaveStateDisabled &&
-			m.DesiredState.ExecutionState != MongodExecutionStateNotRunning &&
-			m.DesiredState.ExecutionState != MongodExecutionStateDestroyed {
-			if m.ParentSlave.PersistentStorage {
-				res[Persistent]++
-			} else {
-				res[Volatile]++
-			}
-		}
-
-	}
-
-	return res
-}
-
 func slaveUsage(s *Slave) (runningMongods, maxMongods uint) {
 	return uint(len(s.Mongods)), uint(slaveMaxNumberOfMongods(s))
 }

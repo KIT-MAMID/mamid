@@ -55,12 +55,3 @@ func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
 
 	t.Error("test not implemented")
 }
-
-func TestClusterAllocator_alreadyAddedMemberCount(t *testing.T) {
-	db, _ := InitializeInMemoryDB("")
-	allocator := &ClusterAllocator{}
-
-	allocator.alreadyAddedMemberCount(db, &ReplicaSet{})
-
-	t.Error("test not implemented")
-}

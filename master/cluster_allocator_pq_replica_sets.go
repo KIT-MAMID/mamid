@@ -42,18 +42,24 @@ func (c *ClusterAllocator) pqReplicaSets(replicaSets []*ReplicaSet, p persistenc
 }
 
 func replicaSetItemFromReplicaSet(r *ReplicaSet) *pqReplicaSetItem {
-	// Find all persistent
-	desiredCounts := map[persistence]uint{
+
+	alreadyAddedMemberCounts := map[persistence]uint{
 		Persistent: 0,
 		Volatile:   0,
 	}
 
 	for _, m := range r.Mongods {
-		if m.ParentSlave.PersistentStorage { // TODO is ParentSlave always resolved?
-			desiredCounts[Persistent]++
-		} else {
-			desiredCounts[Volatile]++
+
+		if m.ParentSlave.ConfiguredState != SlaveStateDisabled &&
+			m.DesiredState.ExecutionState != MongodExecutionStateNotRunning &&
+			m.DesiredState.ExecutionState != MongodExecutionStateDestroyed {
+			if m.ParentSlave.PersistentStorage {
+				alreadyAddedMemberCounts[Persistent]++
+			} else {
+				alreadyAddedMemberCounts[Volatile]++
+			}
 		}
+
 	}
 
 	relMemberCounts := make(map[persistence]float64, 2)
@@ -61,17 +67,17 @@ func replicaSetItemFromReplicaSet(r *ReplicaSet) *pqReplicaSetItem {
 
 	for _, p := range []persistence{Persistent, Volatile} {
 
-		var memberCount uint
+		var desiredMemberCount uint
 		if p.PersistentStorage() {
-			memberCount = r.PersistentMemberCount
+			desiredMemberCount = r.PersistentMemberCount
 		} else {
-			memberCount = r.VolatileMemberCount
+			desiredMemberCount = r.VolatileMemberCount
 		}
 
-		degraded[p] = memberCount > 0 && desiredCounts[p] < memberCount
+		degraded[p] = desiredMemberCount > 0 && alreadyAddedMemberCounts[p] < desiredMemberCount
 
 		if degraded[p] {
-			relMemberCounts[p] = float64(desiredCounts[p]) / float64(memberCount)
+			relMemberCounts[p] = float64(alreadyAddedMemberCounts[p]) / float64(desiredMemberCount)
 		} else {
 			relMemberCounts[p] = float64(1.0)
 		}
