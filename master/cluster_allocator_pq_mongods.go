@@ -22,6 +22,11 @@ func pqMongodItemFromMongod(mongod *Mongod) *pqMongodItem {
 }
 
 func (q *pqMongods) PopMongodOnBusiestSlave() *Mongod {
+
+	if q.slice.Len() <= 0 {
+		return nil
+	}
+
 	item, ok := heap.Pop(&q.slice).(*pqMongodItem)
 	if !ok {
 		panic("unexpected type in pqMongods")

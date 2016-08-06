@@ -33,6 +33,9 @@ func (c *ClusterAllocator) pqReplicaSets(replicaSets []*ReplicaSet, p persistenc
 }
 
 func (q *pqReplicaSets) Pop() *ReplicaSet {
+	if q.slice.Len() <= 0 {
+		return nil
+	}
 	return heap.Pop(&q.slice).(*ReplicaSet)
 }
 

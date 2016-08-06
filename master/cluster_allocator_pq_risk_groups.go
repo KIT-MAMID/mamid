@@ -16,15 +16,22 @@ func (q *pqSlavesByRiskGroup) PopSlaveInNonconflictingRiskGroup() *Slave {
 	var currentSlave *Slave
 	for _, slavePQ := range q.slaveQueues {
 		// TODO actual peek would be better
+
+		if slavePQ.Len() <= 0 {
+			continue
+		}
+
 		peek, assertionOK := heap.Pop(&slavePQ).(*Slave)
 		if !assertionOK {
 			panic("unexpected type in slave pqSlice")
 		}
+
 		if currentSlave == nil || slaveBusyRate(peek) < slaveBusyRate(currentSlave) {
 			currentSlave = peek
 		} else {
 			heap.Push(&slavePQ, peek)
 		}
+
 	}
 
 	return currentSlave
