@@ -18,13 +18,16 @@ func (c *ClusterAllocator) pqReplicaSets(replicaSets []*ReplicaSet, p persistenc
 
 	pq := &pqReplicaSets{
 		slice: pqReplicaSetItemSlice{
-			items: make([]*pqReplicaSetItem, len(replicaSets)),
+			items: make([]*pqReplicaSetItem, 0),
 			p:     p,
 		},
 	}
 
-	for i, r := range replicaSets {
-		pq.slice.items[i] = replicaSetItemFromReplicaSet(r)
+	for _, r := range replicaSets {
+		item := replicaSetItemFromReplicaSet(r)
+		if item.degraded[p] {
+			pq.slice.Push(item)
+		}
 	}
 
 	heap.Init(&pq.slice)
