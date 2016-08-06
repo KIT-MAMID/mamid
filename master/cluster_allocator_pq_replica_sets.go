@@ -103,15 +103,31 @@ func replicaSetItemFromReplicaSet(r *ReplicaSet) *pqReplicaSetItem {
 		}
 	}
 
+	relMemberCounts := make(map[persistence]float64, 2)
+	degraded := make(map[persistence]bool, 2)
+
+	for _, p := range []persistence{Persistent, Volatile} {
+
+		var memberCount uint
+		if p.PersistentStorage() {
+			memberCount = r.PersistentMemberCount
+		} else {
+			memberCount = r.VolatileMemberCount
+		}
+
+		degraded[p] = memberCount > 0 && desiredCounts[p] < memberCount
+
+		if degraded[p] {
+			relMemberCounts[p] = float64(desiredCounts[p]) / float64(memberCount)
+		} else {
+			relMemberCounts[p] = float64(1.0)
+		}
+
+	}
+
 	return &pqReplicaSetItem{
-		r: r,
-		relMemberCounts: map[persistence]float64{
-			Persistent: float64(desiredCounts[Persistent]) / float64(r.PersistentMemberCount),
-			Volatile:   float64(desiredCounts[Volatile]) / float64(r.VolatileMemberCount),
-		},
-		degraded: map[persistence]bool{
-			Persistent: desiredCounts[Persistent] < r.PersistentMemberCount,
-			Volatile:   desiredCounts[Volatile] < r.VolatileMemberCount,
-		},
+		r:               r,
+		relMemberCounts: relMemberCounts,
+		degraded:        degraded,
 	}
 }
