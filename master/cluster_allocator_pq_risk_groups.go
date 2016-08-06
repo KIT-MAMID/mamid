@@ -39,14 +39,6 @@ func (q *pqSlavesByRiskGroup) slaveComparator(a, b interface{}) bool {
 	return slaveBusyRate(s1) < slaveBusyRate(s2) // least busy slave first
 }
 
-func (q *pqSlavesByRiskGroup) shouldEnqueueSlave(s *Slave) bool {
-	if slavePersistence(s) != q.p {
-		return false
-	}
-	runningMongods, maxMongods := slaveUsage(s)
-	return runningMongods < maxMongods
-}
-
 func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, r *ReplicaSet, p persistence) *pqSlavesByRiskGroup {
 
 	usedRiskGroupIDs := make([]uint, 0)
@@ -77,9 +69,12 @@ func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, r *ReplicaSet, p persistenc
 				slice = pqSlice{make([]interface{}, 0), pq.slaveComparator}
 				pq.slaveQueues[s.RiskGroupID] = slice
 			}
-			if pq.shouldEnqueueSlave(s) {
+
+			runningMongods, maxMongods := slaveUsage(s)
+			if slavePersistence(s) == p && runningMongods < maxMongods {
 				slice.Push(s)
 			}
+
 		}
 	}
 
