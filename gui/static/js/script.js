@@ -187,14 +187,23 @@ mamidApp.controller('mainController', function ($scope, filterFilter, SlaveServi
     $scope.message = 'Greetings from the controller';
     $scope.problems = ProblemService.query();
     SlaveService.query(function (slaves) {
+
         $scope.slaves = slaves;
-        var chart = c3.generate({
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id}, function(problems) {
+                 $scope.genChart();
+            });
+        }
+    });
+    $scope.genChart = function() {
+        c3.generate({
                 bindto: '#slaves',
                 data: {
                     columns: [
                         ['Active', $scope.getStateCount('active')],
                         ['Maintenance', $scope.getStateCount('maintenance')],
                         ['Disabled', $scope.getStateCount('disabled')],
+                        ['Problematic', $scope.getProblemCount()]
                     ],
                     type: 'donut',
                 },
@@ -208,10 +217,27 @@ mamidApp.controller('mainController', function ($scope, filterFilter, SlaveServi
                 ,
             })
             ;
-    });
-
+    };
     $scope.getStateCount = function (state) {
-        return filterFilter($scope.slaves, {configured_state: state}).length;
+        var s = []
+        for(var i=0;i<$scope.slaves.length;i++){
+            if($scope.slaves[i].problems.length == 0) {
+                s.push($scope.slaves[i]);
+            }
+        }
+        return filterFilter(s, {configured_state: state}).length;
+    };
+
+    $scope.getProblemCount = function() {
+        var count = 0;
+        window.console.log($scope.slaves.length);
+        for(var i=0;i<$scope.slaves.length;i++){
+            window.console.log($scope.slaves[i].problems.length);
+            if($scope.slaves[i].problems.length > 0) {
+                count++;
+            }
+        }
+        return count;
     }
 
 });
