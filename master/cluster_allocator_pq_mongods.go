@@ -36,7 +36,7 @@ func (q *pqMongods) PopMongodOnBusiestSlave() *Mongod {
 
 func (c *ClusterAllocator) pqMongods(mongods []*Mongod, p persistence) *pqMongods {
 
-	items := make([]interface{}, len(mongods))
+	items := make([]interface{}, 0, len(mongods))
 	for _, m := range mongods {
 		if slavePersistence(m.ParentSlave) == p {
 			items = append(items, pqMongodItemFromMongod(m))
