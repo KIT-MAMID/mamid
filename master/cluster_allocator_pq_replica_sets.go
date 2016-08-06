@@ -41,7 +41,7 @@ func (q *pqReplicaSets) Pop() *ReplicaSet {
 
 func (q *pqReplicaSets) PushIfDegraded(r *ReplicaSet) {
 	item := replicaSetItemFromReplicaSet(r)
-	if !item.degraded[q.slice.p] {
+	if item.degraded[q.slice.p] {
 		heap.Push(&q.slice, item)
 	}
 }
