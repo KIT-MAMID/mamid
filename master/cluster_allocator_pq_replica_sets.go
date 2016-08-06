@@ -36,7 +36,7 @@ func (q *pqReplicaSets) Pop() *ReplicaSet {
 	if q.slice.Len() <= 0 {
 		return nil
 	}
-	return heap.Pop(&q.slice).(*ReplicaSet)
+	return heap.Pop(&q.slice).(*pqReplicaSetItem).r
 }
 
 func (q *pqReplicaSets) PushIfDegraded(r *ReplicaSet) {
@@ -74,7 +74,7 @@ func (s *pqReplicaSetItemSlice) Swap(i, j int) {
 	s.items[i], s.items[j] = s.items[j], s.items[i]
 }
 
-func (s pqReplicaSetItemSlice) Push(i interface{}) {
+func (s *pqReplicaSetItemSlice) Push(i interface{}) {
 	item, ok := i.(*pqReplicaSetItem)
 	if !ok {
 		panic("pqReplicaSetItemSlice should only be used with *ReplicaSet")
@@ -82,7 +82,7 @@ func (s pqReplicaSetItemSlice) Push(i interface{}) {
 	s.items = append(s.items, item)
 }
 
-func (s pqReplicaSetItemSlice) Pop() interface{} {
+func (s *pqReplicaSetItemSlice) Pop() interface{} {
 	ret := s.items[len(s.items)-1]
 	s.items = s.items[0 : len(s.items)-1]
 	return ret
