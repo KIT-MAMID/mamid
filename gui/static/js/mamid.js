@@ -148,7 +148,7 @@ mamidApp.config(function ($routeProvider) {
 mamidApp.factory('SlaveService', function ($resource) {
     return $resource('/api/slaves/:slave', {slave: "@id"}, {
         create: {method: 'put'},
-        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/'},
+        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/', isArray: true},
         getProblems: {method: 'get', url: '/api/slaves/:slave/problems', isArray: true}
     });
 });
