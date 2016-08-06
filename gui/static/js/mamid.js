@@ -183,8 +183,9 @@ mamidApp.factory('RiskGroupService', function ($resource) {
     });
 });
 
-mamidApp.controller('mainController', function ($scope, filterFilter, SlaveService, ProblemService) {
+mamidApp.controller('mainController', function ($scope, $location, filterFilter, SlaveService, ProblemService) {
     $scope.problems = ProblemService.query();
+    $scope.$location = $location;
     SlaveService.query(function (slaves) {
 
         $scope.slaves = slaves;
