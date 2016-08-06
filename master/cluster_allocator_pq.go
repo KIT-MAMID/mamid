@@ -17,11 +17,11 @@ func (s *pqSlice) Swap(i, j int) {
 	s.Slice[i], s.Slice[j] = s.Slice[j], s.Slice[i]
 }
 
-func (s pqSlice) Push(i interface{}) {
+func (s *pqSlice) Push(i interface{}) {
 	s.Slice = append(s.Slice, i)
 }
 
-func (s pqSlice) Pop() interface{} {
+func (s *pqSlice) Pop() interface{} {
 	ret := s.Slice[len(s.Slice)-1]
 	s.Slice = s.Slice[0 : len(s.Slice)-1]
 	return ret
