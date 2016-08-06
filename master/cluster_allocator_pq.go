@@ -10,7 +10,7 @@ func (s pqSlice) Len() int {
 }
 
 func (s pqSlice) Less(left, right int) bool {
-	return s.LessComparator(&s.Slice[left], &s.Slice[right])
+	return s.LessComparator(s.Slice[left], s.Slice[right])
 }
 
 func (s *pqSlice) Swap(i, j int) {
