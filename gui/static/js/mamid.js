@@ -230,7 +230,6 @@ mamidApp.controller('mainController', function ($scope, $location, filterFilter,
 
     $scope.getProblemCount = function() {
         var count = 0;
-        window.console.log($scope.slaves.length);
         for(var i=0;i<$scope.slaves.length;i++){
             window.console.log($scope.slaves[i].problems.length);
             if($scope.slaves[i].problems.length > 0) {
