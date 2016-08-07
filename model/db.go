@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -281,6 +282,68 @@ func initializeDB(dsn string) (db *gorm.DB, err error) {
 
 func migrateDB(db *gorm.DB) {
 	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{}, &CommunicationError{}, &SlaveError{})
+	if err := createSlaveUtilizationView(db); err != nil {
+		panic(err)
+	}
+	if err := createReplicaSetEffectiveMembersView(db); err != nil {
+		panic(err)
+	}
+	if err := createReplicaSetConfiguredMembersView(db); err != nil {
+		panic(err)
+	}
+}
+
+func createReplicaSetEffectiveMembersView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS replica_set_effective_members;
+		CREATE VIEW replica_set_effective_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN slaves s ON s.id = m.parent_slave_id
+		JOIN mongod_states observed ON observed.id = m.observed_state_id
+		JOIN mongod_states desired ON desired.id = m.desired_state_id
+		WHERE
+		observed.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `
+		AND
+		desired.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `;`).Error
+}
+
+func createSlaveUtilizationView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS slave_utilization;
+		CREATE VIEW slave_utilization AS
+		SELECT
+			*,
+			CASE WHEN max_mongods = 0 THEN 1 ELSE current_mongods*1.0/max_mongods END AS utilization,
+			(max_mongods - current_mongods) AS free_mongods
+		FROM (
+			SELECT
+				s.*,
+				s.mongod_port_range_end - s.mongod_port_range_begin AS max_mongods,
+				COUNT(DISTINCT m.id) as current_mongods
+			FROM slaves s
+			LEFT OUTER JOIN mongods m ON m.parent_slave_id = s.id
+			GROUP BY s.id
+		);`).Error
+}
+
+func createReplicaSetConfiguredMembersView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS replica_set_configured_members;
+		CREATE VIEW replica_set_configured_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+		JOIN slaves s ON m.parent_slave_id = s.id
+		WHERE
+			s.configured_state != ` + fmt.Sprintf("%d", SlaveStateDisabled) + `
+			AND
+			desired_state.execution_state NOT IN (` +
+		fmt.Sprintf("%d", MongodExecutionStateNotRunning) +
+		`, ` + fmt.Sprintf("%d", MongodExecutionStateDestroyed) +
+		`);`).Error
 }
 
 func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
