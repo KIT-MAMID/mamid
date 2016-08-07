@@ -13,7 +13,7 @@ var notifiers []Notifier
 var apiClient APIClient
 
 func main() {
-	p.Parse("/home/niklas/GO/src/github.com/KIT-MAMID/mamid/notifier/contacts.txt")
+	p.Parse("contacts.txt")
 	notifiers = append(notifiers, &email)
 	// Wait forever
 	c := make(chan os.Signal, 1)
