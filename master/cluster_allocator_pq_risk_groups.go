@@ -40,7 +40,7 @@ func (q *pqSlavesByRiskGroup) PopSlaveInNonconflictingRiskGroup() *Slave {
 func (q *pqSlavesByRiskGroup) slaveComparator(a, b interface{}) bool {
 	s1, s1_ok := a.(*Slave)
 	s2, s2_ok := b.(*Slave)
-	if s1_ok || s2_ok {
+	if !s1_ok || !s2_ok {
 		panic("unexpected type in slave pqSlice")
 	}
 	return slaveBusyRate(s1) < slaveBusyRate(s2) // least busy slave first
@@ -51,7 +51,9 @@ func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, r *ReplicaSet, p persistenc
 	usedRiskGroupIDs := make([]uint, 0)
 
 	for _, m := range r.Mongods {
-		usedRiskGroupIDs = append(usedRiskGroupIDs, m.ParentSlave.RiskGroupID)
+		if m.ParentSlave.RiskGroupID != 0 { //risk group 0 should never be used up -> always allowed
+			usedRiskGroupIDs = append(usedRiskGroupIDs, m.ParentSlave.RiskGroupID)
+		}
 	}
 
 	var candidateRiskGroups []*RiskGroup
@@ -61,7 +63,7 @@ func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, r *ReplicaSet, p persistenc
 
 	// find usable slaves among candidate risk groups
 	var candidateSlaves []*Slave
-	if err := tx.Where("risk_group_id not in (?)", usedRiskGroupIDs).Where("persistent_storage = ?", p.PersistentStorage()).Find(&candidateSlaves).Error; err != nil {
+	if err := tx.Where("risk_group_id not in (?)", usedRiskGroupIDs).Find(&candidateSlaves).Error; err != nil {
 		panic(err)
 	}
 
@@ -74,14 +76,17 @@ func (c *ClusterAllocator) pqRiskGroups(tx *gorm.DB, r *ReplicaSet, p persistenc
 			slice, ok := pq.slaveQueues[s.RiskGroupID]
 			if !ok {
 				slice = pqSlice{make([]interface{}, 0), pq.slaveComparator}
-				pq.slaveQueues[s.RiskGroupID] = slice
+			}
+
+			if err := tx.Model(s).Related(&s.Mongods, "Mongods").Error; err != nil {
+				panic(err)
 			}
 
 			runningMongods, maxMongods := slaveUsage(s)
-			if slavePersistence(s) == p && runningMongods < maxMongods {
+			if runningMongods < maxMongods {
 				slice.Push(s)
 			}
-
+			pq.slaveQueues[s.RiskGroupID] = slice
 		}
 	}
 
