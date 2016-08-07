@@ -273,7 +273,7 @@ func (c *ClusterAllocator) slaveNextMongodPort(tx *gorm.DB, s *Slave) (portNumbe
 }
 
 func slaveMaxNumberOfMongods(s *Slave) PortNumber {
-	res := s.MongodPortRangeEnd - s.MongodPortRangeBegin + PortNumber(1)
+	res := s.MongodPortRangeEnd - s.MongodPortRangeBegin
 	if res <= 0 {
 		panic("datastructure invariant violated: the range of Mongod ports for a slave must be sized greater than 0")
 	}
