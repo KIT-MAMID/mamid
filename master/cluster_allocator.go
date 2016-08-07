@@ -4,7 +4,7 @@ import (
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/jinzhu/gorm"
-	"math"
+	"log"
 )
 
 type ClusterAllocator struct {
@@ -37,7 +37,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	}()
 
 	// list of replica sets with number of excess mongods
-	replicaSets, err = tx.Raw(`SELECT
+	replicaSets, err := tx.Raw(`SELECT
 			r.id,
 			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
 				- r.persistent_member_count AS deletable_persistent,
@@ -47,7 +47,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	).Rows()
 
 	if err != nil {
-		panic(res.Error)
+		panic(err)
 	}
 	defer replicaSets.Close()
 
@@ -57,7 +57,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			replicaSetID                             uint
 			deletable_persistent, deletable_volatile int
 		)
-		err = replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile).Error
+		err := replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile).Error
 		if err != nil {
 			panic(err)
 		}
@@ -69,6 +69,12 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				deletable_count = deletable_persistent
 			} else {
 				deletable_count = deletable_volatile
+			}
+
+			// Assert that deletable_count >= 0
+			// SQLite will not LIMIT if deletable_count is negative!
+			if deletable_count < 0 {
+				continue
 			}
 
 			log.Printf("cluster allocator: removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", replicaSetID, deletable_count, p)
@@ -85,7 +91,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					AND s.persistent_storage = ?
 					AND s.configured_state != ?
 				ORDER BY (CASE s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
-				LIMIT ?`, replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, math.Max(deletable_count, 0),
+				LIMIT ?`, replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, deletable_count,
 			).Find(&deletableMongds).Error
 			if err != nil {
 				panic(err)
@@ -96,16 +102,16 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			for _, m := range deletableMongds {
 				log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed`", m)
 
-				res = tx.Exec("UPDATE mongod_states SET execution_state=? WHERE id=?", MongodExecutionStateDestroyed, leastBusySlaveInReplicaSet.DesiredStateID)
+				res := tx.Exec("UPDATE mongod_states SET execution_state=? WHERE id=?", MongodExecutionStateDestroyed, m.DesiredStateID)
 				if res.Error != nil {
 					panic(res.Error)
 				}
 
 				if res.RowsAffected < 1 {
-					log.Errorf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
+					log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
 				}
 				if res.RowsAffected > 1 {
-					log.Errorf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row")
+					log.Printf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row")
 				}
 
 				// TODO side effects
@@ -126,6 +132,8 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			memberCountColumnName = "volatile_member_count"
 		}
 
+		unsatisfiable_replica_set_ids := make([]uint, 0)
+
 		for {
 
 			replicaSet := struct {
@@ -134,20 +142,22 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			}{}
 
 			// HEAD of degraded replica sets PQ
-			err := tx.Raw(`SELECT r.*, COUNT(DISTINCT members.mongod_id) as "configured_member_count"
+			res := tx.Raw(`SELECT r.*, COUNT(DISTINCT members.mongod_id) as "configured_member_count"
 					FROM replica_sets r
 					LEFT OUTER JOIN replica_set_configured_members members
 						ON r.id = members.replica_set_id
 						AND r.persistent_storage = ?
 					WHERE
 						r.`+memberCountColumnName+` != 0
+						AND
+						r.id NOT IN ?
 					GROUP BY r.id
 					ORDER BY COUNT(members.mongod_id) / r.`+memberCountColumnName+`
-					LIMIT 1`, p.PersistentStorage(),
-			).Scan(&replicaSet).Error
+					LIMIT 1`, p.PersistentStorage(), unsatisfiable_replica_set_ids,
+			).Scan(&replicaSet)
 
-			if err != nil {
-				panic(err)
+			if res.Error != nil {
+				panic(res.Error)
 			}
 
 			if res.RecordNotFound() {
@@ -158,7 +168,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			log.Printf("cluster allocator: looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
 
 			var leastBusySlaveInReplicaSet Slave
-			err = tx.Raw(`SELECT s.*
+			res = tx.Raw(`SELECT s.*
 			      	      FROM slave_utilization s
 			      	      WHERE
 			      	      	s.free_mongods > 0
@@ -175,15 +185,21 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			      	      	)
 			      	      ORDER BY s.utilization ASC
 			      	      LIMIT 1`, replicaSet.ID,
-			).Scan(&leastBusySlaveInReplicaSet).Error
+			).Scan(&leastBusySlaveInReplicaSet)
 
-			if err != nil {
-				panic(err)
+			if res.Error != nil {
+				panic(res.Error)
+			}
+
+			if res.RecordNotFound() {
+				log.Printf("cluster allocator: unsatisfiable replica set `%s`: not enough suitable `%s` slaves", replicaSet.Name, p)
+				unsatisfiable_replica_set_ids = append(unsatisfiable_replica_set_ids, replicaSet.ID)
+				continue
 			}
 
 			log.Printf("cluster allocator: found slave `%s` as host for new mongod for replica set `%s`", leastBusySlaveInReplicaSet.Hostname, replicaSet.Name)
 
-			_ = c.spawnMongodOnSlave(tx, leastBusySlaveInReplicaSet, replicaSet.(ReplicaSet))
+			_ = c.spawnMongodOnSlave(tx, &leastBusySlaveInReplicaSet, &replicaSet.ReplicaSet)
 			// TODO side effects
 
 		}
