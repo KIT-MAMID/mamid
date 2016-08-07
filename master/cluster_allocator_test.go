@@ -32,16 +32,6 @@ mismatch generation => use mock of Bus?
 
 */
 
-/*
-Should partition the
-  set of ALL slaves of type either persistent|volatile
-  with >= 1 free Mongod Port
-  into a map[RiskGroup]PriorityQueue
-*/
-func TestClusterAllocator_pqRiskGroups(t *testing.T) {
-	t.Error("test not implemented")
-}
-
 // Testing this helper function used in effectiveMemberCount and alreadyAddedMemberCount
 func TestClusterAllocator_traverseReplicaSetMongods(t *testing.T) {
 	t.Error("test not implemented")

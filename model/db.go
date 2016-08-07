@@ -220,6 +220,31 @@ func InitializeTestDB() (db *gorm.DB, err error) {
 
 }
 
+func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
+
+	path := "/tmp/mamid_test.db"
+	os.Remove(path)
+	db, err = initializeDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if sqlFilePath != "" {
+		statements, err := ioutil.ReadFile(sqlFilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		db.Exec(string(statements), []interface{}{})
+
+	}
+
+	migrateDB(db)
+
+	return db, nil
+
+}
+
 func InitializeInMemoryDB(sqlFilePath string) (db *gorm.DB, err error) {
 
 	db, err = initializeDB(":memory:")
