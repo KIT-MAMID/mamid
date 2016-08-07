@@ -59,15 +59,22 @@ func (c *ClusterAllocator) replicaSets(tx *gorm.DB) (replicaSets []*ReplicaSet) 
 
 		for _, m := range r.Mongods {
 
-			if err := tx.Model(m).Related(&m.ObservedState, "ObservedState").Error; err != nil {
+			res := tx.Model(m).Related(&m.ObservedState, "ObservedState")
+			if err := res.Error; !res.RecordNotFound() && err != nil {
 				panic(err)
 			}
-			if err := tx.Model(m).Related(&m.DesiredState, "DesiredState").Error; err != nil {
+			res = tx.Model(m).Related(&m.DesiredState, "DesiredState")
+			if err := res.Error; !res.RecordNotFound() && err != nil {
 				panic(err)
 			}
-			if err := tx.Model(m).Related(&m.ParentSlave, "ParentSlave").Error; err != nil {
+
+			//m.ParentSlave is a pointer and gorm does not initialize pointers on its own
+			var parentSlave Slave
+			res = tx.Model(m).Related(&parentSlave, "ParentSlave")
+			if err := res.Error; err != nil {
 				panic(err)
 			}
+			m.ParentSlave = &parentSlave
 
 		}
 
