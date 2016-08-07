@@ -1,9 +1,10 @@
 package main
 
-import(
-	"net/smtp"
+import (
 	"fmt"
+	"net/smtp"
 )
+
 type Notifier interface {
 	SendProblem(problem Problem) error
 }
@@ -11,26 +12,27 @@ type Notifier interface {
 type EmailNotifier struct {
 	Contacts []*EmailContact
 }
+
 func (n *EmailNotifier) SendProblem(problem Problem) error {
 	content := ("A Problem occured: " + problem.Description + "\r\n" +
-		   "ReplicaSet: " + fmt.Sprint(problem.ReplicaSet) + "\r\n" +
-		   "Slave: " + fmt.Sprint( problem.Slave) + "\r\n" +
-		   "long Description:" + problem.LongDescription) + "\r\n"
+		"ReplicaSet: " + fmt.Sprint(problem.ReplicaSet) + "\r\n" +
+		"Slave: " + fmt.Sprint(problem.Slave) + "\r\n" +
+		"long Description:" + problem.LongDescription) + "\r\n"
 	subject := ("Subject:" + "KIT-MAMID: Problem in " + fmt.Sprint(problem.ReplicaSet) + "/" + fmt.Sprint(problem.Slave))
-	msg := []byte("From: kit.mamid@gmail.com\r\n"+
-                        subject + "\r\n" +
-			content)
-		err := n.sendMailToContacts(msg)
-		if err != nil{
-			return err
-		}
+	msg := []byte("From: kit.mamid@gmail.com\r\n" +
+		subject + "\r\n" +
+		content)
+	err := n.sendMailToContacts(msg)
+	if err != nil {
+		return err
+	}
 	return nil
 }
-func (n *EmailNotifier) sendMailToContacts(msg []byte) error{
+func (n *EmailNotifier) sendMailToContacts(msg []byte) error {
 	auth := smtp.PlainAuth("", "kit.mamid@gmail.com", "uwsngsdlsnh", "smtp.gmail.com")
 	var to []string
-	for i := 0; i < len(n.Contacts); i++{
-		to[i] = n.Contacts[i].Address;
+	for i := 0; i < len(n.Contacts); i++ {
+		to[i] = n.Contacts[i].Address
 	}
 	err := smtp.SendMail(
 		"smtp.gmail.com:587",
@@ -40,4 +42,3 @@ func (n *EmailNotifier) sendMailToContacts(msg []byte) error{
 		msg)
 	return err
 }
-
