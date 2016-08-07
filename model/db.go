@@ -57,7 +57,7 @@ type Slave struct {
 	Problems []*Problem
 
 	// Foreign keys
-	RiskGroupID uint
+	RiskGroupID uint `sql:"type:integer REFERENCES risk_groups(id)"`
 }
 
 type PortNumber uint16
@@ -100,22 +100,22 @@ type Mongod struct {
 	ReplSetName string
 
 	ObservationError   MSPError
-	ObservationErrorID uint
+	ObservationErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 
 	LastEstablishStateError   MSPError
-	LastEstablishStateErrorID uint
+	LastEstablishStateErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 
 	ParentSlave   *Slave
-	ParentSlaveID uint
+	ParentSlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint
+	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
 
 	DesiredState   MongodState
-	DesiredStateID uint
+	DesiredStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 
 	ObservedState   MongodState
-	ObservedStateID uint
+	ObservedStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 }
 
 type MongodState struct {
@@ -142,7 +142,7 @@ type ReplicaSetMember struct { // was ReplicaSetMember in UML
 	Port     PortNumber
 
 	// Foreign key to parent MongodState
-	MongodStateID uint
+	MongodStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 }
 
 type MSPError struct {
@@ -156,13 +156,13 @@ type MSPError struct {
 type CommunicationError struct {
 	msp.CommunicationError
 	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint
+	MSPErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 }
 
 type SlaveError struct {
 	msp.SlaveError
 	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint
+	MSPErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 }
 
 type ProblemType uint
@@ -184,13 +184,13 @@ type Problem struct {
 	LastUpdated     time.Time
 
 	Slave   *Slave
-	SlaveID uint
+	SlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint
+	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
 
 	Mongod   *Mongod
-	MongodID uint
+	MongodID uint `sql:"type:integer REFERENCES mongods(id)"`
 }
 
 func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
