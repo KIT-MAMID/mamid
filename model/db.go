@@ -77,7 +77,7 @@ const (
 )
 
 type ReplicaSet struct {
-	ID                              uint   `gorm:"primary_key"`
+	ID                              uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1
 	Name                            string `gorm:"unique_index"`
 	PersistentMemberCount           uint
 	VolatileMemberCount             uint
@@ -88,7 +88,7 @@ type ReplicaSet struct {
 }
 
 type RiskGroup struct {
-	ID     uint   `gorm:"primary_key"`
+	ID     uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1, 0 is special value for slaves "out of risk" => define a constant?
 	Name   string `gorm:"unique_index"`
 	Slaves []*Slave
 }

@@ -2,7 +2,7 @@ package master
 
 import (
 	. "github.com/KIT-MAMID/mamid/model"
-	_ "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -32,16 +32,22 @@ mismatch generation => use mock of Bus?
 
 */
 
-// Testing this helper function used in effectiveMemberCount and alreadyAddedMemberCount
-func TestClusterAllocator_traverseReplicaSetMongods(t *testing.T) {
-	t.Error("test not implemented")
-}
+func TestClutserAllocator_findUnusedPort(t *testing.T) {
 
-func TestClusterAllocator_effectiveMemberCount(t *testing.T) {
-	db, _ := InitializeInMemoryDB("")
-	allocator := &ClusterAllocator{}
+	unusedPort, found := findUnusedPort([]PortNumber{2, 3, 5}, 2, 6)
+	assert.EqualValues(t, 4, unusedPort, "should find lowest free port number")
 
-	allocator.effectiveMemberCount(db, &ReplicaSet{})
+	unusedPort, found = findUnusedPort([]PortNumber{}, 2, 5)
+	assert.EqualValues(t, 2, unusedPort, "should use minPort when no port used")
 
-	t.Error("test not implemented")
+	unusedPort, found = findUnusedPort([]PortNumber{0}, 2, 5)
+	assert.EqualValues(t, 2, unusedPort)
+
+	var uninitialized []PortNumber
+	unusedPort, found = findUnusedPort(uninitialized, 2, 5)
+	assert.EqualValues(t, 2, unusedPort)
+
+	unusedPort, found = findUnusedPort([]PortNumber{2, 3, 4}, 2, 5)
+	assert.Equal(t, false, found, "should not find a port if no port free")
+
 }

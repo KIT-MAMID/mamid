@@ -57,7 +57,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			replicaSetID                             uint
 			deletable_persistent, deletable_volatile int
 		)
-		err := replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile).Error
+		err := replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile)
 		if err != nil {
 			panic(err)
 		}
@@ -132,7 +132,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			memberCountColumnName = "volatile_member_count"
 		}
 
-		unsatisfiable_replica_set_ids := make([]uint, 0)
+		unsatisfiable_replica_set_ids := []uint{0} // we always start at 1, this is a workaround for the statement generator producing (NULL) in case of an empty set otherwise
 
 		for {
 
@@ -146,32 +146,34 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					FROM replica_sets r
 					LEFT OUTER JOIN replica_set_configured_members members
 						ON r.id = members.replica_set_id
-						AND r.persistent_storage = ?
+						AND members.persistent_storage = ?
 					WHERE
 						r.`+memberCountColumnName+` != 0
 						AND
-						r.id NOT IN ?
+						r.id NOT IN (?)
 					GROUP BY r.id
-					ORDER BY COUNT(members.mongod_id) / r.`+memberCountColumnName+`
+					HAVING COUNT(DISTINCT members.mongod_id) < r.`+memberCountColumnName+`
+					ORDER BY COUNT(DISTINCT members.mongod_id) / r.`+memberCountColumnName+`
 					LIMIT 1`, p.PersistentStorage(), unsatisfiable_replica_set_ids,
 			).Scan(&replicaSet)
-
-			if res.Error != nil {
-				panic(res.Error)
-			}
 
 			if res.RecordNotFound() {
 				log.Printf("cluster allocator: finished repairing degraded replica sets in need of `%s` members", p)
 				break
+			} else if res.Error != nil {
+				panic(res.Error)
 			}
 
 			log.Printf("cluster allocator: looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
 
-			var leastBusySlaveInReplicaSet Slave
+			// TODO spawn twice on same slave if slave is in risk group 0???
+			var leastBusySuitableSlave Slave
 			res = tx.Raw(`SELECT s.*
 			      	      FROM slave_utilization s
 			      	      WHERE
 			      	      	s.free_mongods > 0
+					AND
+					s.configured_state = ?
 			      	      	AND (
 			      	      		s.risk_group_id NOT IN (
 			      	      			SELECT DISTINCT s.risk_group_id
@@ -184,22 +186,28 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			      	      		OR s.risk_group_id = 0
 			      	      	)
 			      	      ORDER BY s.utilization ASC
-			      	      LIMIT 1`, replicaSet.ID,
-			).Scan(&leastBusySlaveInReplicaSet)
-
-			if res.Error != nil {
-				panic(res.Error)
-			}
+			      	      LIMIT 1`, SlaveStateActive, replicaSet.ID,
+			).Scan(&leastBusySuitableSlave)
 
 			if res.RecordNotFound() {
 				log.Printf("cluster allocator: unsatisfiable replica set `%s`: not enough suitable `%s` slaves", replicaSet.Name, p)
 				unsatisfiable_replica_set_ids = append(unsatisfiable_replica_set_ids, replicaSet.ID)
 				continue
+			} else if res.Error != nil {
+				panic(res.Error)
 			}
 
-			log.Printf("cluster allocator: found slave `%s` as host for new mongod for replica set `%s`", leastBusySlaveInReplicaSet.Hostname, replicaSet.Name)
+			log.Printf("cluster allocator: found slave `%s` as host for new mongod for replica set `%s`", leastBusySuitableSlave.Hostname, replicaSet.Name)
 
-			_ = c.spawnMongodOnSlave(tx, &leastBusySlaveInReplicaSet, &replicaSet.ReplicaSet)
+			m, err := c.spawnMongodOnSlave(tx, &leastBusySuitableSlave, &replicaSet.ReplicaSet)
+			if err != nil {
+				log.Printf("cluster allocator: could not spawn mongod on slave `%s`: %s", leastBusySuitableSlave.Hostname, err.Error())
+				// the queries should have not returned a slave without free ports
+				panic(err)
+			} else {
+				log.Printf("cluster allocator: spawned mongod `%d` for replica set `%s` on slave `%s`", m.ID, replicaSet.Name, leastBusySuitableSlave.Hostname)
+			}
+
 			// TODO side effects
 
 		}
@@ -246,12 +254,6 @@ func (c *ClusterAllocator) replicaSets(tx *gorm.DB) (replicaSets []*ReplicaSet) 
 	return replicaSets
 }
 
-func (c *ClusterAllocator) removeUnneededMembers(tx *gorm.DB, r *ReplicaSet) {
-	for persistence, count := range c.effectiveMemberCount(tx, r) {
-		c.removeUnneededMembersByPersistence(tx, r, persistence, count)
-	}
-}
-
 func slavePersistence(s *Slave) persistence {
 	switch s.PersistentStorage {
 	case true:
@@ -283,272 +285,77 @@ func (p persistence) String() string {
 	}
 }
 
-func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
+func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaSet) (*Mongod, error) {
 
-	/*
-		CREATE VIEW replica_set_effective_members AS
-		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
-		FROM replica_sets r
-		JOIN mongods m ON m.replica_set_id = r.id
-		JOIN slaves s ON s.id = m.parent_slave
-		JOIN slave_states observed ON observed.id = m.observed_state_id
-		JOIN slave_states desired ON desired.id = m.desired_state_id
-		WHERE
-			observed.execution_state = ?running
-			AND
-			desired.execution_state = ?running
+	var usedPorts []PortNumber
+	res := tx.Raw(`
+		SELECT m.port
+		FROM mongods m
+		WHERE m.parent_slave_id = ?
+		ORDER BY m.port ASC
+	`, s.ID).Pluck("port", &usedPorts)
 
-		-- list of replica sets with number on excess mongods
-		SELECT
-			r.id,
-			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?persistent)
-				- r.persistent_member_count AS deletable_persistent,
-			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?volatile)
-				- r.volatile_member_count AS deletable_volatile
-		FROM replica_sets r
-
-		-- foreach row, remove mongods by the query below LIMIT BY CLAMP_TO_ZERO(deletable_(persistent|volatile))
-
-		-- view: slave_utilization
-		CREATE VIEW slave_utilization AS
-		SELECT
-			*,
-			CASE max_mongods = 0 THEN 1 ELSE current_mongods/max_mongods END AS utilization,
-			(max_mongods - current_mongods) AS free_mongods
-		FROM (
-			SELECT
-				s.*,
-				s.mongod_port_range_end - s.mongod_port_range_begin AS max_mongods,
-				COUNT(DISTINCT m.id) as current_mongods
-			FROM slaves s
-			LEFT OUTER JOIN mongods m ON m.replica_set_id = r.id
-		)
-
-		-- HEAD of prioritized list of deletable members
-		-- 	parametrized by: configured_state
-		SELECT m.*
-		FROM replica_sets r
-		JOIN mongods m ON m.replica_set_id = r.id
-		JOIN slaves s ON s.id = m.parent_slave
-		JOIN slave_utilization su ON s.id = u.slave_id
-		WHERE r.id = ?r.ID AND s.persistent_storage = ?p
-		ORDER BY (CASE s.configured_state = ?disabled THEN 1 ELSE 2 END) ASC, su.utilization DESC
-		LIMIT CLAMP_TO_ZERO(deletable_persistent|volatile)
-
-	*/
-
-	var configuredMemberCount uint
-	if p == Persistent {
-		configuredMemberCount = r.PersistentMemberCount
-	} else if p == Volatile {
-		configuredMemberCount = r.VolatileMemberCount
+	if !res.RecordNotFound() && res.Error != nil {
+		panic(res.Error)
 	}
 
-	// Destroy any Mongod running on disabled slaves (no specific priority)
-	for initialCount > configuredMemberCount {
-		for _, m := range r.Mongods {
+	log.Printf("cluster allocator: slave: %#v: found used ports: %v", s, usedPorts)
 
-			if m.ParentSlave.ConfiguredState == SlaveStateDisabled &&
-				slavePersistence(m.ParentSlave) == p {
+	unusedPort, found := findUnusedPort(usedPorts, s.MongodPortRangeBegin, s.MongodPortRangeEnd)
 
-				c.destroyMongod(tx, m)
-				initialCount--
-			}
-		}
+	if !found {
+		return nil, fmt.Errorf("could not spawn Mongod: no free port on slave `%s`", s.Hostname)
 	}
 
-	// Remove superfluous Mongods on busiest slaves first
-	removalPQ := c.pqMongods(r.Mongods, p)
-	for initialCount > configuredMemberCount {
-		// Destroy any Mongod (lower priority)
-		m := removalPQ.PopMongodOnBusiestSlave()
-
-		if m == nil {
-			break
-		}
-
-		// destroy
-		c.destroyMongod(tx, m)
-		initialCount--
-
+	desiredState := MongodState{
+		IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
+		ExecutionState:         MongodExecutionStateRunning,
 	}
 
-}
-
-func (c *ClusterAllocator) destroyMongod(tx *gorm.DB, m *Mongod) {
-
-	// Set the desired execution state to disabled
-
-	m.DesiredState.ExecutionState = MongodExecutionStateDestroyed
-	if err := tx.Model(&m.DesiredState).Update("execution_state", MongodExecutionStateDestroyed); err != nil {
-		panic(err)
-	}
-
-	// TODO MongodMatchStatus
-
-}
-
-func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memberCountTuple {
-
-	var res memberCountTuple
-
-	for _, m := range r.Mongods {
-
-		if m.ObservedState.ExecutionState == MongodExecutionStateRunning &&
-			m.DesiredState.ExecutionState == MongodExecutionStateRunning {
-			if m.ParentSlave.PersistentStorage {
-				res[Persistent]++
-			} else {
-				res[Volatile]++
-			}
-		}
-	}
-
-	return res
-}
-
-func (c *ClusterAllocator) addMembersForPersistence(tx *gorm.DB, p persistence) {
-
-	/*
-
-		-- view: replica set members
-		CREATE VIEW replica_set_configured_members AS
-		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
-		FROM replica_set r
-		JOIN mongods m ON m.replica_set_id = r.id
-		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
-		JOIN slaves s ON m.parent_slave_id = s.id
-		WHERE
-			s.configured_state != ?disabled
-			AND
-			desired_state.execution_state NOT IN (?NotRunning, ?Destroyed)
-
-		-- HEAD of degraded replica sets PQ
-		SELECT r.*, COUNT(DISTINCT members.mongod_id) as "configured_member_count"
-		FROM replica_sets r
-		LEFT OUTER JOIN replica_set_configured_members members ON r.id = members.replica_set_id
-		WHERE r.persistent_storage = ?p AND ?r.Peristent|VolatileMemberCount != 0
-		GROUP BY r.id
-		ORDER BY COUNT(members.mongod_id) / r.Persistent|VolatileMemberCount
-		LIMIT 1
-
-		-- parameters: replica_set_id
-		SELECT s.*
-		FROM slave_utilization s
-		WHERE
-			s.free_mongods > 0
-			AND (
-				s.risk_group_id NOT IN (
-					SELECT DISTINCT s.risk_group_id
-					FROM mongods m
-					JOIN slaves s ON m.parent_slave_id = s.id
-					WHERE m.replica_set_id = ?replica_set_id
-				)
-				-- 0 is the default risk group that is not a risk group,
-				-- i.e from which multiple slaves can be allocated for the same replica set
-				OR s.risk_group_id = 0
-			)
-		ORDER BY s.utilization ASC
-		LIMIT 1
-
-	*/
-
-}
-
-func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
-
-	for _, persistence := range []persistence{Volatile, Persistent} {
-		c.addMembersForPersistence(tx, persistence)
-	}
-
-	// TODO remove this code once SQL works
-	for _, persistence := range []persistence{Volatile, Persistent} {
-
-		// build prioritization datastructures
-		// will only return items that match current persistence and actually need more members
-
-		pqReplicaSets := c.pqReplicaSets(replicaSets, persistence)
-
-		for r := pqReplicaSets.Pop(); r != nil; {
-
-			pqRiskGroups := c.pqRiskGroups(tx, r, persistence)
-
-			if s := pqRiskGroups.PopSlaveInNonconflictingRiskGroup(); s != nil {
-
-				// spawn new Mongod m on s and add it to r.Mongods
-				// compute MongodState for m and set the DesiredState variable
-				_ = c.spawnMongodOnSlave(tx, s, r)
-				// TODO send DesiredReplicaSetConstraintStatus
-
-				pqReplicaSets.PushIfDegraded(r)
-
-			} else {
-
-				// TODO send DesiredReplicaSetConstraintStatus
-				panic("not implemented")
-
-			}
-		}
-
-	}
-}
-
-func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaSet) *Mongod {
-
-	// Get a port number, validates expected invariant that there's a free port as a side effect
-	portNumber, err := c.slaveNextMongodPort(tx, s)
-	if err != nil {
+	if err := tx.Create(&desiredState).Error; err != nil {
 		panic(err)
 	}
 
 	m := &Mongod{
-		Port:        portNumber,
-		ReplSetName: r.Name,
-		ParentSlave: s,
-		ReplicaSet:  r,
-		DesiredState: MongodState{ // TODO verify this nested initialization works with gorm
-			IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
-			ExecutionState:         MongodExecutionStateRunning,
-		},
+		Port:           unusedPort,
+		ReplSetName:    r.Name,
+		ParentSlaveID:  s.ID,
+		ReplicaSetID:   r.ID,
+		DesiredStateID: desiredState.ID,
 	}
 
 	if err := tx.Create(&m).Error; err != nil {
 		panic(err)
 	}
 
-	return m
+	return m, nil
 
 }
 
-func (c *ClusterAllocator) slaveNextMongodPort(tx *gorm.DB, s *Slave) (portNumber PortNumber, err error) {
+// find free port using merge-join-like loop. results are in [minPort, maxPort)
+// assuming usedPorts is sorted ascending
+func findUnusedPort(usedPorts []PortNumber, minPort, maxPort PortNumber) (unusedPort PortNumber, found bool) {
 
-	var mongods []*Mongod
+	usedPortIndex := 0
 
-	if err = tx.Model(s).Related(&mongods).Error; err != nil {
-		return PortNumber(0), err
+	// make usedPortIndex satisfy invariant
+	for ; usedPortIndex < len(usedPorts) && !(usedPorts[usedPortIndex] >= minPort); usedPortIndex++ {
 	}
 
-	maxMongodCount := slaveMaxNumberOfMongods(s)
-	if len(mongods) >= int(maxMongodCount) {
-		return PortNumber(0), fmt.Errorf("slave '%s' is full or is running more than maximum of '%d' Mongods", s.Hostname, maxMongodCount)
-	}
-
-	if len(mongods) <= 0 {
-		return s.MongodPortRangeBegin, nil
-	}
-
-	portsUsed := make([]bool, maxMongodCount)
-	for _, m := range mongods {
-		portsUsed[m.Port-s.MongodPortRangeBegin] = true
-	}
-	for i := PortNumber(0); i < maxMongodCount; i++ {
-		if !portsUsed[i] {
-			return s.MongodPortRangeBegin + i, nil
+	for currentPort := minPort; currentPort < maxPort; currentPort++ {
+		if usedPortIndex >= len(usedPorts) { // we passed all used ports
+			return currentPort, true
 		}
-	}
 
-	panic("algorithm invariant violated: this code should not be reached")
-	return PortNumber(0), nil
+		if usedPorts[usedPortIndex] == currentPort { // current port is used
+			usedPortIndex++
+		} else if usedPorts[usedPortIndex] > currentPort { // next used port is after current port
+			return currentPort, true
+		}
+		// invariant: usedPorts[usedPortIndex] >= currentPort || usedPortIndex >= len(usedPorts)
+		// 							i.e. no more used ports to check for
+	}
+	return 0, false
 }
 
 func slaveMaxNumberOfMongods(s *Slave) PortNumber {
