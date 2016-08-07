@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/jinzhu/gorm"
+	"math"
 )
 
 type ClusterAllocator struct {
@@ -35,12 +36,158 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		}
 	}()
 
-	replicaSets := c.replicaSets(tx)
-	for _, r := range replicaSets {
-		c.removeUnneededMembers(tx, r)
+	// list of replica sets with number of excess mongods
+	replicaSets, err = tx.Raw(`SELECT
+			r.id,
+			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				- r.persistent_member_count AS deletable_persistent,
+			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				- r.volatile_member_count AS deletable_volatile
+		    FROM replica_sets r`, true, false,
+	).Rows()
+
+	if err != nil {
+		panic(res.Error)
+	}
+	defer replicaSets.Close()
+
+	for replicaSets.Next() {
+
+		var (
+			replicaSetID                             uint
+			deletable_persistent, deletable_volatile int
+		)
+		err = replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile).Error
+		if err != nil {
+			panic(err)
+		}
+
+		for _, p := range []persistence{Persistent, Volatile} {
+
+			var deletable_count int
+			if p.PersistentStorage() {
+				deletable_count = deletable_persistent
+			} else {
+				deletable_count = deletable_volatile
+			}
+
+			log.Printf("cluster allocator: removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", replicaSetID, deletable_count, p)
+
+			var deletableMongds []*Mongod
+
+			err := tx.Raw(`SELECT m.*
+				FROM replica_sets r
+				JOIN mongods m ON m.replica_set_id = r.id
+				JOIN slaves s ON s.id = m.parent_slave
+				JOIN slave_utilization su ON s.id = u.slave_id
+				WHERE
+					r.id = ?
+					AND s.persistent_storage = ?
+					AND s.configured_state != ?
+				ORDER BY (CASE s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
+				LIMIT ?`, replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, math.Max(deletable_count, 0),
+			).Find(&deletableMongds).Error
+			if err != nil {
+				panic(err)
+			}
+
+			log.Printf("cluster allocator: setting %d mongods for replica set `%#v` to desired state `destroyed`", len(deletableMongds), replicaSetID)
+
+			for _, m := range deletableMongds {
+				log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed`", m)
+
+				res = tx.Exec("UPDATE mongod_states SET execution_state=? WHERE id=?", MongodExecutionStateDestroyed, leastBusySlaveInReplicaSet.DesiredStateID)
+				if res.Error != nil {
+					panic(res.Error)
+				}
+
+				if res.RowsAffected < 1 {
+					log.Errorf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
+				}
+				if res.RowsAffected > 1 {
+					log.Errorf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row")
+				}
+
+				// TODO side effects
+			}
+
+		}
+
 	}
 
-	c.addMembers(tx, replicaSets)
+	// Now add new members
+
+	for _, p := range []persistence{Persistent, Volatile} {
+
+		var memberCountColumnName string
+		if p.PersistentStorage() {
+			memberCountColumnName = "persistent_member_count"
+		} else {
+			memberCountColumnName = "volatile_member_count"
+		}
+
+		for {
+
+			replicaSet := struct {
+				ReplicaSet
+				ConfiguredMemberCount int
+			}{}
+
+			// HEAD of degraded replica sets PQ
+			err := tx.Raw(`SELECT r.*, COUNT(DISTINCT members.mongod_id) as "configured_member_count"
+					FROM replica_sets r
+					LEFT OUTER JOIN replica_set_configured_members members
+						ON r.id = members.replica_set_id
+						AND r.persistent_storage = ?
+					WHERE
+						r.`+memberCountColumnName+` != 0
+					GROUP BY r.id
+					ORDER BY COUNT(members.mongod_id) / r.`+memberCountColumnName+`
+					LIMIT 1`, p.PersistentStorage(),
+			).Scan(&replicaSet).Error
+
+			if err != nil {
+				panic(err)
+			}
+
+			if res.RecordNotFound() {
+				log.Printf("cluster allocator: finished repairing degraded replica sets in need of `%s` members", p)
+				break
+			}
+
+			log.Printf("cluster allocator: looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
+
+			var leastBusySlaveInReplicaSet Slave
+			err = tx.Raw(`SELECT s.*
+			      	      FROM slave_utilization s
+			      	      WHERE
+			      	      	s.free_mongods > 0
+			      	      	AND (
+			      	      		s.risk_group_id NOT IN (
+			      	      			SELECT DISTINCT s.risk_group_id
+			      	      			FROM mongods m
+			      	      			JOIN slaves s ON m.parent_slave_id = s.id
+			      	      			WHERE m.replica_set_id = ?
+			      	      		)
+			      	      		-- 0 is the default risk group that is not a risk group,
+			      	      		-- i.e from which multiple slaves can be allocated for the same replica set
+			      	      		OR s.risk_group_id = 0
+			      	      	)
+			      	      ORDER BY s.utilization ASC
+			      	      LIMIT 1`, replicaSet.ID,
+			).Scan(&leastBusySlaveInReplicaSet).Error
+
+			if err != nil {
+				panic(err)
+			}
+
+			log.Printf("cluster allocator: found slave `%s` as host for new mongod for replica set `%s`", leastBusySlaveInReplicaSet.Hostname, replicaSet.Name)
+
+			_ = c.spawnMongodOnSlave(tx, leastBusySlaveInReplicaSet, replicaSet.(ReplicaSet))
+			// TODO side effects
+
+		}
+	}
 
 	return err
 }
@@ -104,6 +251,17 @@ func (p persistence) PersistentStorage() bool {
 		return true
 	case Volatile:
 		return false
+	default:
+		panic("invalid value for persistence")
+	}
+}
+
+func (p persistence) String() string {
+	switch p {
+	case Persistent:
+		return "persistent"
+	case Volatile:
+		return "volatile"
 	default:
 		panic("invalid value for persistence")
 	}
