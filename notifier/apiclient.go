@@ -1,8 +1,14 @@
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
 
 type APIClient struct {
+	httpClient http.Client
 }
 
 type Problem struct {
@@ -17,6 +23,15 @@ type Problem struct {
 
 func (apiclient *APIClient) Receive(host string) []Problem {
 	var problems []Problem
-	//[GET]
+	resp, err := apiclient.httpClient.Get(fmt.Sprintf("http://%s/api/problems", host))
+	if err == nil {
+		if resp.StatusCode == http.StatusOK {
+			json.NewDecoder(resp.Body).Decode(&problems) //TODO Check decode error
+		} else {
+			//TODO handle error
+		}
+	} else {
+		return nil
+	}
 	return problems
 }

@@ -10,6 +10,7 @@ var p Parser
 var email EmailNotifier
 var lastProblems []Problem
 var notifiers []Notifier
+var apiClient APIClient
 
 func main() {
 	p.Parse("/home/niklas/GO/src/github.com/KIT-MAMID/mamid/notifier/contacts.txt")
@@ -17,14 +18,16 @@ func main() {
 	// Wait forever
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
-	var currentProblems []Problem
+	//receive Problems through API
+	var currentProblems []Problem = apiClient.Receive("localhost:8080")
 	currentProblems = diffProblems(currentProblems)
 	for i := 0; i < len(currentProblems); i++ {
+		print(currentProblems[i].Description)
 		notify(currentProblems[i])
 	}
 	<-c
 	os.Exit(0)
-	//receive Problems through API
+
 }
 func diffProblems(received []Problem) []Problem {
 	for i := 0; i < len(received); i++ {
