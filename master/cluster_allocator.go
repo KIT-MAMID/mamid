@@ -84,13 +84,13 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			err := tx.Raw(`SELECT m.*
 				FROM replica_sets r
 				JOIN mongods m ON m.replica_set_id = r.id
-				JOIN slaves s ON s.id = m.parent_slave
-				JOIN slave_utilization su ON s.id = u.slave_id
+				JOIN slaves s ON s.id = m.parent_slave_id
+				JOIN slave_utilization su ON s.id = su.id
 				WHERE
 					r.id = ?
 					AND s.persistent_storage = ?
 					AND s.configured_state != ?
-				ORDER BY (CASE s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
+				ORDER BY (CASE WHEN s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
 				LIMIT ?`, replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, deletable_count,
 			).Find(&deletableMongds).Error
 			if err != nil {
