@@ -112,27 +112,35 @@ func (p persistence) PersistentStorage() bool {
 func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
 
 	/*
-		-- effective member count (before deleting anything)
-		SELECT r.replica_set_id, COUNT(DISTINCT m.ID)
+		CREATE VIEW replica_set_effective_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
 		FROM replica_sets r
 		JOIN mongods m ON m.replica_set_id = r.id
 		JOIN slaves s ON s.id = m.parent_slave
 		JOIN slave_states observed ON observed.id = m.observed_state_id
 		JOIN slave_states desired ON desired.id = m.desired_state_id
 		WHERE
-			s.persistent_storage = ?p
-			AND
 			observed.execution_state = ?running
 			AND
 			desired.execution_state = ?running
-		GROUP BY r.id;
+
+		-- list of replica sets with number on excess mongods
+		SELECT
+			r.id,
+			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?persistent)
+				- r.persistent_member_count AS deletable_persistent,
+			(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?volatile)
+				- r.volatile_member_count AS deletable_volatile
+		FROM replica_sets r
+
+		-- foreach row, remove mongods by the query below LIMIT BY CLAMP_TO_ZERO(deletable_(persistent|volatile))
 
 		-- view: slave_utilization
 		CREATE VIEW slave_utilization AS
 		SELECT
 			*,
 			CASE max_mongods = 0 THEN 1 ELSE current_mongods/max_mongods END AS utilization,
-			max_mongods - current_mongods AS free_mongods
+			(max_mongods - current_mongods) AS free_mongods
 		FROM (
 			SELECT
 				s.*,
@@ -149,9 +157,9 @@ func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *Re
 		JOIN mongods m ON m.replica_set_id = r.id
 		JOIN slaves s ON s.id = m.parent_slave
 		JOIN slave_utilization su ON s.id = u.slave_id
-		WHERE r.id = ?r.ID AND s.persistent_storage = ?p AND s.configured_state = ?configured_state
-		ORDER BY DESC su.utilization -- TODO how is it ordered? we want =disabled first. Do it in 2 queries (prepared statements?)
-		LIMIT 1
+		WHERE r.id = ?r.ID AND s.persistent_storage = ?p
+		ORDER BY (CASE s.configured_state = ?disabled THEN 1 ELSE 2 END) ASC, su.utilization DESC
+		LIMIT CLAMP_TO_ZERO(deletable_persistent|volatile)
 
 	*/
 
