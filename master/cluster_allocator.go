@@ -111,6 +111,50 @@ func (p persistence) PersistentStorage() bool {
 
 func (c *ClusterAllocator) removeUnneededMembersByPersistence(tx *gorm.DB, r *ReplicaSet, p persistence, initialCount uint) {
 
+	/*
+		-- effective member count (before deleting anything)
+		SELECT r.replica_set_id, COUNT(DISTINCT m.ID)
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN slaves s ON s.id = m.parent_slave
+		JOIN slave_states observed ON observed.id = m.observed_state_id
+		JOIN slave_states desired ON desired.id = m.desired_state_id
+		WHERE
+			s.persistent_storage = ?p
+			AND
+			observed.execution_state = ?running
+			AND
+			desired.execution_state = ?running
+		GROUP BY r.id;
+
+		-- view: slave_utilization
+		CREATE VIEW slave_utilization AS
+		SELECT
+			*,
+			CASE max_mongods = 0 THEN 1 ELSE current_mongods/max_mongods END AS utilization,
+			max_mongods - current_mongods AS free_mongods
+		FROM (
+			SELECT
+				s.*,
+				s.mongod_port_range_end - s.mongod_port_range_begin AS max_mongods,
+				COUNT(DISTINCT m.id) as current_mongods
+			FROM slaves s
+			LEFT OUTER JOIN mongods m ON m.replica_set_id = r.id
+		)
+
+		-- HEAD of prioritized list of deletable members
+		-- 	parametrized by: configured_state
+		SELECT m.*
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN slaves s ON s.id = m.parent_slave
+		JOIN slave_utilization su ON s.id = u.slave_id
+		WHERE r.id = ?r.ID AND s.persistent_storage = ?p AND s.configured_state = ?configured_state
+		ORDER BY DESC su.utilization -- TODO how is it ordered? we want =disabled first. Do it in 2 queries (prepared statements?)
+		LIMIT 1
+
+	*/
+
 	var configuredMemberCount uint
 	if p == Persistent {
 		configuredMemberCount = r.PersistentMemberCount
@@ -181,8 +225,61 @@ func (c *ClusterAllocator) effectiveMemberCount(tx *gorm.DB, r *ReplicaSet) memb
 	return res
 }
 
+func (c *ClusterAllocator) addMembersForPersistence(tx *gorm.DB, p persistence) {
+
+	/*
+
+		-- view: replica set members
+		CREATE VIEW replica_set_configured_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
+		FROM replica_set r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+		JOIN slaves s ON m.parent_slave_id = s.id
+		WHERE
+			s.configured_state != ?disabled
+			AND
+			desired_state.execution_state NOT IN (?NotRunning, ?Destroyed)
+
+		-- HEAD of degraded replica sets PQ
+		SELECT r.*, COUNT(DISTINCT members.mongod_id) as "configured_member_count"
+		FROM replica_sets r
+		LEFT OUTER JOIN replica_set_configured_members members ON r.id = members.replica_set_id
+		WHERE r.persistent_storage = ?p AND ?r.Peristent|VolatileMemberCount != 0
+		GROUP BY r.id
+		ORDER BY COUNT(members.mongod_id) / r.Persistent|VolatileMemberCount
+		LIMIT 1
+
+		-- parameters: replica_set_id
+		SELECT s.*
+		FROM slave_utilization s
+		WHERE
+			s.free_mongods > 0
+			AND (
+				s.risk_group_id NOT IN (
+					SELECT DISTINCT s.risk_group_id
+					FROM mongods m
+					JOIN slaves s ON m.parent_slave_id = s.id
+					WHERE m.replica_set_id = ?replica_set_id
+				)
+				-- 0 is the default risk group that is not a risk group,
+				-- i.e from which multiple slaves can be allocated for the same replica set
+				OR s.risk_group_id = 0
+			)
+		ORDER BY s.utilization ASC
+		LIMIT 1
+
+	*/
+
+}
+
 func (c *ClusterAllocator) addMembers(tx *gorm.DB, replicaSets []*ReplicaSet) {
 
+	for _, persistence := range []persistence{Volatile, Persistent} {
+		c.addMembersForPersistence(tx, persistence)
+	}
+
+	// TODO remove this code once SQL works
 	for _, persistence := range []persistence{Volatile, Persistent} {
 
 		// build prioritization datastructures
