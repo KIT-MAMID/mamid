@@ -39,6 +39,7 @@ func (p *Parser) Parse(path string) ([]Contact, error){
 				var newContact EmailContact
 				newContact.Address = x[1]
 				contacts = append(contacts, newContact)
+				email.Contacts = append(email.Contacts,&newContact)
 			default:
 				panic("unrecknoized input")
 			}

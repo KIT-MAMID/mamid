@@ -11,7 +11,6 @@ type Notifier interface {
 type EmailNotifier struct {
 	Contacts []*EmailContact
 }
-
 func (n *EmailNotifier) SendProblem(problem Problem) error {
 	content := ("A Problem occured: " + problem.Description + "\r\n" +
 		   "ReplicaSet: " + fmt.Sprint(problem.ReplicaSet) + "\r\n" +
