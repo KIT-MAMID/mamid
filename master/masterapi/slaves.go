@@ -278,7 +278,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 }
 
-func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
+func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
 
 	//Allow change of state if nothing else is changed
 	if currentSlave.ID == updatedSlave.ID &&
@@ -291,10 +291,10 @@ func changeToSlaveAllowed(db *gorm.DB, currentSlave *model.Slave, updatedSlave *
 		return nil, nil
 	}
 	if currentSlave.ConfiguredState != model.SlaveStateDisabled {
-		return fmt.Errorf("slave's desired state must be = disabled"), nil
+		return fmt.Errorf("slave's desired state must be `disabled`"), nil
 	}
 
-	if err := db.Model(&currentSlave).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
+	if err := tx.Model(&currentSlave).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
 		return nil, err
 	}
 
