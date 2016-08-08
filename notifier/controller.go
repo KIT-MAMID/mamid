@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"fmt"
+	"time"
 )
 
 var p Parser
@@ -18,16 +19,22 @@ func main() {
 	// Wait forever
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
-	//receive Problems through API
-	currentProblems, err := apiClient.Receive("localhost:8080")
-	fmt.Print(err)
-	currentProblems = diffProblems(currentProblems)
-	for i := 0; i < len(currentProblems); i++ {
-		print(currentProblems[i].Description)
-		notify(currentProblems[i])
+	go func() {
+		<-c
+		os.Exit(0)
+	}()
+	for {
+		//receive Problems through API
+		currentProblems, err := apiClient.Receive("localhost:8080")
+		fmt.Print(err)
+		currentProblems = diffProblems(currentProblems)
+		for i := 0; i < len(currentProblems); i++ {
+			print(currentProblems[i].Description)
+			notify(currentProblems[i])
+		}
+		time.Sleep(10* time.Second)
 	}
-	<-c
-	os.Exit(0)
+
 
 }
 func diffProblems(received []Problem) []Problem {
