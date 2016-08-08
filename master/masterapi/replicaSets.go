@@ -90,24 +90,31 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+
 	// Persist to database
 
-	err = m.DB.Create(&modelReplSet).Error
+	err = tx.Create(&modelReplSet).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
-	}
-
-	if err != nil {
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		return
+	} else if err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 
 	// Return created slave
 
@@ -141,12 +148,18 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+
 	var modelReplSet model.ReplicaSet
-	dbRes := m.DB.First(&modelReplSet, id)
+
+	dbRes := tx.First(&modelReplSet, id)
+
 	if dbRes.RecordNotFound() {
+		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err = dbRes.Error; err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -154,6 +167,7 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 
 	replSet, err := ProjectReplicaSetToModelReplicaSet(&postReplSet)
 	if err != nil {
+		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
 		return
@@ -161,6 +175,7 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if replSet.ConfigureAsShardingConfigServer != modelReplSet.ConfigureAsShardingConfigServer ||
 		replSet.Name != modelReplSet.Name {
+		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "name and configure_as_sharding_server may not be changed")
 		return
@@ -168,16 +183,22 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to database
 
-	err = m.DB.Save(replSet).Error
+	err = tx.Save(replSet).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			return
-		}
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, driverErr.Error())
+		return
 	}
+
+	// Trigger cluster allocator
+	if err = m.attemptClusterAllocator(tx, w); err != nil {
+		return
+	}
+
+	tx.Commit()
 }
 
 func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
@@ -239,8 +260,11 @@ func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var replSet model.ReplicaSet
-	res := m.DB.First(&replSet, id)
+	res := tx.First(&replSet, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
@@ -253,7 +277,7 @@ func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var slaves []*model.Slave
-	res = m.DB.Raw("SELECT s.* FROM slaves s JOIN mongods m ON m.parent_slave_id = s.id WHERE m.replica_set_id = ?", id).Scan(&slaves)
+	res = tx.Raw("SELECT s.* FROM slaves s JOIN mongods m ON m.parent_slave_id = s.id WHERE m.replica_set_id = ?", id).Scan(&slaves)
 	if err = res.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
