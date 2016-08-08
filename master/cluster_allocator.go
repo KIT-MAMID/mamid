@@ -111,7 +111,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
 				}
 				if res.RowsAffected > 1 {
-					log.Printf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row")
+					log.Printf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row", m)
 				}
 
 				// TODO side effects
