@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
-	//"fmt"
+	"fmt"
 )
 
 var p Parser
@@ -19,7 +19,8 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	//receive Problems through API
-	var currentProblems []Problem = apiClient.Receive("localhost:8080")
+	currentProblems, err := apiClient.Receive("localhost:8080")
+	fmt.Print(err)
 	currentProblems = diffProblems(currentProblems)
 	for i := 0; i < len(currentProblems); i++ {
 		print(currentProblems[i].Description)

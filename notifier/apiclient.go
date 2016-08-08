@@ -21,17 +21,19 @@ type Problem struct {
 	ReplicaSet      uint
 }
 
-func (apiclient *APIClient) Receive(host string) []Problem {
-	var problems []Problem
+func (apiclient *APIClient) Receive(host string) (problems []Problem, err error) {
 	resp, err := apiclient.httpClient.Get(fmt.Sprintf("http://%s/api/problems", host))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
-			json.NewDecoder(resp.Body).Decode(&problems) //TODO Check decode error
+			err = json.NewDecoder(resp.Body).Decode(&problems)
+			if err != nil {
+				return nil, err;
+			}
 		} else {
-			//TODO handle error
+			return nil, fmt.Errorf("API returned non 200 %d", resp.StatusCode)
 		}
 	} else {
-		return nil
+		return nil, err
 	}
-	return problems
+	return problems, nil
 }
