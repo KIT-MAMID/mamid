@@ -32,7 +32,7 @@ func (n *EmailNotifier) sendMailToContacts(msg []byte) error {
 	auth := smtp.PlainAuth("", "kit.mamid@gmail.com", "uwsngsdlsnh", "smtp.gmail.com")
 	var to []string
 	for i := 0; i < len(n.Contacts); i++ {
-		to[i] = n.Contacts[i].Address
+		to = append(to, n.Contacts[i].Address)
 	}
 	err := smtp.SendMail(
 		"smtp.gmail.com:587",
