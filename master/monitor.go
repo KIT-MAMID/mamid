@@ -45,6 +45,10 @@ func (m *Monitor) Run() {
 	}()
 }
 
+func mongodTuple(s *model.Slave, m *model.Mongod) string {
+	return fmt.Sprintf("(%s(id=%d),%s,%s)", slave.Hostname, slave.ID, observedMongod.PortNumber, observedMongod.ReplicaSetName)
+}
+
 func (m *Monitor) observeSlave(slave model.Slave) {
 	//Request mongod states from slave
 	observedMongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
@@ -62,13 +66,20 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 		for _, observedMongod := range observedMongods {
 
 			var dbMongod model.Mongod
-			getOrCreateErr := tx.FirstOrCreate(&dbMongod, &model.Mongod{
+			dbMongodRes := tx.First(&dbMongod, &model.Mongod{
 				ParentSlaveID: slave.ID,
 				Port:          model.PortNumber(observedMongod.Port),
 				ReplSetName:   observedMongod.ReplicaSetName,
-			}).Error
-			if getOrCreateErr != nil {
-				log.Println(getOrCreateErr.Error())
+			})
+
+			if dbMongodRes.RecordNotFound() {
+				log.Printf("monitor: internal inconsistency: did not find corresponding database Mongod to observed Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), dbMongodRes.Error)
+				tx.Rollback()
+				return
+			} else {
+				log.Printf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), dbMongodRes.Error)
 				tx.Rollback()
 				return
 			}
@@ -76,7 +87,8 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			//Get desired state if it exists
 			relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-				log.Println(relatedResult.Error.Error())
+				log.Printf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
+					mongodTuple(slave, dbMongod), relatedResult.Error.Error())
 				tx.Rollback()
 				return
 			}
@@ -84,7 +96,8 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			//Get observed state if it exists
 			relatedResult = tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "ObservedState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-				log.Println(relatedResult.Error.Error())
+				log.Printf("monitor: database error when querying for observed state of Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), relatedResult.Error)
 				tx.Rollback()
 				return
 			}
