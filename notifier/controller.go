@@ -9,14 +9,14 @@ import (
 
 var p Parser
 var email EmailNotifier
-var lastProblems []Problem
+var lastProblems map[uint]Problem
 var notifiers []Notifier
 var apiClient APIClient
 
 func main() {
 	p.Parse("contacts.txt")
+	lastProblems = make(map[uint]Problem)
 	notifiers = append(notifiers, &email)
-	// Wait forever
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	go func() {
@@ -37,12 +37,27 @@ func main() {
 
 }
 func diffProblems(received []Problem) []Problem {
-	for i := 0; i < len(received); i++ {
-		for j := 0; j < len(lastProblems); j++ {
-			if true {
-				received = append(received[:i], received[i+1:]...)
+	// Clean old problems
+	for id := range lastProblems {
+		var contained bool
+		for i := 0; i < len(received); i++ {
+			contained = received[i].Id == id
+			if contained {
+				break
 			}
 		}
+		if !contained {
+			delete(lastProblems, id)
+		}
+	}
+	// Add problems to the map of already notified problems and remove already notified problems from the resulting slice
+	for i := 0; i < len(received); i++ {
+		if _, ok := lastProblems[received[i].Id]; ok {
+			received = append(received[:i], received[i+1:]...)
+			i--
+			continue
+		}
+		lastProblems[received[i].Id] = received[i]
 	}
 	return received
 }
