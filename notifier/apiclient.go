@@ -27,7 +27,7 @@ func (apiclient *APIClient) Receive(host string) (problems []Problem, err error)
 		if resp.StatusCode == http.StatusOK {
 			err = json.NewDecoder(resp.Body).Decode(&problems)
 			if err != nil {
-				return nil, err;
+				return nil, err
 			}
 		} else {
 			return nil, fmt.Errorf("API returned non 200 %d", resp.StatusCode)

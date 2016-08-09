@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
-	"fmt"
 	"time"
 )
 
@@ -32,9 +32,8 @@ func main() {
 			print(currentProblems[i].Description)
 			notify(currentProblems[i])
 		}
-		time.Sleep(10* time.Second)
+		time.Sleep(10 * time.Second)
 	}
-
 
 }
 func diffProblems(received []Problem) []Problem {
