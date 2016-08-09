@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/vaughan0/go-ini"
 )
 
@@ -22,6 +23,9 @@ func (p *Parser) Parse(path string) ([]Contact, error) {
 				newContact.Name = name
 				contacts = append(contacts, newContact)
 				email.Contacts = append(email.Contacts, &newContact)
+
+			default:
+				fmt.Printf("Ignoring unknown notifier '%s'.\n", key)
 			}
 		}
 	}
