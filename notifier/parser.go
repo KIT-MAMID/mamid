@@ -1,17 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"os"
-	"strings"
-	//	"fmt"
-	//	"text/scanner"
+	"github.com/vaughan0/go-ini"	
 )
 
 type Contact interface {
 }
 
 type EmailContact struct {
+	Name string
 	Address string
 }
 
@@ -19,31 +16,22 @@ type Parser struct {
 }
 
 func (p *Parser) Parse(path string) ([]Contact, error) {
+	file, err := ini.LoadFile(path)
 	var contacts []Contact
-	var input []string
-	file, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	scan := bufio.NewScanner(file)
-	for i := 0; scan.Scan(); i++ {
-		input = append(input, scan.Text())
-	}
-	//for i := 0; i < len(input); i++ {
-	//split := strings.Split(input[i], ";")
-	for j := 0; j < len(input); j++ {
-		x := strings.Split(input[j], ":")
-		switch x[0] {
-		case "email":
-			var newContact EmailContact
-			newContact.Address = x[1]
-			contacts = append(contacts, newContact)
-			email.Contacts = append(email.Contacts, &newContact)
-		default:
-			panic("unrecknoized input")
+	for name, section := range file {
+		for key, value := range section {
+			switch key {
+			case "email":
+				var newContact EmailContact
+				newContact.Address = value
+				newContact.Name = name
+				contacts = append(contacts, newContact)
+				email.Contacts = append(email.Contacts, &newContact)
+			default:
+				panic("unrecknoized input")
+				return nil,err
+			}
 		}
 	}
-	//}
 	return contacts, nil
 }
