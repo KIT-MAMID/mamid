@@ -60,8 +60,9 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 	if err == nil {
 		tx := m.DB.Begin()
 		for _, observedMongod := range observedMongods {
-			var modelMongod model.Mongod
-			getOrCreateErr := tx.FirstOrCreate(&modelMongod, &model.Mongod{
+
+			var dbMongod model.Mongod
+			getOrCreateErr := tx.FirstOrCreate(&dbMongod, &model.Mongod{
 				ParentSlaveID: slave.ID,
 				Port:          model.PortNumber(observedMongod.Port),
 				ReplSetName:   observedMongod.ReplicaSetName,
@@ -73,7 +74,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//Get desired state if it exists
-			relatedResult := tx.Model(&modelMongod).Related(&modelMongod.DesiredState, "DesiredState")
+			relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
 				tx.Rollback()
@@ -81,7 +82,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			}
 
 			//Get observed state if it exists
-			relatedResult = tx.Model(&modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
+			relatedResult = tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "ObservedState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Println(relatedResult.Error.Error())
 				tx.Rollback()
@@ -91,15 +92,15 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			if observedMongod.StatusError == nil {
 				//TODO Finish this
 				//Put observations into model
-				modelMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
-				modelMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
-				modelMongod.ObservationError = model.MSPError{}
+				dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
+				dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
+				dbMongod.ObservationError = model.MSPError{}
 			} else {
-				modelMongod.ObservationError = slaveErrorToMspError(*observedMongod.StatusError)
+				dbMongod.ObservationError = slaveErrorToMspError(*observedMongod.StatusError)
 			}
 
 			//TODO Only update observed state and errors to prevent collisions with cluster allocator
-			saveErr := tx.Save(&modelMongod).Error
+			saveErr := tx.Save(&dbMongod).Error
 			if saveErr != nil {
 				log.Println(saveErr.Error())
 				tx.Rollback()
