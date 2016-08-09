@@ -7,14 +7,22 @@ import (
 	"time"
 )
 
-var p Parser
-var email EmailNotifier
 var lastProblems map[uint]Problem
 var notifiers []Notifier
-var apiClient APIClient
 
 func main() {
-	p.Parse("contacts.txt")
+	var p Parser
+	var email EmailNotifier
+	// Load contacts from ini file
+	contacts, _ := p.Parse("contacts.txt")
+	emailContacts := make([]*EmailContact, 0)
+	for i := 0; i < len(contacts); i++ {
+		switch t := contacts[i].(type) {
+		case EmailContact:
+			emailContacts = append(emailContacts, &t)
+		}
+	}
+	email.Contacts = emailContacts
 	lastProblems = make(map[uint]Problem)
 	notifiers = append(notifiers, &email)
 	c := make(chan os.Signal, 1)
@@ -23,6 +31,7 @@ func main() {
 		<-c
 		os.Exit(0)
 	}()
+	var apiClient APIClient
 	for {
 		//receive Problems through API
 		currentProblems, err := apiClient.Receive("localhost:8080")

@@ -22,8 +22,6 @@ func (p *Parser) Parse(path string) ([]Contact, error) {
 				newContact.Address = value
 				newContact.Name = name
 				contacts = append(contacts, newContact)
-				email.Contacts = append(email.Contacts, &newContact)
-
 			default:
 				fmt.Printf("Ignoring unknown notifier '%s'.\n", key)
 			}
