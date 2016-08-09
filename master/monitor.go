@@ -10,7 +10,7 @@ import (
 
 type Monitor struct {
 	DB              *gorm.DB
-	BusWriteChannel chan interface{}
+	BusWriteChannel chan<- interface{}
 	MSPClient       msp.MSPClient
 }
 

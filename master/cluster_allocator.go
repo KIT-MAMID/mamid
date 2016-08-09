@@ -8,7 +8,7 @@ import (
 )
 
 type ClusterAllocator struct {
-	BusWriteChannel chan interface{}
+	BusWriteChannel *chan<- interface{}
 }
 
 type persistence uint
@@ -222,9 +222,10 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	}
 
 	// Send replica set constraint status messages on bus for every replica set
+	if c.BusWriteChannel != nil {
 
-	// Get replica sets and the count of their actually configured members from the database
-	replicaSetsWithMemberCounts, err := tx.Raw(`SELECT
+		// Get replica sets and the count of their actually configured members from the database
+		replicaSetsWithMemberCounts, err := tx.Raw(`SELECT
 			r.*,
 			(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
 				AS configured_persistent_members,
@@ -232,31 +233,32 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				AS configured_volatile_members
 		    	FROM replica_sets r
 		`, true, false, unsatisfiable_replica_set_ids).Rows()
-	if err != nil {
-		panic(err)
-	}
-
-	for replicaSetsWithMemberCounts.Next() {
-		var replicaSet ReplicaSet
-		tx.ScanRows(replicaSetsWithMemberCounts, &replicaSet)
-
-		configuredMemberCounts := struct {
-			ConfiguredPersistentMembers uint
-			ConfiguredVolatileMembers   uint
-		}{}
-		tx.ScanRows(replicaSetsWithMemberCounts, &configuredMemberCounts)
-
-		unsatisfied := false
-		//Check if replica set is in unsatisfiable list
-		for _, id := range unsatisfiable_replica_set_ids {
-			unsatisfied = unsatisfied || (id == replicaSet.ID)
+		if err != nil {
+			panic(err)
 		}
 
-		c.BusWriteChannel <- DesiredReplicaSetConstraintStatus{
-			Unsatisfied:           unsatisfied,
-			ReplicaSet:            replicaSet,
-			ActualPersistentCount: configuredMemberCounts.ConfiguredPersistentMembers,
-			ActualVolatileCount:   configuredMemberCounts.ConfiguredVolatileMembers,
+		for replicaSetsWithMemberCounts.Next() {
+			var replicaSet ReplicaSet
+			tx.ScanRows(replicaSetsWithMemberCounts, &replicaSet)
+
+			configuredMemberCounts := struct {
+				ConfiguredPersistentMembers uint
+				ConfiguredVolatileMembers   uint
+			}{}
+			tx.ScanRows(replicaSetsWithMemberCounts, &configuredMemberCounts)
+
+			unsatisfied := false
+			//Check if replica set is in unsatisfiable list
+			for _, id := range unsatisfiable_replica_set_ids {
+				unsatisfied = unsatisfied || (id == replicaSet.ID)
+			}
+
+			*c.BusWriteChannel <- DesiredReplicaSetConstraintStatus{
+				Unsatisfied:           unsatisfied,
+				ReplicaSet:            replicaSet,
+				ActualPersistentCount: configuredMemberCounts.ConfiguredPersistentMembers,
+				ActualVolatileCount:   configuredMemberCounts.ConfiguredVolatileMembers,
+			}
 		}
 	}
 

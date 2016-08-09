@@ -9,7 +9,7 @@ import (
 
 type ProblemManager struct {
 	DB             *gorm.DB
-	BusReadChannel chan interface{}
+	BusReadChannel <-chan interface{}
 }
 
 func (p *ProblemManager) Run() {
