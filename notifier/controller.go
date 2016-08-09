@@ -14,7 +14,11 @@ func main() {
 	var p Parser
 	var email EmailNotifier
 	// Load contacts from ini file
-	relay, apiHost, contactsFile, configError := p.ParseConfig("config.ini")
+	if len(os.Args) != 2 {
+		log.Println("No config file supplied! Usage: notifier <config file>")
+		return
+	}
+	relay, apiHost, contactsFile, configError := p.ParseConfig(os.Args[1])
 	if configError != nil {
 		log.Println("Error loading config:", configError)
 		return
