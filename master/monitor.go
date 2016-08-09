@@ -47,7 +47,7 @@ func (m *Monitor) Run() {
 }
 
 func mongodTuple(s model.Slave, m msp.Mongod) string {
-	return fmt.Sprintf("(%s(id=%d),%s,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetName)
+	return fmt.Sprintf("(%s(id=%d),%d,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetName)
 }
 
 func (m *Monitor) observeSlave(slave model.Slave) {
