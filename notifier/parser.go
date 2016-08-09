@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/vaughan0/go-ini"	
+	"github.com/vaughan0/go-ini"
 )
 
 type Contact interface {
 }
 
 type EmailContact struct {
-	Name string
+	Name    string
 	Address string
 }
 
@@ -29,7 +29,7 @@ func (p *Parser) Parse(path string) ([]Contact, error) {
 				email.Contacts = append(email.Contacts, &newContact)
 			default:
 				panic("unrecknoized input")
-				return nil,err
+				return nil, err
 			}
 		}
 	}
