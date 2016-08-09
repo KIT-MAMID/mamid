@@ -67,6 +67,9 @@ clean_slave:
 test:
 	@$(GO) test -short $(pkgs)
 
+.PHONY: test-verbose
+test-verbose:
+	@$(GO) test -v $(pkgs)
 
 .PHONY: check-format
 check-format:
