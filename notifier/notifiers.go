@@ -23,12 +23,9 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 	msg := []byte("From: kit.mamid@gmail.com\r\n" +
 		subject + "\r\n" +
 		content)
-	err := n.sendMailToContacts(msg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return n.sendMailToContacts(msg)
 }
+
 func (n *EmailNotifier) sendMailToContacts(msg []byte) error {
 	auth := smtp.PlainAuth("", "kit.mamid@gmail.com", "uwsngsdlsnh", "smtp.gmail.com")
 	var to []string
