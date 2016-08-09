@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"time"
@@ -16,7 +16,7 @@ func main() {
 	// Load contacts from ini file
 	relay, apiHost, contactsFile, configError := p.ParseConfig("config.ini")
 	if configError != nil {
-		fmt.Println(configError)
+		log.Println("Error loading config:", configError)
 		return
 	}
 	contacts, _ := p.Parse(contactsFile)
@@ -41,10 +41,11 @@ func main() {
 	for {
 		//receive Problems through API
 		currentProblems, err := apiClient.Receive(apiHost)
-		fmt.Print(err)
+		if err != nil {
+			log.Println("Error querying API:", err)
+		}
 		currentProblems = diffProblems(currentProblems)
 		for i := 0; i < len(currentProblems); i++ {
-			print(currentProblems[i].Description)
 			notify(currentProblems[i])
 		}
 		time.Sleep(10 * time.Second)
@@ -79,6 +80,9 @@ func diffProblems(received []Problem) []Problem {
 
 func notify(problem Problem) {
 	for i := 0; i < len(notifiers); i++ {
-		notifiers[i].SendProblem(problem)
+		err := notifiers[i].SendProblem(problem)
+		if err != nil {
+			log.Println("Error sending notification:", err)
+		}
 	}
 }
