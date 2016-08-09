@@ -115,7 +115,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 				ReplicaSetName: "repl1",
 				StatusError: &msp.Error{
 					Identifier:  "foo",
-					Description: "bar",
+					Description: "cannot observe mongod",
 				},
 			},
 		},
@@ -130,6 +130,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	//Mongod should have an observation error
 	db.Model(&mongod).Related(&mongod.ObservationError, "ObservationError")
+	assert.EqualValues(t, "cannot observe mongod", mongod.ObservationError.Description)
 	assert.NotZero(t, mongod.ObservationErrorID)
 
 	connStatusX = <-readChannel
