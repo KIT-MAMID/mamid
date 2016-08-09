@@ -14,7 +14,12 @@ func main() {
 	var p Parser
 	var email EmailNotifier
 	// Load contacts from ini file
-	contacts, _ := p.Parse("contacts.txt")
+	relay, apiHost, contactsFile, configError := p.ParseConfig("config.ini")
+	if configError != nil {
+		fmt.Println(configError)
+		return
+	}
+	contacts, _ := p.Parse(contactsFile)
 	emailContacts := make([]*EmailContact, 0)
 	for i := 0; i < len(contacts); i++ {
 		switch t := contacts[i].(type) {
@@ -23,6 +28,7 @@ func main() {
 		}
 	}
 	email.Contacts = emailContacts
+	email.Relay = relay
 	lastProblems = make(map[uint]Problem)
 	notifiers = append(notifiers, &email)
 	c := make(chan os.Signal, 1)
@@ -34,7 +40,7 @@ func main() {
 	var apiClient APIClient
 	for {
 		//receive Problems through API
-		currentProblems, err := apiClient.Receive("localhost:8080")
+		currentProblems, err := apiClient.Receive(apiHost)
 		fmt.Print(err)
 		currentProblems = diffProblems(currentProblems)
 		for i := 0; i < len(currentProblems); i++ {

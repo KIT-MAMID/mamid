@@ -29,3 +29,18 @@ func (p *Parser) Parse(path string) ([]Contact, error) {
 	}
 	return contacts, err
 }
+
+func (p *Parser) ParseConfig(path string) (relay SMTPRelay, apiHost string, contactsFile string, err error) {
+	file, err := ini.LoadFile(path)
+	if err != nil {
+		return
+	}
+	notifier := file["notifier"]
+	apiHost = notifier["api_host"]
+	contactsFile = notifier["contacts"]
+
+	smtp := file["smtp"]
+	relay.MailFrom = smtp["mail_form"]
+	relay.Hostname = smtp["relay_host"]
+	return
+}
