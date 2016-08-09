@@ -171,6 +171,8 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			res = tx.Raw(`SELECT s.*
 			      	      FROM slave_utilization s
 			      	      WHERE
+			      	        s.persistent_storage = ?
+			      	        AND
 			      	      	s.free_mongods > 0
 					AND
 					s.configured_state = ?
@@ -186,7 +188,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			      	      		OR s.risk_group_id = 0
 			      	      	)
 			      	      ORDER BY s.utilization ASC
-			      	      LIMIT 1`, SlaveStateActive, replicaSet.ID,
+			      	      LIMIT 1`, p.PersistentStorage(), SlaveStateActive, replicaSet.ID,
 			).Scan(&leastBusySuitableSlave)
 
 			if res.RecordNotFound() {
