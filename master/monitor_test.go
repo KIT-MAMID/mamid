@@ -93,7 +93,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	var mongod model.Mongod
 	db.First(&mongod, 1)
-	db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState")
+	assert.Nil(t, db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error, "after observation, the observed state should be != nil")
 	assert.Equal(t, model.MongodExecutionStateRunning, mongod.ObservedState.ExecutionState)
 
 	connStatusX := <-readChannel
