@@ -4,14 +4,6 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-type Contact interface {
-}
-
-type EmailContact struct {
-	Name    string
-	Address string
-}
-
 type Parser struct {
 }
 
