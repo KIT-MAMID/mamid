@@ -8,6 +8,7 @@ import (
 )
 
 type ClusterAllocator struct {
+	BusWriteChannel chan interface{}
 }
 
 type persistence uint
@@ -121,6 +122,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 
 	}
 
+	//All unsatisfiable replica sets (independent of persistence)
+	unsatisfiable_replica_set_ids := []uint{}
+
 	// Now add new members
 
 	for _, p := range []persistence{Persistent, Volatile} {
@@ -132,7 +136,8 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			memberCountColumnName = "volatile_member_count"
 		}
 
-		unsatisfiable_replica_set_ids := []uint{0} // we always start at 1, this is a workaround for the statement generator producing (NULL) in case of an empty set otherwise
+		//Unsatisfiable replica sets for the current persistence
+		unsatisfiable_replica_set_ids_by_persistance := []uint{0} // we always start at 1, this is a workaround for the statement generator producing (NULL) in case of an empty set otherwise
 
 		for {
 
@@ -154,7 +159,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					GROUP BY r.id
 					HAVING COUNT(DISTINCT members.mongod_id) < r.`+memberCountColumnName+`
 					ORDER BY COUNT(DISTINCT members.mongod_id) / r.`+memberCountColumnName+`
-					LIMIT 1`, p.PersistentStorage(), unsatisfiable_replica_set_ids,
+					LIMIT 1`, p.PersistentStorage(), unsatisfiable_replica_set_ids_by_persistance,
 			).Scan(&replicaSet)
 
 			if res.RecordNotFound() {
@@ -193,6 +198,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 
 			if res.RecordNotFound() {
 				log.Printf("cluster allocator: unsatisfiable replica set `%s`: not enough suitable `%s` slaves", replicaSet.Name, p)
+				unsatisfiable_replica_set_ids_by_persistance = append(unsatisfiable_replica_set_ids_by_persistance, replicaSet.ID)
 				unsatisfiable_replica_set_ids = append(unsatisfiable_replica_set_ids, replicaSet.ID)
 				continue
 			} else if res.Error != nil {
@@ -215,6 +221,50 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		}
 	}
 
+	// Send replica set constraint status messages on bus for every replica set
+
+	// Get replica sets and the count of their actually configured members from the database
+	replicaSetsWithMemberCounts, err := tx.Raw(`SELECT
+			r.*,
+			(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				AS configured_persistent_members,
+			(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				AS configured_volatile_members
+		    	FROM replica_sets r
+		`, true, false, unsatisfiable_replica_set_ids).Rows()
+	if err != nil {
+		panic(err)
+	}
+
+	for replicaSetsWithMemberCounts.Next() {
+		var replicaSet ReplicaSet
+		tx.ScanRows(replicaSetsWithMemberCounts, &replicaSet)
+
+		configuredMemberCounts := struct {
+			ConfiguredPersistentMembers uint
+			ConfiguredVolatileMembers   uint
+		}{}
+		tx.ScanRows(replicaSetsWithMemberCounts, &configuredMemberCounts)
+
+		unsatisfied := false
+		//Check if replica set is in unsatisfiable list
+		for _, id := range unsatisfiable_replica_set_ids {
+			unsatisfied = unsatisfied || (id == replicaSet.ID)
+		}
+
+		c.BusWriteChannel <- DesiredReplicaSetConstraintStatus{
+			Unsatisfied:           unsatisfied,
+			ReplicaSet:            replicaSet,
+			ActualPersistentCount: configuredMemberCounts.ConfiguredPersistentMembers,
+			ActualVolatileCount:   configuredMemberCounts.ConfiguredVolatileMembers,
+		}
+	}
+
+	if err == nil {
+		log.Println("Cluster allocator done successfully")
+	} else {
+		log.Println("Cluster allocator done with error", err)
+	}
 	return err
 }
 
