@@ -12,7 +12,7 @@
 	url = https://github.com/jinzhu/gorm
 [submodule "vendor/github.com/mattn/go-sqlite3"]
 	path = vendor/github.com/mattn/go-sqlite3
-	url = https://github.com/mattn/go-sqlite3
+	url = https://github.com/KIT-MAMID/go-sqlite3
 [submodule "vendor/github.com/jinzhu/inflection"]
 	path = vendor/github.com/jinzhu/inflection
 	url = https://github.com/jinzhu/inflection
