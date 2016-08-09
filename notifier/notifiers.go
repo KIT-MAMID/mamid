@@ -11,7 +11,7 @@ type Notifier interface {
 
 type EmailNotifier struct {
 	Contacts []*EmailContact
-	Relay SMTPRelay
+	Relay    SMTPRelay
 }
 
 func (n *EmailNotifier) SendProblem(problem Problem) error {
