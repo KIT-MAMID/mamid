@@ -19,7 +19,7 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 		"ReplicaSet: " + fmt.Sprint(problem.ReplicaSet) + "\r\n" +
 		"Slave: " + fmt.Sprint(problem.Slave) + "\r\n" +
 		"long Description:" + problem.LongDescription) + "\r\n"
-	subject := ("Subject:" + "KIT-MAMID: Problem in " + fmt.Sprint(problem.ReplicaSet) + "/" + fmt.Sprint(problem.Slave))
+	subject := ("Subject: [MAMID] Problem: " + problem.Description)
 	msg := []byte("From: " + n.Relay.MailFrom + "\r\n" +
 		subject + "\r\n" +
 		content)
