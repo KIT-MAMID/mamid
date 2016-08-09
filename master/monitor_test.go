@@ -44,10 +44,10 @@ func createDB(t *testing.T) (db *gorm.DB, err error) {
 type FakeMSPClient struct {
 	msp.MSPClient
 	Status []msp.Mongod
-	Error  msp.Error
+	Error  *msp.Error
 }
 
-func (m FakeMSPClient) RequestStatus(Target msp.HostPort) ([]msp.Mongod, msp.Error) {
+func (m FakeMSPClient) RequestStatus(Target msp.HostPort) ([]msp.Mongod, *msp.Error) {
 	return m.Status, m.Error
 }
 
@@ -113,7 +113,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 			msp.Mongod{
 				Port:           2000,
 				ReplicaSetName: "repl1",
-				StatusError: &msp.SlaveError{
+				StatusError: &msp.Error{
 					Identifier:  "foo",
 					Description: "bar",
 				},
@@ -168,7 +168,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 	//-----------------
 	monitor.MSPClient = FakeMSPClient{
 		Status: []msp.Mongod{},
-		Error:  msp.CommunicationError{},
+		Error:  &msp.Error{Identifier: msp.CommunicationError},
 	}
 
 	db.First(&slave, 1)

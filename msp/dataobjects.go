@@ -1,5 +1,9 @@
 package msp
 
+import (
+	"fmt"
+)
+
 type MongodState string
 
 const (
@@ -19,22 +23,32 @@ type Mongod struct {
 	ReplicaSetName          string
 	ReplicaSetMembers       []HostPort
 	ShardingConfigServer    bool
-	StatusError             *SlaveError
-	LastEstablishStateError *SlaveError
+	StatusError             *Error
+	LastEstablishStateError *Error
 	State                   MongodState
 }
 
-type Error interface {
-}
+type PortNumber uint16
 
-type SlaveError struct {
+type Error struct {
+	// See constants in this package for list of identifiers
 	Identifier      string
 	Description     string
 	LongDescription string
 }
 
-type CommunicationError struct {
-	Message string
+func (e *Error) validateFields() error {
+
+	validationError := func(fieldname string) error {
+		return fmt.Errorf("invalid msp.Error: `%s` is a mandatory field", fieldname)
+	}
+
+	if e.Identifier == "" {
+		return validationError("Identifier")
+	}
+
+	return nil
 }
 
-type PortNumber uint16
+// List of Error identifiers
+const CommunicationError string = "COMM" // slave is unreachable or slave response not understood

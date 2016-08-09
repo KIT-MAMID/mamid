@@ -1,6 +1,7 @@
 package master
 
 import (
+	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/jinzhu/gorm"
@@ -45,23 +46,27 @@ func (m *Monitor) Run() {
 	}()
 }
 
-func mongodTuple(s *model.Slave, m *model.Mongod) string {
-	return fmt.Sprintf("(%s(id=%d),%s,%s)", slave.Hostname, slave.ID, observedMongod.PortNumber, observedMongod.ReplicaSetName)
+func mongodTuple(s model.Slave, m msp.Mongod) string {
+	return fmt.Sprintf("(%s(id=%d),%s,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetName)
 }
 
 func (m *Monitor) observeSlave(slave model.Slave) {
 	//Request mongod states from slave
-	observedMongods, err := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
+	observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
 
-	//Send connection status to bus
-	commError, isCommError := err.(msp.CommunicationError)
+	// Notify about reachablility
+	comErr := msp.Error{}
+	if mspError != nil {
+		comErr = *mspError
+	}
 	m.BusWriteChannel <- model.ConnectionStatus{
 		Slave:              slave,
-		Unreachable:        isCommError,
-		CommunicationError: commError,
+		Unreachable:        mspError != nil && mspError.Identifier == msp.CommunicationError,
+		CommunicationError: comErr,
 	}
+	// TODO do we need to write this to the DB (currently there is no field for this in model.Slave)
 
-	if err == nil {
+	if mspError == nil {
 		tx := m.DB.Begin()
 		for _, observedMongod := range observedMongods {
 
@@ -77,7 +82,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 					mongodTuple(slave, observedMongod), dbMongodRes.Error)
 				tx.Rollback()
 				return
-			} else {
+			} else if dbMongodRes.Error != nil {
 				log.Printf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), dbMongodRes.Error)
 				tx.Rollback()
@@ -88,7 +93,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
 			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
 				log.Printf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
-					mongodTuple(slave, dbMongod), relatedResult.Error.Error())
+					mongodTuple(slave, observedMongod), relatedResult.Error.Error())
 				tx.Rollback()
 				return
 			}
@@ -109,7 +114,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 				dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
 				dbMongod.ObservationError = model.MSPError{}
 			} else {
-				dbMongod.ObservationError = slaveErrorToMspError(*observedMongod.StatusError)
+				dbMongod.ObservationError = mspErrorToModelMSPError(observedMongod.StatusError)
 			}
 
 			//TODO Only update observed state and errors to prevent collisions with cluster allocator
@@ -156,18 +161,9 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 			m.BusWriteChannel <- compareStates(modelMongod)
 		}
 	} else {
-		if commError, ok := err.(msp.CommunicationError); ok {
-			//TODO Handle
-			log.Printf("monitor: %#v", commError)
-			return
-		} else if slaveError, ok := err.(msp.SlaveError); ok {
-			//TODO Handle
-			log.Printf("monitor: %#v", slaveError)
-			return
-		} else {
-			log.Println("Unknown error in Monitor.observeSlave")
-			return
-		}
+		//TODO Handle other slave errors => check identifiers != CommunicationError
+		//log.Printf("monitor: error observing slave: %#v", mspError)
+		return
 	}
 }
 
@@ -195,18 +191,10 @@ func mspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutio
 	}
 }
 
-func slaveErrorToMspError(e msp.SlaveError) model.MSPError {
+func mspErrorToModelMSPError(mspError *msp.Error) model.MSPError {
 	return model.MSPError{
-		SlaveError: model.SlaveError{
-			SlaveError: e,
-		},
-	}
-}
-
-func communicationErrorToMspError(e msp.CommunicationError) model.MSPError {
-	return model.MSPError{
-		CommunicationError: model.CommunicationError{
-			CommunicationError: e,
-		},
+		Identifier:      mspError.Identifier,
+		Description:     mspError.Description,
+		LongDescription: mspError.LongDescription,
 	}
 }

@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
@@ -145,24 +144,13 @@ type ReplicaSetMember struct { // was ReplicaSetMember in UML
 	MongodStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 }
 
+// msp.Error
+// duplicated for decoupling protocol & internal representation
 type MSPError struct {
-	// Union type for the different errors returned by msp
-	// Necessary to decouple MSP from ORM / DB logic
-	ID                 uint `gorm:"primary_key"`
-	CommunicationError CommunicationError
-	SlaveError         SlaveError
-}
-
-type CommunicationError struct {
-	msp.CommunicationError
-	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
-}
-
-type SlaveError struct {
-	msp.SlaveError
-	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
+	ID              uint `gorm:"primary_key"`
+	Identifier      string
+	Description     string
+	LongDescription string
 }
 
 type ProblemType uint
@@ -281,7 +269,7 @@ func initializeDB(dsn string) (db *gorm.DB, err error) {
 }
 
 func migrateDB(db *gorm.DB) {
-	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{}, &CommunicationError{}, &SlaveError{})
+	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
 	if err := createSlaveUtilizationView(db); err != nil {
 		panic(err)
 	}
