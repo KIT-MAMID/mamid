@@ -19,3 +19,6 @@
 [submodule "vendor/github.com/stretchr/testify.git"]
 	path = vendor/github.com/stretchr/testify.git
 	url = https://github.com/stretchr/testify.git
+[submodule "vendor/github.com/vaughan0/go-ini"]
+	path = vendor/github.com/vaughan0/go-ini
+	url = https://github.com/vaughan0/go-ini
