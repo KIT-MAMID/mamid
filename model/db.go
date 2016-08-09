@@ -181,7 +181,37 @@ type Problem struct {
 	MongodID uint `sql:"type:integer REFERENCES mongods(id)"`
 }
 
-func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
+type DB struct {
+	gormDB *gorm.DB
+}
+
+func initializeDB(dsn string) (*DB, error) {
+
+	gormDB, err := gorm.Open("sqlite3", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	db := &DB{
+		gormDB: gormDB,
+	}
+
+	return db, nil
+
+}
+
+func (db *DB) Begin() *gorm.DB {
+	tx := db.gormDB.Begin()
+
+	//Enable foreign keys for every database connection
+	err := tx.Exec("PRAGMA foreign_keys = ON;").Error
+	if err != nil {
+		panic(err)
+	}
+	return tx
+}
+
+func InitializeFileFromFile(path string) (db *DB, err error) {
 
 	db, err = initializeDB(path)
 	if err != nil {
@@ -194,7 +224,7 @@ func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
 
 }
 
-func InitializeTestDB() (db *gorm.DB, err error) {
+func InitializeTestDB() (db *DB, err error) {
 
 	path := "/tmp/mamid_test.db"
 	os.Remove(path)
@@ -209,7 +239,7 @@ func InitializeTestDB() (db *gorm.DB, err error) {
 
 }
 
-func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
+func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, err error) {
 
 	path := "/tmp/mamid_test.db"
 	os.Remove(path)
@@ -218,15 +248,17 @@ func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
 		return nil, err
 	}
 
+	tx := db.Begin()
 	if sqlFilePath != "" {
 		statements, err := ioutil.ReadFile(sqlFilePath)
 		if err != nil {
 			return nil, err
 		}
 
-		db.Exec(string(statements), []interface{}{})
+		tx.Exec(string(statements), []interface{}{})
 
 	}
+	tx.Commit()
 
 	migrateDB(db)
 
@@ -234,51 +266,19 @@ func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
 
 }
 
-func InitializeInMemoryDB(sqlFilePath string) (db *gorm.DB, err error) {
-
-	db, err = initializeDB(":memory:")
-	if err != nil {
-		return
-	}
-
-	if sqlFilePath != "" {
-		statements, err := ioutil.ReadFile(sqlFilePath)
-		if err != nil {
-			return nil, err
-		}
-
-		db.Exec(string(statements), []interface{}{})
-
-	}
-
-	migrateDB(db)
-
-	return db, nil
-
-}
-
-func initializeDB(dsn string) (db *gorm.DB, err error) {
-
-	db, err = gorm.Open("sqlite3", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-
-}
-
-func migrateDB(db *gorm.DB) {
-	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
-	if err := createSlaveUtilizationView(db); err != nil {
+func migrateDB(db *DB) {
+	tx := db.Begin()
+	tx.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
+	if err := createSlaveUtilizationView(tx); err != nil {
 		panic(err)
 	}
-	if err := createReplicaSetEffectiveMembersView(db); err != nil {
+	if err := createReplicaSetEffectiveMembersView(tx); err != nil {
 		panic(err)
 	}
-	if err := createReplicaSetConfiguredMembersView(db); err != nil {
+	if err := createReplicaSetConfiguredMembersView(tx); err != nil {
 		panic(err)
 	}
+	tx.Commit()
 }
 
 func createReplicaSetEffectiveMembersView(tx *gorm.DB) error {

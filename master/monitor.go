@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
-	"github.com/jinzhu/gorm"
 	"log"
 	"time"
 )
 
 type Monitor struct {
-	DB              *gorm.DB
+	DB              *model.DB
 	BusWriteChannel chan<- interface{}
 	MSPClient       msp.MSPClient
 }
@@ -25,11 +24,13 @@ func (m *Monitor) Run() {
 				log.Println("Monitor running")
 
 				//Get all slaves from database
+				tx := m.DB.Begin()
 				var slaves []model.Slave
-				err := m.DB.Find(&slaves).Error
+				err := tx.Find(&slaves).Error
 				if err != nil {
 					log.Println(err.Error())
 				}
+				tx.Rollback()
 
 				//Observe active slaves
 				for _, slave := range slaves {

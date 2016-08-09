@@ -3,24 +3,24 @@ package master
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
-	"github.com/jinzhu/gorm"
 	"time"
 )
 
 type ProblemManager struct {
-	DB             *gorm.DB
+	DB             *model.DB
 	BusReadChannel <-chan interface{}
 }
 
 func (p *ProblemManager) Run() {
 	for {
 		message := <-p.BusReadChannel
+		tx := p.DB.Begin()
 		switch message.(type) {
 		case model.ConnectionStatus:
 			connStatus := message.(model.ConnectionStatus)
 			if connStatus.Unreachable {
 				var problem model.Problem
-				p.DB.Where(&model.Problem{
+				tx.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,
 					SlaveID:     connStatus.Slave.ID,
 				}).Assign(&model.Problem{
@@ -30,7 +30,7 @@ func (p *ProblemManager) Run() {
 					FirstOccurred: time.Now(),
 				}).FirstOrCreate(&problem)
 			} else {
-				p.DB.Where(&model.Problem{
+				tx.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,
 					SlaveID:     connStatus.Slave.ID,
 				}).Delete(&model.Problem{})
@@ -39,7 +39,7 @@ func (p *ProblemManager) Run() {
 			constrStatus := message.(model.DesiredReplicaSetConstraintStatus)
 			if constrStatus.Unsatisfied {
 				var problem model.Problem
-				p.DB.Where(&model.Problem{
+				tx.Where(&model.Problem{
 					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
 					ReplicaSetID: constrStatus.ReplicaSet.ID,
 				}).Assign(&model.Problem{
@@ -55,12 +55,13 @@ func (p *ProblemManager) Run() {
 					FirstOccurred: time.Now(),
 				}).FirstOrCreate(&problem)
 			} else {
-				p.DB.Where(&model.Problem{
+				tx.Where(&model.Problem{
 					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
 					ReplicaSetID: constrStatus.ReplicaSet.ID,
 				}).Delete(&model.Problem{})
 			}
 		}
+		tx.Commit()
 	}
 
 }

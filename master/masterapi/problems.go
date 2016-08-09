@@ -22,8 +22,10 @@ type Problem struct {
 
 func (m *MasterAPI) ProblemIndex(w http.ResponseWriter, r *http.Request) {
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
 	var problems []*model.Problem
-	err := m.DB.Order("id", false).Find(&problems).Error
+	err := tx.Order("id", false).Find(&problems).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -52,8 +54,11 @@ func (m *MasterAPI) ProblemById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var problem model.Problem
-	res := m.DB.First(&problem, id)
+	res := tx.First(&problem, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
@@ -77,8 +82,11 @@ func (m *MasterAPI) ProblemBySlave(w http.ResponseWriter, r *http.Request) {
 	}
 	slaveId := uint(id64)
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var slave model.Slave
-	getSlaveRes := m.DB.First(&slave, slaveId)
+	getSlaveRes := tx.First(&slave, slaveId)
 	if getSlaveRes.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -88,7 +96,7 @@ func (m *MasterAPI) ProblemBySlave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := m.DB.Model(&slave).Order("id", false).Related(&slave.Problems, "Problems").Error; err != nil {
+	if err := tx.Model(&slave).Order("id", false).Related(&slave.Problems, "Problems").Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
 		return
@@ -110,8 +118,11 @@ func (m *MasterAPI) ProblemByReplicaSet(w http.ResponseWriter, r *http.Request) 
 	}
 	replicaSetId := uint(id64)
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var replicaSet model.ReplicaSet
-	getReplicaSetRes := m.DB.First(&replicaSet, replicaSetId)
+	getReplicaSetRes := tx.First(&replicaSet, replicaSetId)
 	if getReplicaSetRes.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -121,7 +132,7 @@ func (m *MasterAPI) ProblemByReplicaSet(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := m.DB.Model(&replicaSet).Order("id", false).Related(&replicaSet.Problems, "Problems").Error; err != nil {
+	if err := tx.Model(&replicaSet).Order("id", false).Related(&replicaSet.Problems, "Problems").Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
 		return

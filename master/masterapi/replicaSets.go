@@ -20,8 +20,11 @@ type ReplicaSet struct {
 }
 
 func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var replicasets []*model.ReplicaSet
-	err := m.DB.Order("id", false).Find(&replicasets).Error
+	err := tx.Order("id", false).Find(&replicasets).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -50,8 +53,11 @@ func (m *MasterAPI) ReplicaSetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var replSet model.ReplicaSet
-	res := m.DB.First(&replSet, id)
+	res := tx.First(&replSet, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)

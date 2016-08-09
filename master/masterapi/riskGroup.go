@@ -16,8 +16,11 @@ type RiskGroup struct {
 }
 
 func (m *MasterAPI) RiskGroupIndex(w http.ResponseWriter, r *http.Request) {
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var riskGroups []*model.RiskGroup
-	err := m.DB.Order("id", false).Find(&riskGroups).Error
+	err := tx.Order("id", false).Find(&riskGroups).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -46,8 +49,11 @@ func (m *MasterAPI) RiskGroupById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var riskgroup model.RiskGroup
-	res := m.DB.First(&riskgroup, id)
+	res := tx.First(&riskgroup, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)

@@ -24,9 +24,11 @@ type Slave struct {
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
+	tx := m.DB.Begin()
+	defer tx.Rollback()
 
 	var slaves []*model.Slave
-	err := m.DB.Order("id", false).Find(&slaves).Error
+	err := tx.Order("id", false).Find(&slaves).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -55,8 +57,11 @@ func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var slave model.Slave
-	res := m.DB.First(&slave, id)
+	res := tx.First(&slave, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
