@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/vaughan0/go-ini"
 	"log"
 )
@@ -35,12 +36,36 @@ func (p *Parser) ParseConfig(path string) (relay SMTPRelay, apiHost string, cont
 	if err != nil {
 		return
 	}
-	notifier := file["notifier"]
-	apiHost = notifier["api_host"]
-	contactsFile = notifier["contacts"]
+	notifier, ok := file["notifier"]
+	if !ok {
+		err = fmt.Errorf("Missing 'notifier' section in config file")
+		return
+	}
+	apiHost, ok = notifier["api_host"]
+	if !ok {
+		err = fmt.Errorf("Missing 'api_host' veriable in 'notifier' section in config file")
+		return
+	}
+	contactsFile, ok = notifier["contacts"]
+	if !ok {
+		err = fmt.Errorf("Missing 'contacts' veriable in 'notifier' section in config file")
+		return
+	}
 
-	smtp := file["smtp"]
-	relay.MailFrom = smtp["mail_form"]
-	relay.Hostname = smtp["relay_host"]
+	smtp, ok := file["smtp"]
+	if !ok {
+		err = fmt.Errorf("Missing 'smtp' section in config file")
+		return
+	}
+	relay.MailFrom, ok = smtp["mail_form"]
+	if !ok {
+		err = fmt.Errorf("Missing 'mail_from' veriable in 'smtp' section in config file")
+		return
+	}
+	relay.Hostname, ok = smtp["relay_host"]
+	if !ok {
+		err = fmt.Errorf("Missing 'relay_host' veriable in 'smtp' section in config file")
+		return
+	}
 	return
 }
