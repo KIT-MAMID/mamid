@@ -28,6 +28,9 @@ func TestApiClientSuccess(t *testing.T) {
 	problems, err := client.Receive(server.Listener.Addr().String())
 	assert.NoError(t, err)
 	assert.Equal(t, len(problems), 2)
+	for i := 0; i < len(problems); i++ {
+		assert.NotEmpty(t, problems[i])
+	}
 }
 
 func TestApiClientFail(t *testing.T) {
