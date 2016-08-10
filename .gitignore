@@ -6,3 +6,4 @@
 docker/.dockergopath
 mamid.sqlite3
 mamid.sqlite3-journal
+/cover/

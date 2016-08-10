@@ -51,6 +51,7 @@ func mongodTuple(s model.Slave, m msp.Mongod) string {
 }
 
 func (m *Monitor) observeSlave(slave model.Slave) {
+
 	//Request mongod states from slave
 	observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
 
@@ -66,105 +67,147 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 	}
 	// TODO do we need to write this to the DB (currently there is no field for this in model.Slave)
 
-	if mspError == nil {
-		tx := m.DB.Begin()
-		for _, observedMongod := range observedMongods {
-
-			var dbMongod model.Mongod
-			dbMongodRes := tx.First(&dbMongod, &model.Mongod{
-				ParentSlaveID: slave.ID,
-				Port:          model.PortNumber(observedMongod.Port),
-				ReplSetName:   observedMongod.ReplicaSetName,
-			})
-
-			if dbMongodRes.RecordNotFound() {
-				log.Printf("monitor: internal inconsistency: did not find corresponding database Mongod to observed Mongod `%s`: %s",
-					mongodTuple(slave, observedMongod), dbMongodRes.Error)
-				tx.Rollback()
-				return
-			} else if dbMongodRes.Error != nil {
-				log.Printf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
-					mongodTuple(slave, observedMongod), dbMongodRes.Error)
-				tx.Rollback()
-				return
-			}
-
-			//Get desired state if it exists
-			relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
-			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-				log.Printf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
-					mongodTuple(slave, observedMongod), relatedResult.Error.Error())
-				tx.Rollback()
-				return
-			}
-
-			//Get observed state if it exists
-			relatedResult = tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "ObservedState")
-			if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-				log.Printf("monitor: database error when querying for observed state of Mongod `%s`: %s",
-					mongodTuple(slave, observedMongod), relatedResult.Error)
-				tx.Rollback()
-				return
-			}
-
-			if observedMongod.StatusError == nil {
-				//TODO Finish this
-				//Put observations into model
-				dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
-				dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
-				dbMongod.ObservationError = model.MSPError{}
-			} else {
-				dbMongod.ObservationError = mspErrorToModelMSPError(observedMongod.StatusError)
-			}
-
-			//TODO Only update observed state and errors to prevent collisions with cluster allocator
-			saveErr := tx.Save(&dbMongod).Error
-			if saveErr != nil {
-				log.Println(saveErr.Error())
-				tx.Rollback()
-				return
-			}
-
-		}
-
-		//Remove observed state of mongods the slave does not report
-		var modelMongods []model.Mongod
-		getMongodsErr := tx.Model(&slave).Related(&modelMongods, "Mongods").Error
-		if getMongodsErr != nil {
-			log.Println(getMongodsErr.Error())
-			tx.Rollback()
-			return
-		}
-	outer:
-		for _, modelMongod := range modelMongods {
-			//Check if slave reported this mongod
-			for _, observedMongod := range observedMongods {
-				if modelMongod.Port == model.PortNumber(observedMongod.Port) &&
-					modelMongod.ReplSetName == observedMongod.ReplicaSetName {
-					continue outer
-				}
-			}
-
-			//Else remove observed state
-			deleteErr := tx.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID).Error
-			if deleteErr != nil {
-				log.Println(deleteErr.Error())
-				tx.Rollback()
-				return
-			}
-		}
-
-		tx.Commit()
-
-		//Check every mongod for mismatches
-		for _, modelMongod := range modelMongods {
-			m.BusWriteChannel <- compareStates(modelMongod)
-		}
-	} else {
+	if mspError != nil {
 		//TODO Handle other slave errors => check identifiers != CommunicationError
 		//log.Printf("monitor: error observing slave: %#v", mspError)
 		return
 	}
+
+	tx := m.DB.Begin()
+
+	if err := m.updateObservedStateInDB(tx, slave, observedMongods); err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return
+	}
+
+	if err := m.handleUnobservedMongodsOfSlave(tx, slave, observedMongods); err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return
+	}
+
+	tx.Commit()
+
+	// Read-only transaction
+	tx = m.DB.Begin()
+	defer tx.Rollback()
+	if err := m.sendMongodMismatchStatusToBus(tx, slave); err != nil {
+		log.Println(err)
+	}
+
+}
+
+// Update database Mongod.ObservedState with newly observedMongods
+// Errors returned by this method should be handled by aborting the transaction tx
+func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (criticalError error) {
+
+	for _, observedMongod := range observedMongods {
+
+		log.Printf("monitor: updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+
+		var dbMongod model.Mongod
+
+		dbMongodRes := tx.First(&dbMongod, &model.Mongod{
+			ParentSlaveID: slave.ID,
+			Port:          model.PortNumber(observedMongod.Port),
+			ReplSetName:   observedMongod.ReplicaSetName,
+		})
+
+		if dbMongodRes.RecordNotFound() {
+			return fmt.Errorf("monitor: internal inconsistency: did not find corresponding database Mongod to observed Mongod `%s`: %s",
+				mongodTuple(slave, observedMongod), dbMongodRes.Error)
+		} else if dbMongodRes.Error != nil {
+			return fmt.Errorf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
+				mongodTuple(slave, observedMongod), dbMongodRes.Error)
+		}
+
+		//Get desired state if it exists
+		relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
+		if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
+			return fmt.Errorf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
+				mongodTuple(slave, observedMongod), relatedResult.Error.Error())
+		}
+
+		//Get observed state if it exists
+		relatedResult = tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "ObservedState")
+		if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
+			return fmt.Errorf("monitor: database error when querying for observed state of Mongod `%s`: %s",
+				mongodTuple(slave, observedMongod), relatedResult.Error)
+		}
+
+		// Update database representation of observation
+		if observedMongod.StatusError == nil {
+			//TODO Finish this
+			//Put observations into model
+			dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
+			dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
+			dbMongod.ObservationError = model.MSPError{}
+		} else {
+			dbMongod.ObservationError = mspErrorToModelMSPError(observedMongod.StatusError)
+		}
+
+		// Persist updated database representation
+		//TODO Only update observed state and errors to prevent collisions with cluster allocator
+		saveErr := tx.Save(&dbMongod).Error
+		if saveErr != nil {
+			return fmt.Errorf("monitor: error persisting updated observed state for mongod `%s`: %s",
+				mongodTuple(slave, observedMongod), saveErr.Error())
+		}
+
+		log.Printf("monitor: finished updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+
+	}
+
+	return nil
+
+}
+
+// Remove observed state of mongods the slave does not report
+// Errors returned by this method should be handled by aborting the transaction tx
+func (m *Monitor) handleUnobservedMongodsOfSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
+
+	var modelMongods []model.Mongod
+	if err := tx.Model(&slave).Related(&modelMongods, "Mongods").Error; err != nil {
+		return err
+	}
+
+outer:
+	for _, modelMongod := range modelMongods {
+
+		//Check if slave reported this mongod
+		for _, observedMongod := range observedMongods {
+			if modelMongod.Port == model.PortNumber(observedMongod.Port) &&
+				modelMongod.ReplSetName == observedMongod.ReplicaSetName {
+				continue outer
+			}
+		}
+
+		//Else remove observed state
+		deleteErr := tx.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID).Error
+		if deleteErr != nil {
+			return deleteErr
+		}
+	}
+
+	return nil
+
+}
+
+// Check every Mongod of the Slave for mismatches between DesiredState and ObservedState
+// and send an appropriate MongodMismatchStatus to the Bus
+func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) (err error) {
+
+	var modelMongods []model.Mongod
+	if err := tx.Model(&slave).Related(&modelMongods, "Mongods").Error; err != nil {
+		return err
+	}
+
+	for _, modelMongod := range modelMongods {
+		m.BusWriteChannel <- compareStates(modelMongod)
+	}
+
+	return nil
 }
 
 func compareStates(mongod model.Mongod) (m model.MongodMatchStatus) {

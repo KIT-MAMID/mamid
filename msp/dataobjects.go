@@ -37,6 +37,10 @@ type Error struct {
 	LongDescription string
 }
 
+func (e Error) String() string {
+	return fmt.Sprintf("{%s: %s : %s}", e.Identifier, e.Description, e.LongDescription)
+}
+
 func (e *Error) validateFields() error {
 
 	validationError := func(fieldname string) error {
@@ -52,3 +56,4 @@ func (e *Error) validateFields() error {
 
 // List of Error identifiers
 const CommunicationError string = "COMM" // slave is unreachable or slave response not understood
+const BadStateDescription string = "BADSTATE"

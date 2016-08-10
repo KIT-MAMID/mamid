@@ -51,7 +51,19 @@ func (c MSPClientImpl) RequestStatus(Target HostPort) ([]Mongod, *Error) {
 	}
 }
 
-func (c MSPClientImpl) EstablishMongodState(Target HostPort, m Mongod) *Error {
+func (c MSPClientImpl) establishMongodState_validate(targetSlave HostPort, m Mongod) *Error {
+	if m.State == MongodStateRecovering {
+		return &Error{BadStateDescription, "Invalid Mongod state", fmt.Sprintf("Mongod state `%s` can only by received, not established.", m.State)}
+	}
+	return nil
+}
+
+func (c MSPClientImpl) EstablishMongodState(target HostPort, m Mongod) *Error {
+
+	if err := c.establishMongodState_validate(target, m); err != nil {
+		return err
+	}
+
 	buffer := new(bytes.Buffer)
 	err := json.NewEncoder(buffer).Encode(m)
 	if err != nil {
@@ -59,7 +71,7 @@ func (c MSPClientImpl) EstablishMongodState(Target HostPort, m Mongod) *Error {
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", Target.Hostname, Target.Port), buffer)
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", target.Hostname, target.Port), buffer)
 	if err != nil {
 		log.Printf("msp: error creating request object for monogd: %s", err)
 		panic(err)
