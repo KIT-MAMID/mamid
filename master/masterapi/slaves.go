@@ -258,7 +258,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	s := tx.Delete(&model.Slave{ID: id})
 	if s.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
+		fmt.Fprint(w, s.Error.Error())
 		tx.Rollback()
 		return
 	}
