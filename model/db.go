@@ -203,12 +203,6 @@ func initializeDB(dsn string) (*DB, error) {
 
 func (db *DB) Begin() *gorm.DB {
 	tx := db.gormDB.Begin()
-
-	//Enable foreign keys for every database connection
-	err := tx.Exec("PRAGMA foreign_keys = ON;").Error
-	if err != nil {
-		panic(err)
-	}
 	return tx
 }
 
