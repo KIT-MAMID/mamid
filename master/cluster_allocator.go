@@ -190,7 +190,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			      	      		)
 			      	      		-- 0 is the default risk group that is not a risk group,
 			      	      		-- i.e from which multiple slaves can be allocated for the same replica set
-			      	      		OR s.risk_group_id = 0
+			      	      		OR s.risk_group_id IS NULL
 			      	      	)
 			      	      ORDER BY s.utilization ASC
 			      	      LIMIT 1`, p.PersistentStorage(), SlaveStateActive, replicaSet.ID,
