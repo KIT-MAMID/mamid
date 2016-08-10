@@ -4,21 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 type APIClient struct {
 	httpClient http.Client
-}
-
-type Problem struct {
-	Id              uint
-	Description     string
-	LongDescription string
-	FirstOccured    time.Time
-	LastUpdate      time.Time
-	Slave           uint
-	ReplicaSet      uint
 }
 
 func (apiclient *APIClient) Receive(host string) (problems []Problem, err error) {
