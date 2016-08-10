@@ -24,11 +24,17 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 		ConfiguredState:      model.SlaveStateActive,
 	}
 	assert.NoError(t, tx.Create(&dbSlave).Error)
+	dbReplSet := model.ReplicaSet{
+		ID:   1,
+		Name: "foo",
+	}
+	assert.NoError(t, tx.Create(&dbReplSet).Error)
 	m1 := model.Mongod{
 		Port:           2000,
 		ReplSetName:    "repl1",
 		ParentSlaveID:  1,
-		DesiredStateID: 1,
+		ReplicaSetID:   1,
+		DesiredStateID: model.NullIntValue(1),
 	}
 	des1 := model.MongodState{
 		ID: 1,

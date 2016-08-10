@@ -46,7 +46,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		PersistentStorage:    true,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
-		RiskGroupID:          2,
+		RiskGroupID:          model.NullIntValue(2),
 	}
 	assert.NoError(t, tx.Create(&dbSlave).Error)
 
@@ -76,7 +76,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
-		RiskGroupID:          1,
+		RiskGroupID:          model.NullIntValue(1),
 	}
 	assert.NoError(t, tx.Create(&dbSlave2).Error)
 
@@ -89,7 +89,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
-		RiskGroupID:          0,
+		RiskGroupID:          model.NullInt(),
 	}
 	assert.NoError(t, tx.Create(&dbSlave3).Error)
 
@@ -100,7 +100,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		ID:            1,
 		Description:   "foo",
 		FirstOccurred: time.Date(2000, time.January, 1, 0, 0, 0, 0, utc),
-		SlaveID:       1,
+		SlaveID:       model.NullIntValue(1),
 	}
 	assert.NoError(t, tx.Create(&dbProblem).Error)
 
@@ -108,7 +108,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		ID:            2,
 		Description:   "bar",
 		FirstOccurred: time.Date(2010, time.January, 1, 0, 0, 0, 0, utc),
-		ReplicaSetID:  1,
+		ReplicaSetID:  model.NullIntValue(1),
 	}
 	assert.NoError(t, tx.Create(&dbProblem2).Error)
 	tx.Commit()
@@ -965,7 +965,7 @@ func TestMasterAPI_RiskGroupAssignSlave(t *testing.T) {
 		tx.Rollback()
 	}
 
-	assert.EqualValues(t, 2, assignedSlave.RiskGroupID)
+	assert.EqualValues(t, 2, assignedSlave.RiskGroupID.Int64)
 }
 
 func TestMasterAPI_RiskGroupAssignSlave_active(t *testing.T) {
@@ -1002,7 +1002,7 @@ func TestMasterAPI_RiskGroupRemoveSlave(t *testing.T) {
 		tx.Rollback()
 	}
 
-	assert.EqualValues(t, 0, removedSlave.RiskGroupID)
+	assert.False(t, removedSlave.RiskGroupID.Valid)
 }
 
 func TestMasterAPI_RiskGroupRemoveSlave_active(t *testing.T) {
@@ -1061,7 +1061,7 @@ func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
 	// Test correct get
 	resp := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "/api/riskgroups/0/slaves", nil)
+	req, err := http.NewRequest("GET", "/api/riskgroups/null/slaves", nil)
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
 

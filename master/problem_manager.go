@@ -22,7 +22,7 @@ func (p *ProblemManager) Run() {
 				var problem model.Problem
 				tx.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,
-					SlaveID:     connStatus.Slave.ID,
+					SlaveID:     model.NullIntValue(connStatus.Slave.ID),
 				}).Assign(&model.Problem{
 					Description: fmt.Sprintf("Slave %s is unreachable", connStatus.Slave.Hostname),
 					LastUpdated: time.Now(),
@@ -32,7 +32,7 @@ func (p *ProblemManager) Run() {
 			} else {
 				tx.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,
-					SlaveID:     connStatus.Slave.ID,
+					SlaveID:     model.NullIntValue(connStatus.Slave.ID),
 				}).Delete(&model.Problem{})
 			}
 		case model.DesiredReplicaSetConstraintStatus:
@@ -41,7 +41,7 @@ func (p *ProblemManager) Run() {
 				var problem model.Problem
 				tx.Where(&model.Problem{
 					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
-					ReplicaSetID: constrStatus.ReplicaSet.ID,
+					ReplicaSetID: model.NullIntValue(constrStatus.ReplicaSet.ID),
 				}).Assign(&model.Problem{
 					Description: fmt.Sprintf("Replica set %s is degraded", constrStatus.ReplicaSet.Name),
 					LongDescription: fmt.Sprintf(
@@ -57,7 +57,7 @@ func (p *ProblemManager) Run() {
 			} else {
 				tx.Where(&model.Problem{
 					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
-					ReplicaSetID: constrStatus.ReplicaSet.ID,
+					ReplicaSetID: model.NullIntValue(constrStatus.ReplicaSet.ID),
 				}).Delete(&model.Problem{})
 			}
 		}

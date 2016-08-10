@@ -12,7 +12,7 @@ import (
 )
 
 type ReplicaSet struct {
-	ID                              uint   `json:"id"`
+	ID                              int64  `json:"id"`
 	Name                            string `json:"name"`
 	PersistentNodeCount             uint   `json:"persistent_node_count"`
 	VolatileNodeCount               uint   `json:"volatile_node_count"`
@@ -131,12 +131,11 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["replicasetId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	var postReplSet ReplicaSet
 	err = json.NewDecoder(r.Body).Decode(&postReplSet)
@@ -209,12 +208,11 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["replicasetId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	// Allow delete
 

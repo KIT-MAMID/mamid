@@ -123,7 +123,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	}
 
 	//All unsatisfiable replica sets (independent of persistence)
-	unsatisfiable_replica_set_ids := []uint{}
+	unsatisfiable_replica_set_ids := []int64{}
 
 	// Now add new members
 
@@ -137,7 +137,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		}
 
 		//Unsatisfiable replica sets for the current persistence
-		unsatisfiable_replica_set_ids_by_persistance := []uint{0} // we always start at 1, this is a workaround for the statement generator producing (NULL) in case of an empty set otherwise
+		unsatisfiable_replica_set_ids_by_persistance := []int64{0} // we always start at 1, this is a workaround for the statement generator producing (NULL) in case of an empty set otherwise
 
 		for {
 
@@ -375,7 +375,7 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 		ReplSetName:    r.Name,
 		ParentSlaveID:  s.ID,
 		ReplicaSetID:   r.ID,
-		DesiredStateID: desiredState.ID,
+		DesiredStateID: NullIntValue(desiredState.ID),
 	}
 
 	if err := tx.Create(&m).Error; err != nil {

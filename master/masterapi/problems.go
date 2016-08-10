@@ -11,13 +11,13 @@ import (
 )
 
 type Problem struct {
-	ID              uint      `json:"id"`
+	ID              int64     `json:"id"`
 	Description     string    `json:"description"`
 	LongDescription string    `json:"long_description"`
 	FirstOccurred   time.Time `json:"first_occurred"`
 	LastUpdated     time.Time `json:"last_updated"`
-	SlaveId         uint      `json:"slave_id"`
-	ReplicaSetId    uint      `json:"replica_set_id"`
+	SlaveId         *int64    `json:"slave_id"`
+	ReplicaSetId    *int64    `json:"replica_set_id"`
 }
 
 func (m *MasterAPI) ProblemIndex(w http.ResponseWriter, r *http.Request) {

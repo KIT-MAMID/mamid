@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
