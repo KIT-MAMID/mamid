@@ -23,7 +23,7 @@ type Controller struct {
 
 func NewController(dataDir string) *Controller {
 	return &Controller{
-		processes: NewProcessManager(fmt.Sprintf("mongod --dbpath %s/%s", dataDir, DataDBDir)),
+		processes: NewProcessManager("mongod", dataDir),
 		configurator: &ConcreteMongodConfigurator{ mgo.Dial },
 		busyTable: make(map[msp.PortNumber]*sync.Mutex),
 		busyTableLock: sync.Mutex{},

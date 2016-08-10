@@ -9,18 +9,21 @@ import (
 
 type ProcessManager struct {
 	command string
+	dataDir string
 	runningProcesses map[msp.PortNumber]*exec.Cmd
 }
 
-func NewProcessManager(command string) ProcessManager {
+func NewProcessManager(command string, dataDir string) ProcessManager {
 	return ProcessManager{
 		command: command,
+		dataDir: dataDir,
 		runningProcesses: make(map[msp.PortNumber]*exec.Cmd),
 	};
 }
 
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
-	cmd := exec.Command(fmt.Sprintf("%s --port %d --replSet '%s'", p.command, m.Port, strings.Replace(m.ReplicaSetName, "'", "'\\''", -1)))
+	escName := strings.Replace(m.ReplicaSetName, "'", "'\\''", -1)
+	cmd := exec.Command(fmt.Sprintf("%s --dbPath '%s/%s/%s' --port %d --replSet '%s'", p.command, p.dataDir, DataDBDir, escName, m.Port, escName))
 	err := cmd.Start()
 	if err != nil {
 		return err

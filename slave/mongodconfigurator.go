@@ -29,6 +29,7 @@ const (
 	replSetStartup = 0
 	replSetPrimary = 1
 	replSetSecondary = 2
+	replSetRecovering = 3
 	replSetUnknown = 6
 )
 type replSetState int
@@ -73,6 +74,13 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		members[k] = msp.HostPort{pair[0], msp.PortNumber(remotePort) }
 	}
 
+	var state msp.MongodState
+	if status.state == replSetRecovering {
+		state = msp.MongodStateRecovering
+	} else {
+		state = msp.MongodStateRunning
+	}
+
 	return msp.Mongod{
 		Port: port,
 		ReplicaSetName: status.set,
@@ -80,7 +88,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		ShardingConfigServer: false,
 		StatusError: nil,
 		LastEstablishStateError: nil,
-		State: msp.MongodStateRunning,
+		State: state,
 	}, nil, status.state
 }
 

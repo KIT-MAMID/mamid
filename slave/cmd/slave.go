@@ -20,7 +20,7 @@ func main() {
 	}
 
 	if err := unix.Access(dataDir, unix.W_OK); err != nil {
-		println("Root data directory %s does not exist or is not writable", dataDir);
+		println(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir));
 		return
 	}
 	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
