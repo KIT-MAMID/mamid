@@ -21,8 +21,6 @@ func (apiclient *APIClient) Receive(host string) (problems []Problem, err error)
 		} else {
 			return nil, fmt.Errorf("API returned non 200 %d", resp.StatusCode)
 		}
-	} else {
-		return nil, err
 	}
-	return problems, nil
+	return
 }
