@@ -355,6 +355,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
     $scope.setSlaveState = function (state) {
         $scope.slave.configured_state = state;
+        $scope.edit_slave.configured_state = state;
         $scope.slave.$save();
     }
 });
