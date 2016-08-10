@@ -3,7 +3,7 @@
     <h4>{{problem.description}} <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
     <p>{{problem.long_description}}</p>
     <ul>
-        <li ng-if="problem.slave_id!=0"><a href="#/slaves/{{problem.slave_id}}">Inspect affected Slave</a></li>
-        <li ng-if="problem.replica_set_id!=0"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected Replica Set</a></li>
+        <li ng-if="problem.slave_id!=null"><a href="#/slaves/{{problem.slave_id}}">Inspect affected Slave</a></li>
+        <li ng-if="problem.replica_set_id!=null"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected Replica Set</a></li>
     </ul>
 </div>
