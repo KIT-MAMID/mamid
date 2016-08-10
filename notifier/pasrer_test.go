@@ -43,3 +43,49 @@ func TestConfigFileMissingFile(t *testing.T) {
 	_, _, _, err = p.ParseConfig(tmpFile.Name())
 	assert.Error(t, err)
 }
+
+func TestConfigFileMissingConf(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[smtp]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("relay_host=localhost:25\n")
+	assert.NoError(t, err)
+	//_, err = tmpFile.WriteString("mail_form=test@localhost\n")
+	//assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[notifier]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("api_host=localhost:8080\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("contacts=contacts.ini\n")
+	assert.NoError(t, err)
+	tmpFile.Sync()
+	tmpFile.Close()
+
+	var p Parser
+	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	assert.Error(t, err)
+}
+
+func TestConfigFileMissingSection(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
+	assert.NoError(t, err)
+	//_, err = tmpFile.WriteString("[smtp]\n")
+	//assert.NoError(t, err)
+	_, err = tmpFile.WriteString("relay_host=localhost:25\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("mail_form=test@localhost\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[notifier]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("api_host=localhost:8080\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("contacts=contacts.ini\n")
+	assert.NoError(t, err)
+	tmpFile.Sync()
+	tmpFile.Close()
+
+	var p Parser
+	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	assert.Error(t, err)
+}
