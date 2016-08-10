@@ -60,8 +60,8 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 // When err != nil is returned, the tx. should be rolled back and the error be reported
 func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hostPort msp.HostPort, mspMongod msp.Mongod, err error) {
 
-	var slave *Slave
-	var desiredState *MongodState
+	var slave Slave
+	var desiredState MongodState
 	var mspMongodState msp.MongodState
 
 	// Fetch master representation
