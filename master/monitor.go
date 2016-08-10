@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
+	"github.com/jinzhu/gorm"
 	"log"
 	"time"
 )
