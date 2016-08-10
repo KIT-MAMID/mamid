@@ -343,7 +343,7 @@ func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
 }
 
 func NullIntValue(value int64) sql.NullInt64 {
-	return sql.NullInt64{value, true}
+	return sql.NullInt64{Int64: value, Valid: true}
 }
 
 func NullInt() sql.NullInt64 {

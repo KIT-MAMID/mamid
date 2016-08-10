@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -355,7 +354,7 @@ func TestForeignKeyChecking(t *testing.T) {
 		PersistentStorage:    true,
 		Mongods:              []*Mongod{},
 		ConfiguredState:      SlaveStateActive,
-		RiskGroupID:          sql.NullInt64{99, true},
+		RiskGroupID:          NullIntValue(99),
 	})
 	assert.NoError(t, res.Error)
 	assert.Error(t, tx0.Commit().Error)
