@@ -37,6 +37,10 @@ type Error struct {
 	LongDescription string
 }
 
+func (e Error) String() string {
+	return fmt.Sprintf("{%s: %s : %s}", e.Identifier, e.Description, e.LongDescription)
+}
+
 func (e *Error) validateFields() error {
 
 	validationError := func(fieldname string) error {
