@@ -10,7 +10,7 @@ import (
 )
 
 type Monitor struct {
-	DB              *gorm.DB
+	DB              *model.DB
 	BusWriteChannel chan<- interface{}
 	MSPClient       msp.MSPClient
 }
@@ -25,11 +25,13 @@ func (m *Monitor) Run() {
 				log.Println("Monitor running")
 
 				//Get all slaves from database
+				tx := m.DB.Begin()
 				var slaves []model.Slave
-				err := m.DB.Find(&slaves).Error
+				err := tx.Find(&slaves).Error
 				if err != nil {
 					log.Println(err.Error())
 				}
+				tx.Rollback()
 
 				//Observe active slaves
 				for _, slave := range slaves {
@@ -204,7 +206,28 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 	}
 
 	for _, modelMongod := range modelMongods {
-		m.BusWriteChannel <- compareStates(modelMongod)
+
+		if err := tx.Model(modelMongod).Related(&modelMongod.DesiredState, "DesiredState").Error; err != nil {
+			return fmt.Errorf("monitor: error fetching DesiredState for mongod `%s`: %s", modelMongod, err)
+		}
+
+		observedStateRes := tx.Model(modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
+		if !observedStateRes.RecordNotFound() && observedStateRes.Error != nil {
+			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%s`: %s", modelMongod, observedStateRes.Error)
+		}
+
+		if observedStateRes.RecordNotFound() {
+			// This happens when
+			// 	a new Mongod with no observations is found
+			// 	a Mongod with desired state = destroyed is still in the database
+			m.BusWriteChannel <- model.MongodMatchStatus{
+				Mismatch: true,
+				Mongod:   modelMongod,
+			}
+		} else {
+			m.BusWriteChannel <- compareStates(modelMongod)
+		}
+
 	}
 
 	return nil

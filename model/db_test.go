@@ -42,10 +42,16 @@ func fixtureEmptyReplicaSet() *ReplicaSet {
 	}
 }
 
+func fixtureEmptyProblem() *Problem {
+	return &Problem{
+		Description: "Test",
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 func TestCanInitializeDB(t *testing.T) {
-	_, err := InitializeInMemoryDB("")
+	_, err := InitializeTestDB()
 	assert.NoError(t, err)
 }
 
@@ -55,16 +61,18 @@ func TestCanInitializeDB(t *testing.T) {
 */
 func TestRelationshipMongodParentSlave(t *testing.T) {
 
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	s := fixtureEmptySlave()
 
-	db.Create(s)
+	tx.Create(s)
 
 	m := fixtureEmptyMongod()
 	m.ParentSlave = s
 
-	db.Create(m)
+	tx.Create(m)
 
 	assert.Equal(t, m.ParentSlaveID, s.ID)
 
@@ -73,13 +81,13 @@ func TestRelationshipMongodParentSlave(t *testing.T) {
 	var sdb Slave
 
 	// Check what happens when just SELECTing the slave
-	err := db.First(&sdb).Error
+	err := tx.First(&sdb).Error
 
 	assert.NoError(t, err)
 	assert.Nil(t, sdb.Mongods)
 
 	// Now resolve the slave->mongod 1:n association
-	err = db.Model(&sdb).Related(&sdb.Mongods, "Mongods").Error
+	err = tx.Model(&sdb).Related(&sdb.Mongods, "Mongods").Error
 
 	assert.NoError(t, err)
 	assert.Equal(t, len(sdb.Mongods), 1)
@@ -89,7 +97,7 @@ func TestRelationshipMongodParentSlave(t *testing.T) {
 
 	// Now resolve the mongod->(parent)slave relation
 	parentSlave := &Slave{}
-	err = db.Model(&sdb.Mongods[0]).Related(parentSlave, "ParentSlave").Error
+	err = tx.Model(&sdb.Mongods[0]).Related(parentSlave, "ParentSlave").Error
 	assert.NoError(t, err)
 	assert.NotZero(t, parentSlave)
 	assert.Equal(t, s.ID, parentSlave.ID)
@@ -99,23 +107,25 @@ func TestRelationshipMongodParentSlave(t *testing.T) {
 // Test RiskGroup Slave relationship
 func TestRiskGroupSlaveRelationship(t *testing.T) {
 
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	s := fixtureEmptySlave()
 	r := fixtureEmptyRiskGroup()
 	r.Slaves = []*Slave{s}
 
-	err := db.Create(&r).Error
+	err := tx.Create(&r).Error
 	assert.NoError(t, err)
 
 	var rdb RiskGroup
 
-	err = db.First(&rdb).Error
+	err = tx.First(&rdb).Error
 
 	assert.NoError(t, err)
 	assert.Zero(t, rdb.Slaves)
 
-	err = db.Model(&rdb).Related(&rdb.Slaves, "Slaves").Error
+	err = tx.Model(&rdb).Related(&rdb.Slaves, "Slaves").Error
 	assert.NoError(t, err)
 	assert.NotZero(t, rdb.Slaves)
 	assert.Equal(t, len(rdb.Slaves), 1)
@@ -126,23 +136,25 @@ func TestRiskGroupSlaveRelationship(t *testing.T) {
 // Test ReplicaSet - Mongod Relationship
 func TestReplicaSetMongodRelationship(t *testing.T) {
 
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	r := fixtureEmptyReplicaSet()
 	m := fixtureEmptyMongod()
 	r.Mongods = []*Mongod{m}
 
-	err := db.Create(&r).Error
+	err := tx.Create(&r).Error
 	assert.NoError(t, err)
 
 	var rdb ReplicaSet
 
-	err = db.First(&rdb).Error
+	err = tx.First(&rdb).Error
 
 	assert.NoError(t, err)
 	assert.Zero(t, rdb.Mongods)
 
-	err = db.Model(&rdb).Related(&rdb.Mongods, "Mongods").Error
+	err = tx.Model(&rdb).Related(&rdb.Mongods, "Mongods").Error
 	assert.NoError(t, err)
 	assert.NotZero(t, rdb.Mongods)
 	assert.Equal(t, len(rdb.Mongods), 1)
@@ -153,7 +165,9 @@ func TestReplicaSetMongodRelationship(t *testing.T) {
 // Test Mongod - MongodState relationship
 func TestMongodMongodStateRelationship(t *testing.T) {
 
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	m := fixtureEmptyMongod()
 
@@ -172,19 +186,19 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 	m.ObservedState = o
 	m.DesiredState = d
 
-	assert.NoError(t, db.Create(m).Error)
+	assert.NoError(t, tx.Create(m).Error)
 
 	var mdb Mongod
 
 	// Observed
-	assert.NoError(t, db.First(&mdb).Error)
+	assert.NoError(t, tx.First(&mdb).Error)
 	assert.Zero(t, mdb.ObservedState)
 
-	assert.NoError(t, db.Model(&mdb).Related(&mdb.ObservedState, "ObservedState").Error)
+	assert.NoError(t, tx.Model(&mdb).Related(&mdb.ObservedState, "ObservedState").Error)
 	assert.NotZero(t, mdb.ObservedState)
 	assert.Equal(t, mdb.ObservedState.ExecutionState, MongodExecutionStateNotRunning)
 
-	assert.NoError(t, db.Model(&mdb).Related(&mdb.DesiredState, "DesiredState").Error)
+	assert.NoError(t, tx.Model(&mdb).Related(&mdb.DesiredState, "DesiredState").Error)
 	assert.NotZero(t, mdb.DesiredState)
 	assert.Equal(t, mdb.DesiredState.ExecutionState, MongodExecutionStateRunning)
 
@@ -192,20 +206,22 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 
 // Test MongodState - ReplicaSetMember relationship
 func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	m := ReplicaSetMember{Hostname: "h1"}
 
 	s := MongodState{ReplicaSetMembers: []ReplicaSetMember{m}}
 
-	assert.NoError(t, db.Create(&s).Error)
+	assert.NoError(t, tx.Create(&s).Error)
 
 	var sdb MongodState
 
-	assert.NoError(t, db.First(&sdb).Error)
+	assert.NoError(t, tx.First(&sdb).Error)
 	assert.Zero(t, sdb.ReplicaSetMembers)
 
-	assert.NoError(t, db.Model(&sdb).Related(&sdb.ReplicaSetMembers, "ReplicaSetMembers").Error)
+	assert.NoError(t, tx.Model(&sdb).Related(&sdb.ReplicaSetMembers, "ReplicaSetMembers").Error)
 	assert.NotZero(t, sdb.ReplicaSetMembers)
 	assert.Equal(t, len(sdb.ReplicaSetMembers), 1)
 	assert.Equal(t, sdb.ReplicaSetMembers[0].Hostname, m.Hostname)
@@ -214,31 +230,33 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 
 func TestDeleteBehavior(t *testing.T) {
 
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	m := fixtureEmptyMongod()
 	m.ID = 1000
 
 	// Create it
-	db.Create(&m)
+	tx.Create(&m)
 
 	var mdb Mongod
 
 	// Read it once
-	d := db.First(&mdb)
+	d := tx.First(&mdb)
 
 	assert.NoError(t, d.Error)
 	assert.Equal(t, mdb.ID, m.ID)
 
 	// Destroy it once, by ID
-	d = db.Delete(&Mongod{ID: 1000})
+	d = tx.Delete(&Mongod{ID: 1000})
 
 	assert.NoError(t, d.Error)
 	assert.EqualValues(t, 1, d.RowsAffected)
 
 	// Destroy it a second time.
 	// No Error will occur, have to check RowsAffected if we deleted something
-	d = db.Delete(&Mongod{ID: 1000})
+	d = tx.Delete(&Mongod{ID: 1000})
 
 	assert.NoError(t, d.Error)
 	assert.EqualValues(t, 0, d.RowsAffected)
@@ -246,16 +264,21 @@ func TestDeleteBehavior(t *testing.T) {
 }
 
 func TestGormFirstBehavior(t *testing.T) {
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
+
 	var m Mongod
-	assert.Error(t, db.First(&m).Error)
+	assert.Error(t, tx.First(&m).Error)
 }
 
 func TestGormFindBehavior(t *testing.T) {
-	db, _ := InitializeInMemoryDB("")
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+	defer tx.Rollback()
 
 	var ms []Mongod
-	d := db.Find(&ms)
+	d := tx.Find(&ms)
 
 	assert.NoError(t, d.Error)
 	assert.EqualValues(t, 0, d.RowsAffected) // RowsAffected does NOT indicate "nothing found"!!!!
@@ -308,6 +331,97 @@ func TestGormTransactions(t *testing.T) {
 	fmt.Println("tx1 done")
 
 	var slave Slave
-	db.First(&slave, 1)
+	tx := db.Begin()
+	tx.First(&slave, 1)
+	tx.Rollback()
 	assert.Equal(t, "foo", slave.Hostname)
+}
+
+func TestForeignKeyChecking(t *testing.T) {
+	db, _ := InitializeTestDB()
+
+	tx0 := db.Begin()
+
+	var foreignKeys int
+	tx0.Raw("PRAGMA foreign_keys;").Row().Scan(&foreignKeys)
+	assert.EqualValues(t, 1, foreignKeys)
+
+	res := tx0.Create(&Slave{
+		Hostname:             "host1",
+		Port:                 1,
+		MongodPortRangeBegin: 2,
+		MongodPortRangeEnd:   3,
+		PersistentStorage:    true,
+		Mongods:              []*Mongod{},
+		ConfiguredState:      SlaveStateActive,
+		RiskGroupID:          NullIntValue(99),
+	})
+	assert.NoError(t, res.Error)
+	assert.Error(t, tx0.Commit().Error)
+}
+
+func TestCascade(t *testing.T) {
+	db, _ := InitializeTestDB()
+
+	tx0 := db.Begin()
+	assert.NoError(t, tx0.Exec("CREATE TABLE foo(id int primary key);").Error)
+	assert.NoError(t, tx0.Exec("CREATE TABLE bar3(for int null references foo(id) on delete cascade deferrable initially deferred);").Error)
+	assert.NoError(t, tx0.Commit().Error)
+
+	tx1 := db.Begin()
+	assert.NoError(t, tx1.Exec("INSERT INTO foo VALUES(1); INSERT INTO bar3 VALUES(1);").Error)
+	assert.NoError(t, tx1.Commit().Error)
+
+	tx3 := db.Begin()
+	var count int
+	tx3.Raw("SELECT count(*) FROM bar3;").Row().Scan(&count)
+	assert.EqualValues(t, 1, count)
+	tx3.Commit()
+
+	tx2 := db.Begin()
+	tx2.Exec("DELETE FROM foo WHERE id = 1;")
+	assert.NoError(t, tx2.Commit().Error)
+
+	tx3 = db.Begin()
+	tx3.Raw("SELECT count(*) FROM bar3;").Row().Scan(&count)
+	assert.EqualValues(t, 0, count)
+	tx3.Commit()
+}
+
+func TestCascadeSlaves(t *testing.T) {
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+
+	r := fixtureEmptyRiskGroup()
+	tx.Create(r)
+
+	rs := fixtureEmptyReplicaSet()
+	tx.Create(rs)
+
+	s := fixtureEmptySlave()
+	s.RiskGroupID = NullIntValue(r.ID)
+	tx.Create(s)
+
+	m := fixtureEmptyMongod()
+	m.ParentSlaveID = s.ID
+	m.ReplicaSetID = rs.ID
+	tx.Create(m)
+
+	p := fixtureEmptyProblem()
+	p.SlaveID = NullIntValue(s.ID)
+	tx.Create(p)
+
+	assert.NoError(t, tx.Commit().Error)
+
+	tx1 := db.Begin()
+	tx1.Delete(&Mongod{}, m.ID)
+	assert.NoError(t, tx1.Commit().Error)
+
+	tx2 := db.Begin()
+	tx2.Delete(&Slave{}, s.ID)
+	assert.NoError(t, tx2.Commit().Error)
+
+	tx3 := db.Begin()
+	assert.True(t, tx3.First(&Problem{}, p.ID).RecordNotFound())
+	tx3.Rollback()
 }

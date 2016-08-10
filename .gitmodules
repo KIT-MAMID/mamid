@@ -12,10 +12,13 @@
 	url = https://github.com/jinzhu/gorm
 [submodule "vendor/github.com/mattn/go-sqlite3"]
 	path = vendor/github.com/mattn/go-sqlite3
-	url = https://github.com/mattn/go-sqlite3
+	url = https://github.com/KIT-MAMID/go-sqlite3
 [submodule "vendor/github.com/jinzhu/inflection"]
 	path = vendor/github.com/jinzhu/inflection
 	url = https://github.com/jinzhu/inflection
 [submodule "vendor/github.com/stretchr/testify.git"]
 	path = vendor/github.com/stretchr/testify.git
 	url = https://github.com/stretchr/testify.git
+[submodule "vendor/github.com/vaughan0/go-ini"]
+	path = vendor/github.com/vaughan0/go-ini
+	url = https://github.com/vaughan0/go-ini

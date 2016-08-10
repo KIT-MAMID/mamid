@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -44,7 +45,7 @@ import (
 */
 
 type Slave struct {
-	ID                   uint   `gorm:"primary_key"`
+	ID                   int64  `gorm:"primary_key"`
 	Hostname             string `gorm:"unique_index"`
 	Port                 PortNumber
 	MongodPortRangeBegin PortNumber
@@ -56,7 +57,7 @@ type Slave struct {
 	Problems []*Problem
 
 	// Foreign keys
-	RiskGroupID uint `sql:"type:integer REFERENCES risk_groups(id)"`
+	RiskGroupID sql.NullInt64 `sql:"type:integer NULL REFERENCES risk_groups(id) DEFERRABLE INITIALLY DEFERRED"`
 }
 
 type PortNumber uint16
@@ -76,7 +77,7 @@ const (
 )
 
 type ReplicaSet struct {
-	ID                              uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1
+	ID                              int64  `gorm:"primary_key"` //TODO needs to start incrementing at 1
 	Name                            string `gorm:"unique_index"`
 	PersistentMemberCount           uint
 	VolatileMemberCount             uint
@@ -87,38 +88,38 @@ type ReplicaSet struct {
 }
 
 type RiskGroup struct {
-	ID     uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1, 0 is special value for slaves "out of risk" => define a constant?
+	ID     int64  `gorm:"primary_key"` //TODO needs to start incrementing at 1, 0 is special value for slaves "out of risk" => define a constant?
 	Name   string `gorm:"unique_index"`
 	Slaves []*Slave
 }
 
 type Mongod struct {
 	// TODO missing UNIQUE constraint
-	ID          uint `gorm:"primary_key"`
+	ID          int64 `gorm:"primary_key"`
 	Port        PortNumber
 	ReplSetName string
 
 	ObservationError   MSPError
-	ObservationErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
+	ObservationErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	LastEstablishStateError   MSPError
-	LastEstablishStateErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
+	LastEstablishStateErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	ParentSlave   *Slave
-	ParentSlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
+	ParentSlaveID int64 `sql:"type:integer REFERENCES slaves(id) DEFERRABLE INITIALLY DEFERRED"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
+	ReplicaSetID int64 `sql:"type:integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	DesiredState   MongodState
-	DesiredStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
+	DesiredStateID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	ObservedState   MongodState
-	ObservedStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
+	ObservedStateID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 }
 
 type MongodState struct {
-	ID                     uint `gorm:"primary_key"`
+	ID                     int64 `gorm:"primary_key"`
 	IsShardingConfigServer bool
 	ExecutionState         MongodExecutionState
 	ReplicaSetMembers      []ReplicaSetMember
@@ -136,18 +137,18 @@ const (
 
 type ReplicaSetMember struct { // was ReplicaSetMember in UML
 	// TODO missing primary key.
-	ID       uint `gorm:"primary_key"`
+	ID       int64 `gorm:"primary_key"`
 	Hostname string
 	Port     PortNumber
 
 	// Foreign key to parent MongodState
-	MongodStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
+	MongodStateID int64 `sql:"type:integer REFERENCES mongod_states(id) DEFERRABLE INITIALLY DEFERRED"`
 }
 
 // msp.Error
 // duplicated for decoupling protocol & internal representation
 type MSPError struct {
-	ID              uint `gorm:"primary_key"`
+	ID              int64 `gorm:"primary_key"`
 	Identifier      string
 	Description     string
 	LongDescription string
@@ -164,7 +165,7 @@ const (
 )
 
 type Problem struct {
-	ID              uint `gorm:"primary_key"`
+	ID              int64 `gorm:"primary_key"`
 	Description     string
 	LongDescription string
 	ProblemType     ProblemType
@@ -172,16 +173,40 @@ type Problem struct {
 	LastUpdated     time.Time
 
 	Slave   *Slave
-	SlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
+	SlaveID sql.NullInt64 `sql:"type:integer NULL REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
+	ReplicaSetID sql.NullInt64 `sql:"type:integer NULL REFERENCES replica_sets(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 
 	Mongod   *Mongod
-	MongodID uint `sql:"type:integer REFERENCES mongods(id)"`
+	MongodID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 }
 
-func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
+type DB struct {
+	gormDB *gorm.DB
+}
+
+func initializeDB(dsn string) (*DB, error) {
+
+	gormDB, err := gorm.Open("sqlite3", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	db := &DB{
+		gormDB: gormDB,
+	}
+
+	return db, nil
+
+}
+
+func (db *DB) Begin() *gorm.DB {
+	tx := db.gormDB.Begin()
+	return tx
+}
+
+func InitializeFileFromFile(path string) (db *DB, err error) {
 
 	db, err = initializeDB(path)
 	if err != nil {
@@ -194,7 +219,7 @@ func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
 
 }
 
-func InitializeTestDB() (db *gorm.DB, err error) {
+func InitializeTestDB() (db *DB, err error) {
 
 	path := "/tmp/mamid_test.db"
 	os.Remove(path)
@@ -209,7 +234,7 @@ func InitializeTestDB() (db *gorm.DB, err error) {
 
 }
 
-func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
+func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, err error) {
 
 	path := "/tmp/mamid_test.db"
 	os.Remove(path)
@@ -218,15 +243,17 @@ func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
 		return nil, err
 	}
 
+	tx := db.Begin()
 	if sqlFilePath != "" {
 		statements, err := ioutil.ReadFile(sqlFilePath)
 		if err != nil {
 			return nil, err
 		}
 
-		db.Exec(string(statements), []interface{}{})
+		tx.Exec(string(statements), []interface{}{})
 
 	}
+	tx.Commit()
 
 	migrateDB(db)
 
@@ -234,51 +261,19 @@ func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
 
 }
 
-func InitializeInMemoryDB(sqlFilePath string) (db *gorm.DB, err error) {
-
-	db, err = initializeDB(":memory:")
-	if err != nil {
-		return
-	}
-
-	if sqlFilePath != "" {
-		statements, err := ioutil.ReadFile(sqlFilePath)
-		if err != nil {
-			return nil, err
-		}
-
-		db.Exec(string(statements), []interface{}{})
-
-	}
-
-	migrateDB(db)
-
-	return db, nil
-
-}
-
-func initializeDB(dsn string) (db *gorm.DB, err error) {
-
-	db, err = gorm.Open("sqlite3", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-
-}
-
-func migrateDB(db *gorm.DB) {
-	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
-	if err := createSlaveUtilizationView(db); err != nil {
+func migrateDB(db *DB) {
+	tx := db.Begin()
+	tx.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
+	if err := createSlaveUtilizationView(tx); err != nil {
 		panic(err)
 	}
-	if err := createReplicaSetEffectiveMembersView(db); err != nil {
+	if err := createReplicaSetEffectiveMembersView(tx); err != nil {
 		panic(err)
 	}
-	if err := createReplicaSetConfiguredMembersView(db); err != nil {
+	if err := createReplicaSetConfiguredMembersView(tx); err != nil {
 		panic(err)
 	}
+	tx.Commit()
 }
 
 func createReplicaSetEffectiveMembersView(tx *gorm.DB) error {
@@ -344,5 +339,30 @@ func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
 		}
 	default:
 		panic(e)
+	}
+}
+
+func NullIntValue(value int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: value, Valid: true}
+}
+
+func NullInt() sql.NullInt64 {
+	return sql.NullInt64{}
+}
+
+func NullIntToPtr(nullint sql.NullInt64) *int64 {
+	if nullint.Valid {
+		value := nullint.Int64
+		return &value
+	} else {
+		return nil
+	}
+}
+
+func PtrToNullInt(value *int64) sql.NullInt64 {
+	if value != nil {
+		return NullIntValue(*value)
+	} else {
+		return NullInt()
 	}
 }

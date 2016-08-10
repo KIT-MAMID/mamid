@@ -13,20 +13,22 @@ import (
 )
 
 type Slave struct {
-	ID                   uint   `json:"id"`
+	ID                   int64  `json:"id"`
 	Hostname             string `json:"hostname"`
 	Port                 uint   `json:"slave_port"`
 	MongodPortRangeBegin uint   `json:"mongod_port_range_begin"` //inclusive
 	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
 	PersistentStorage    bool   `json:"persistent_storage"`
 	ConfiguredState      string `json:"configured_state"`
-	RiskGroupID          uint   `json:"risk_group_id"`
+	RiskGroupID          *int64 `json:"risk_group_id"`
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
+	tx := m.DB.Begin()
+	defer tx.Rollback()
 
 	var slaves []*model.Slave
-	err := m.DB.Order("id", false).Find(&slaves).Error
+	err := tx.Order("id", false).Find(&slaves).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -55,8 +57,11 @@ func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var slave model.Slave
-	res := m.DB.First(&slave, id)
+	res := tx.First(&slave, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
@@ -133,12 +138,11 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["slaveId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	var postSlave Slave
 	err = json.NewDecoder(r.Body).Decode(&postSlave)
@@ -225,12 +229,11 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["slaveId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	tx := m.DB.Begin()
 
@@ -255,7 +258,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	s := tx.Delete(&model.Slave{ID: id})
 	if s.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
+		fmt.Fprint(w, s.Error.Error())
 		tx.Rollback()
 		return
 	}

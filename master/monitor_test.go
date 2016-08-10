@@ -3,15 +3,15 @@ package master
 import (
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 )
 
-func createDB(t *testing.T) (db *gorm.DB, err error) {
+func createDB(t *testing.T) (db *model.DB, err error) {
 	// Setup database
 	db, err = model.InitializeTestDB()
+	tx := db.Begin()
 
 	dbSlave := model.Slave{
 		ID:                   1,
@@ -23,21 +23,28 @@ func createDB(t *testing.T) (db *gorm.DB, err error) {
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
 	}
-	assert.NoError(t, db.Create(&dbSlave).Error)
+	assert.NoError(t, tx.Create(&dbSlave).Error)
+	dbReplSet := model.ReplicaSet{
+		ID:   1,
+		Name: "foo",
+	}
+	assert.NoError(t, tx.Create(&dbReplSet).Error)
 	m1 := model.Mongod{
 		Port:           2000,
 		ReplSetName:    "repl1",
 		ParentSlaveID:  1,
-		DesiredStateID: 1,
+		ReplicaSetID:   1,
+		DesiredStateID: model.NullIntValue(1),
 	}
 	des1 := model.MongodState{
 		ID: 1,
 		IsShardingConfigServer: false,
 		ExecutionState:         model.MongodExecutionStateRunning,
 	}
-	assert.NoError(t, db.Create(&des1).Error)
-	assert.NoError(t, db.Create(&m1).Error)
+	assert.NoError(t, tx.Create(&des1).Error)
+	assert.NoError(t, tx.Create(&m1).Error)
 
+	tx.Commit()
 	return
 }
 
@@ -87,13 +94,21 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	//Observe Slave
 	var slave model.Slave
-	db.First(&slave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&slave, 1)
+		tx.Rollback()
+	}
 
 	monitor.observeSlave(slave)
 
 	var mongod model.Mongod
-	db.First(&mongod, 1)
-	assert.Nil(t, db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error, "after observation, the observed state should be != nil")
+	{
+		tx := db.Begin()
+		tx.First(&mongod, 1)
+		assert.Nil(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error, "after observation, the observed state should be != nil")
+		tx.Rollback()
+	}
 	assert.Equal(t, model.MongodExecutionStateRunning, mongod.ObservedState.ExecutionState)
 
 	connStatusX := <-readChannel
@@ -121,16 +136,23 @@ func TestMonitor_observeSlave(t *testing.T) {
 		},
 		Error: nil,
 	}
-
-	db.First(&slave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&slave, 1)
+		tx.Rollback()
+	}
 
 	monitor.observeSlave(slave)
 
-	db.First(&mongod, 1)
+	{
+		tx := db.Begin()
+		tx.First(&mongod, 1)
 
-	//Mongod should have an observation error
-	db.Model(&mongod).Related(&mongod.ObservationError, "ObservationError")
-	assert.EqualValues(t, "cannot observe mongod", mongod.ObservationError.Description)
+		//Mongod should have an observation error
+		tx.Model(&mongod).Related(&mongod.ObservationError, "ObservationError")
+		assert.EqualValues(t, "cannot observe mongod", mongod.ObservationError.Description)
+		tx.Rollback()
+	}
 	assert.NotZero(t, mongod.ObservationErrorID)
 
 	connStatusX = <-readChannel
@@ -148,14 +170,22 @@ func TestMonitor_observeSlave(t *testing.T) {
 		Error:  nil,
 	}
 
-	db.First(&slave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&slave, 1)
+		tx.Rollback()
+	}
 
 	monitor.observeSlave(slave)
 
-	db.First(&mongod, 1)
+	{
+		tx := db.Begin()
+		tx.First(&mongod, 1)
 
-	//Mongod should not have observed state anymore
-	assert.True(t, db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").RecordNotFound())
+		//Mongod should not have observed state anymore
+		assert.True(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").RecordNotFound())
+		tx.Rollback()
+	}
 
 	connStatusX = <-readChannel
 	connStatus, ok = connStatusX.(model.ConnectionStatus)
@@ -172,7 +202,11 @@ func TestMonitor_observeSlave(t *testing.T) {
 		Error:  &msp.Error{Identifier: msp.CommunicationError},
 	}
 
-	db.First(&slave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&slave, 1)
+		tx.Rollback()
+	}
 
 	monitor.observeSlave(slave)
 

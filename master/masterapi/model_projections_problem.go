@@ -9,7 +9,7 @@ func ProjectModelProblemToProblem(m *model.Problem) *Problem {
 		LongDescription: m.LongDescription,
 		FirstOccurred:   m.FirstOccurred,
 		LastUpdated:     m.LastUpdated,
-		SlaveId:         m.SlaveID,
-		ReplicaSetId:    m.ReplicaSetID,
+		SlaveId:         model.NullIntToPtr(m.SlaveID),
+		ReplicaSetId:    model.NullIntToPtr(m.ReplicaSetID),
 	}
 }

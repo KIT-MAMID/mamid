@@ -6,7 +6,6 @@ import (
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -15,27 +14,28 @@ import (
 	"time"
 )
 
-func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, err error) {
+func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, err error) {
 	// Setup database
-	db, err = model.InitializeInMemoryDB("")
+	db, err = model.InitializeTestDB()
+	tx := db.Begin()
 
 	dbRiskGroup := model.RiskGroup{
 		ID:   1,
 		Name: "risk1",
 	}
-	assert.NoError(t, db.Create(&dbRiskGroup).Error)
+	assert.NoError(t, tx.Create(&dbRiskGroup).Error)
 
 	dbRiskGroup2 := model.RiskGroup{
 		ID:   2,
 		Name: "risk2",
 	}
-	assert.NoError(t, db.Create(&dbRiskGroup2).Error)
+	assert.NoError(t, tx.Create(&dbRiskGroup2).Error)
 
 	dbRiskGroup3 := model.RiskGroup{
 		ID:   3,
 		Name: "risk3",
 	}
-	assert.NoError(t, db.Create(&dbRiskGroup3).Error)
+	assert.NoError(t, tx.Create(&dbRiskGroup3).Error)
 
 	dbSlave := model.Slave{
 		ID:                   1,
@@ -46,9 +46,9 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		PersistentStorage:    true,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
-		RiskGroupID:          2,
+		RiskGroupID:          model.NullIntValue(2),
 	}
-	assert.NoError(t, db.Create(&dbSlave).Error)
+	assert.NoError(t, tx.Create(&dbSlave).Error)
 
 	dbReplicaset := model.ReplicaSet{
 		ID:   1,
@@ -57,7 +57,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		VolatileMemberCount:             2,
 		ConfigureAsShardingConfigServer: false,
 	}
-	assert.NoError(t, db.Create(&dbReplicaset).Error)
+	assert.NoError(t, tx.Create(&dbReplicaset).Error)
 
 	m1 := model.Mongod{
 		Port:          5001,
@@ -65,7 +65,7 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		ReplicaSetID:  1,
 		ParentSlaveID: 1,
 	}
-	assert.NoError(t, db.Create(&m1).Error)
+	assert.NoError(t, tx.Create(&m1).Error)
 
 	dbSlave2 := model.Slave{
 		ID:                   2,
@@ -76,9 +76,9 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
-		RiskGroupID:          1,
+		RiskGroupID:          model.NullIntValue(1),
 	}
-	assert.NoError(t, db.Create(&dbSlave2).Error)
+	assert.NoError(t, tx.Create(&dbSlave2).Error)
 
 	dbSlave3 := model.Slave{
 		ID:                   3,
@@ -89,9 +89,9 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
-		RiskGroupID:          0,
+		RiskGroupID:          model.NullInt(),
 	}
-	assert.NoError(t, db.Create(&dbSlave3).Error)
+	assert.NoError(t, tx.Create(&dbSlave3).Error)
 
 	utc, err := time.LoadLocation("UTC")
 	assert.NoError(t, err)
@@ -100,17 +100,18 @@ func createDBAndMasterAPI(t *testing.T) (db *gorm.DB, mainRouter *mux.Router, er
 		ID:            1,
 		Description:   "foo",
 		FirstOccurred: time.Date(2000, time.January, 1, 0, 0, 0, 0, utc),
-		SlaveID:       1,
+		SlaveID:       model.NullIntValue(1),
 	}
-	assert.NoError(t, db.Create(&dbProblem).Error)
+	assert.NoError(t, tx.Create(&dbProblem).Error)
 
 	dbProblem2 := model.Problem{
 		ID:            2,
 		Description:   "bar",
 		FirstOccurred: time.Date(2010, time.January, 1, 0, 0, 0, 0, utc),
-		ReplicaSetID:  1,
+		ReplicaSetID:  model.NullIntValue(1),
 	}
-	assert.NoError(t, db.Create(&dbProblem2).Error)
+	assert.NoError(t, tx.Create(&dbProblem2).Error)
+	tx.Commit()
 
 	// Setup masterapi
 	clusterAllocator := &master.ClusterAllocator{}
@@ -190,7 +191,11 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 	}
 
 	var createdSlave model.Slave
-	db.First(&createdSlave, "hostname = ?", "createdhost")
+	{
+		tx := db.Begin()
+		tx.First(&createdSlave, "hostname = ?", "createdhost")
+		tx.Rollback()
+	}
 
 	//Check created database entry
 	assert.NotEmpty(t, createdSlave.ID)
@@ -239,7 +244,11 @@ func TestMasterAPI_SlavePut_additionalUnknownField(t *testing.T) {
 
 	assert.Equal(t, 200, resp.Code)
 	var invalidSlave model.Slave
-	assert.NoError(t, db.First(&invalidSlave, "hostname = ?", "createdhost").Error)
+	{
+		tx := db.Begin()
+		assert.NoError(t, tx.First(&invalidSlave, "hostname = ?", "createdhost").Error)
+		tx.Rollback()
+	}
 }
 
 func TestMasterAPI_SlavePut_missingField(t *testing.T) {
@@ -257,7 +266,11 @@ func TestMasterAPI_SlavePut_missingField(t *testing.T) {
 	assert.Equal(t, 400, resp.Code)
 
 	var invalidSlave model.Slave
-	assert.Error(t, db.First(&invalidSlave, "hostname = ?", "createdhost_invalid").Error)
+	{
+		tx := db.Begin()
+		assert.Error(t, tx.First(&invalidSlave, "hostname = ?", "createdhost_invalid").Error)
+		tx.Rollback()
+	}
 }
 
 func TestMasterAPI_SlaveUpdate(t *testing.T) {
@@ -275,7 +288,11 @@ func TestMasterAPI_SlaveUpdate(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 2)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, "updHost", updatedSlave.Hostname)
 	assert.EqualValues(t, 2, updatedSlave.Port)
@@ -300,7 +317,11 @@ func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 	assert.Equal(t, 403, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 1)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, "host1", updatedSlave.Hostname)
 	assert.EqualValues(t, 1, updatedSlave.Port)
@@ -342,7 +363,11 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 2)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, model.SlaveStateActive, updatedSlave.ConfiguredState)
 }
@@ -362,7 +387,11 @@ func TestMasterAPI_SlaveUpdate_change_desired_state_disabled(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 2)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, model.SlaveStateDisabled, updatedSlave.ConfiguredState)
 }
@@ -396,7 +425,11 @@ func TestMasterAPI_SlaveDelete(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 2)
+		tx.Rollback()
+	}
 
 	assert.Empty(t, updatedSlave.ID)
 }
@@ -415,7 +448,11 @@ func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
 	assert.Equal(t, 403, resp.Code)
 
 	var updatedSlave model.Slave
-	db.First(&updatedSlave, 1)
+	{
+		tx := db.Begin()
+		tx.First(&updatedSlave, 1)
+		tx.Rollback()
+	}
 
 	assert.NotEmpty(t, updatedSlave.ID)
 }
@@ -501,7 +538,11 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	}
 
 	var createdReplSet model.ReplicaSet
-	db.First(&createdReplSet, "name = ?", "repl2")
+	{
+		tx := db.Begin()
+		tx.First(&createdReplSet, "name = ?", "repl2")
+		tx.Rollback()
+	}
 
 	//Check created database entry
 	assert.NotEmpty(t, createdReplSet.ID)
@@ -534,7 +575,11 @@ func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updateReplSet model.ReplicaSet
-	db.First(&updateReplSet, 1)
+	{
+		tx := db.Begin()
+		tx.First(&updateReplSet, 1)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, "repl1", updateReplSet.Name)
 	assert.EqualValues(t, 1, updateReplSet.PersistentMemberCount)
@@ -557,7 +602,11 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updateReplSet model.ReplicaSet
-	db.First(&updateReplSet, 1)
+	{
+		tx := db.Begin()
+		tx.First(&updateReplSet, 1)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, "repl1", updateReplSet.Name)
 	assert.EqualValues(t, 0, updateReplSet.PersistentMemberCount)
@@ -592,7 +641,11 @@ func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
 
 	assert.Equal(t, 200, resp.Code)
 
-	assert.True(t, db.First(&model.ReplicaSet{}, 1).RecordNotFound())
+	{
+		tx := db.Begin()
+		assert.True(t, tx.First(&model.ReplicaSet{}, 1).RecordNotFound())
+		tx.Rollback()
+	}
 }
 
 func TestMasterAPI_ReplicaSetDelete_not_existing(t *testing.T) {
@@ -779,7 +832,11 @@ func TestMasterAPI_RiskGroupPut(t *testing.T) {
 	}
 
 	var createdRiskGroup model.RiskGroup
-	db.First(&createdRiskGroup, "name = ?", "newrisk")
+	{
+		tx := db.Begin()
+		tx.First(&createdRiskGroup, "name = ?", "newrisk")
+		tx.Rollback()
+	}
 
 	//Check created database entry
 	assert.NotEmpty(t, createdRiskGroup.ID)
@@ -822,7 +879,11 @@ func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var updatedRiskGroup model.RiskGroup
-	db.First(&updatedRiskGroup, 1)
+	{
+		tx := db.Begin()
+		tx.First(&updatedRiskGroup, 1)
+		tx.Rollback()
+	}
 
 	assert.Equal(t, "foo", updatedRiskGroup.Name)
 }
@@ -840,7 +901,11 @@ func TestMasterAPI_RiskGroupDelete(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 
 	var deletedRiskGroup model.RiskGroup
-	db.First(&deletedRiskGroup, 3)
+	{
+		tx := db.Begin()
+		tx.First(&deletedRiskGroup, 3)
+		tx.Rollback()
+	}
 
 	assert.Empty(t, deletedRiskGroup.ID)
 }
@@ -858,7 +923,11 @@ func TestMasterAPI_RiskGroupDelete_has_slaves(t *testing.T) {
 	assert.Equal(t, 403, resp.Code)
 
 	var deletedRiskGroup model.Slave
-	db.First(&deletedRiskGroup, 1)
+	{
+		tx := db.Begin()
+		tx.First(&deletedRiskGroup, 1)
+		tx.Rollback()
+	}
 
 	assert.NotEmpty(t, deletedRiskGroup.ID)
 }
@@ -890,9 +959,13 @@ func TestMasterAPI_RiskGroupAssignSlave(t *testing.T) {
 	assert.EqualValues(t, 200, resp.Code)
 
 	var assignedSlave model.Slave
-	db.First(&assignedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&assignedSlave, 2)
+		tx.Rollback()
+	}
 
-	assert.EqualValues(t, 2, assignedSlave.RiskGroupID)
+	assert.EqualValues(t, 2, assignedSlave.RiskGroupID.Int64)
 }
 
 func TestMasterAPI_RiskGroupAssignSlave_active(t *testing.T) {
@@ -923,9 +996,13 @@ func TestMasterAPI_RiskGroupRemoveSlave(t *testing.T) {
 	assert.EqualValues(t, 200, resp.Code)
 
 	var removedSlave model.Slave
-	db.First(&removedSlave, 2)
+	{
+		tx := db.Begin()
+		tx.First(&removedSlave, 2)
+		tx.Rollback()
+	}
 
-	assert.EqualValues(t, 0, removedSlave.RiskGroupID)
+	assert.False(t, removedSlave.RiskGroupID.Valid)
 }
 
 func TestMasterAPI_RiskGroupRemoveSlave_active(t *testing.T) {
@@ -984,7 +1061,7 @@ func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
 	// Test correct get
 	resp := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "/api/riskgroups/0/slaves", nil)
+	req, err := http.NewRequest("GET", "/api/riskgroups/null/slaves", nil)
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
 

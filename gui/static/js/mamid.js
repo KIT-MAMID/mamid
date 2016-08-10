@@ -167,7 +167,7 @@ mamidApp.factory('ReplicaSetService', function ($resource) {
 mamidApp.factory('RiskGroupService', function ($resource) {
     return $resource('/api/riskgroups/:riskgroup', {riskgroup: "@id"}, {
         create: {method: 'put'},
-        getUnassignedSlaves: {method: 'get', url: '/api/riskgroups/0/slaves/', isArray: true},
+        getUnassignedSlaves: {method: 'get', url: '/api/riskgroups/null/slaves/', isArray: true},
         assignToRiskGroup: {
             method: 'put',
             url: '/api/riskgroups/:riskgroup/slaves/:slave',
@@ -338,7 +338,11 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $location.path("/slaves");
             });
         } else {
-            $scope.slave.$save();
+            $scope.edit_slave.$save();
+            $scope.slave = SlaveService.get({slave: slaveId});
+            $scope.slave.$promise.then(function () {
+                $scope.edit_slave = angular.copy($scope.slave);
+            });
         }
 
     };
@@ -351,6 +355,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
     $scope.setSlaveState = function (state) {
         $scope.slave.configured_state = state;
+        $scope.edit_slave.configured_state = state;
         $scope.slave.$save();
     }
 });

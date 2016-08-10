@@ -1,6 +1,7 @@
 package masterapi
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
@@ -11,13 +12,16 @@ import (
 )
 
 type RiskGroup struct {
-	ID   uint   `json:"id"`
+	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
 
 func (m *MasterAPI) RiskGroupIndex(w http.ResponseWriter, r *http.Request) {
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var riskGroups []*model.RiskGroup
-	err := m.DB.Order("id", false).Find(&riskGroups).Error
+	err := tx.Order("id", false).Find(&riskGroups).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -46,8 +50,11 @@ func (m *MasterAPI) RiskGroupById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
 	var riskgroup model.RiskGroup
-	res := m.DB.First(&riskgroup, id)
+	res := tx.First(&riskgroup, id)
 
 	if res.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
@@ -122,12 +129,11 @@ func (m *MasterAPI) RiskGroupPut(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["riskgroupId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	var postRiskGroup RiskGroup
 	err = json.NewDecoder(r.Body).Decode(&postRiskGroup)
@@ -194,12 +200,11 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) RiskGroupDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["riskgroupId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseInt(idStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id := uint(id64)
 
 	tx := m.DB.Begin()
 
@@ -257,26 +262,35 @@ func (m *MasterAPI) RiskGroupDelete(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["riskgroupId"]
-	id64, err := strconv.ParseUint(idStr, 10, 0)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+
+	id := sql.NullInt64{}
+
+	// Check if risk group exists
+	// Special case: id == 0 => Get unassigned slaves
+	if idStr != "null" {
+		idInt64, err := strconv.ParseInt(idStr, 10, 0)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		id.Valid = true
+		id.Int64 = idInt64
 	}
-	id := uint(id64)
+	// else id is NULL
 
 	tx := m.DB.Begin()
 	defer tx.Rollback()
 
 	// Check if risk group exists
 	// Special case: id == 0 => Get unassigned slaves
-	if id != 0 {
+	if id.Valid {
 		var riskgroup model.RiskGroup
 		riskgroupRes := tx.First(&riskgroup, id)
 		if riskgroupRes.RecordNotFound() {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Riskgroup not found")
 			return
-		} else if err = riskgroupRes.Error; err != nil {
+		} else if err := riskgroupRes.Error; err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, err.Error())
 			return
@@ -284,7 +298,12 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var slaves []*model.Slave
-	err = tx.Where("risk_group_id = ?", id).Find(&slaves).Error
+	var err error
+	if id.Valid { // gorm/gosql does not query for IS NULL automatically
+		err = tx.Where("risk_group_id = ?", id).Find(&slaves).Error
+	} else {
+		err = tx.Where("risk_group_id IS NULL", id).Find(&slaves).Error
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error())
@@ -300,20 +319,18 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request) {
 	riskgroupIdStr := mux.Vars(r)["riskgroupId"]
-	riskgroupId64, err := strconv.ParseUint(riskgroupIdStr, 10, 0)
+	riskgroupId, err := strconv.ParseInt(riskgroupIdStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	riskgroupId := uint(riskgroupId64)
 
 	slaveIdStr := mux.Vars(r)["slaveId"]
-	slaveId64, err := strconv.ParseUint(slaveIdStr, 10, 0)
+	slaveId, err := strconv.ParseInt(slaveIdStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	slaveId := uint(slaveId64)
 
 	if riskgroupId == 0 || slaveId == 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -348,7 +365,7 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 	}
 
 	updatedSlave := modelSlave
-	updatedSlave.RiskGroupID = riskgroupId
+	updatedSlave.RiskGroupID = model.NullIntValue(riskgroupId)
 
 	permissionError, dbError := changeToSlaveAllowed(tx, &modelSlave, &updatedSlave)
 	if dbError != nil {
@@ -380,20 +397,18 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 
 func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request) {
 	riskgroupIdStr := mux.Vars(r)["riskgroupId"]
-	riskgroupId64, err := strconv.ParseUint(riskgroupIdStr, 10, 0)
+	riskgroupId, err := strconv.ParseInt(riskgroupIdStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	riskgroupId := uint(riskgroupId64)
 
 	slaveIdStr := mux.Vars(r)["slaveId"]
-	slaveId64, err := strconv.ParseUint(slaveIdStr, 10, 0)
+	slaveId, err := strconv.ParseInt(slaveIdStr, 10, 0)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	slaveId := uint(slaveId64)
 
 	if riskgroupId == 0 || slaveId == 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -427,7 +442,7 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if modelSlave.RiskGroupID != riskgroupId {
+	if !modelSlave.RiskGroupID.Valid || modelSlave.RiskGroupID.Int64 != riskgroupId {
 		tx.Rollback()
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Slave not found in this riskgroup. (Slave is in other riskgroup)")
@@ -435,7 +450,7 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 	}
 
 	updatedSlave := modelSlave
-	updatedSlave.RiskGroupID = 0
+	updatedSlave.RiskGroupID = model.NullInt()
 
 	permissionError, dbError := changeToSlaveAllowed(tx, &modelSlave, &updatedSlave)
 	if dbError != nil {
@@ -453,7 +468,7 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 
 	// Persist to database
 
-	tx.Model(&modelSlave).Update("RiskGroupID", 0)
+	tx.Model(&modelSlave).Update("RiskGroupID", model.NullInt())
 
 	//Check db specific errors
 	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {

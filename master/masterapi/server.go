@@ -3,13 +3,14 @@ package masterapi
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/master"
+	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"net/http"
 )
 
 type MasterAPI struct {
-	DB               *gorm.DB
+	DB               *model.DB
 	ClusterAllocator *master.ClusterAllocator
 	Router           *mux.Router
 }
