@@ -33,3 +33,13 @@ func TestConfigFile(t *testing.T) {
 	assert.Equal(t, relay.Hostname, "localhost:25")
 	assert.Equal(t, relay.MailFrom, "test@localhost")
 }
+
+func TestConfigFileMissingFile(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
+	assert.NoError(t, err)
+	os.Remove(tmpFile.Name())
+
+	var p Parser
+	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	assert.Error(t, err)
+}
