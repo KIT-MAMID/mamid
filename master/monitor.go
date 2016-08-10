@@ -89,7 +89,6 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 
 	tx.Commit()
 
-	//Check every mongod for mismatches
 	// Read-only transaction
 	tx = m.DB.Begin()
 	defer tx.Rollback()
@@ -195,6 +194,8 @@ outer:
 
 }
 
+// Check every Mongod of the Slave for mismatches between DesiredState and ObservedState
+// and send an appropriate MongodMismatchStatus to the Bus
 func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) (err error) {
 
 	var modelMongods []model.Mongod
