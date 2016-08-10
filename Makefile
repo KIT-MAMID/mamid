@@ -71,6 +71,15 @@ test:
 test-verbose:
 	@$(GO) test -v $(pkgs)
 
+.PHONY: cover
+cover:
+	mkdir -p cover
+	for pkg in $(pkgs) ; do \
+		basename=`basename $${pkg}` ; \
+		$(GO) test $${pkg} -coverprofile=$${basename}.out ; \
+		if [ -f $${basename}.out ] ; then $(GO) tool cover -html=$${basename}.out -o cover/$${basename}.html ; fi ; \
+	done
+
 .PHONY: check-format
 check-format:
 	@! $(GOFMT) -d $(pkg_dirs) | $(GREP) '^'
