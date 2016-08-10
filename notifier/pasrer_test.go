@@ -89,3 +89,59 @@ func TestConfigFileMissingSection(t *testing.T) {
 	_, _, _, err = p.ParseConfig(tmpFile.Name())
 	assert.Error(t, err)
 }
+
+func TestContactsFile(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[hans]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("email=hans@localhost\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[peter]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("email=peter@localhost\n\n")
+	assert.NoError(t, err)
+	tmpFile.Sync()
+	tmpFile.Close()
+
+	var p Parser
+	contacts, err := p.Parse(tmpFile.Name())
+	assert.NoError(t, err)
+	assert.Equal(t, len(contacts), 2)
+	for i := 0; i < len(contacts); i++ {
+		assert.IsType(t, EmailContact{}, contacts[i])
+		assert.NotEmpty(t, contacts[i])
+	}
+}
+
+func TestContactsFileAdditionalType(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[hans]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("email=hans@localhost\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("[peter]\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("email=peter@localhost\n\n")
+	assert.NoError(t, err)
+	_, err = tmpFile.WriteString("jabber=peter@localhost\n\n")
+	assert.NoError(t, err)
+	tmpFile.Sync()
+	tmpFile.Close()
+
+	var p Parser
+	contacts, err := p.Parse(tmpFile.Name())
+	assert.NoError(t, err)
+	assert.Equal(t, len(contacts), 2)
+	for i := 0; i < len(contacts); i++ {
+		assert.IsType(t, EmailContact{}, contacts[i])
+		assert.NotEmpty(t, contacts[i])
+	}
+}
+
+func TestContactsFileNoFile(t *testing.T) {
+	var p Parser
+	_, err := p.Parse("")
+	assert.Error(t, err)
+}
