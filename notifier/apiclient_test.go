@@ -41,3 +41,12 @@ func TestApiClientFail(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, problems, []Problem(nil))
 }
+
+func TestApiClientServerFail(t *testing.T) {
+	server := createAPIMock(500)
+	server.Close()
+	var client APIClient
+	problems, err := client.Receive(server.Listener.Addr().String())
+	assert.Error(t, err)
+	assert.Equal(t, problems, []Problem(nil))
+}
