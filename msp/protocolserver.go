@@ -7,8 +7,8 @@ import (
 )
 
 type Consumer interface {
-	RequestStatus() ([]Mongod, *SlaveError)
-	EstablishMongodState(m Mongod) *SlaveError
+	RequestStatus() ([]Mongod, *Error)
+	EstablishMongodState(m Mongod) *Error
 }
 
 type Listener struct {

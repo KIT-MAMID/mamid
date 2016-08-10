@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -259,4 +261,53 @@ func TestGormFindBehavior(t *testing.T) {
 	assert.EqualValues(t, 0, d.RowsAffected) // RowsAffected does NOT indicate "nothing found"!!!!
 	assert.Equal(t, 0, len(ms))              // Use this instead
 
+}
+
+func TestGormTransactions(t *testing.T) {
+	db, _ := InitializeTestDB()
+
+	//Create a slave
+	tx0 := db.Begin()
+	m := fixtureEmptySlave()
+	m.ID = 1
+	m.Hostname = "baz"
+	m.Port = 5
+	assert.NoError(t, tx0.Create(&m).Error)
+	assert.NoError(t, tx0.Commit().Error)
+
+	fmt.Println("Insert slaves from tx0 done and committed")
+
+	//Modify same slave in two transactions
+	tx1 := db.Begin()
+	fmt.Println("begin tx1")
+	assert.NoError(t, tx1.First(&Slave{}, 1).Update("hostname", "foo").Error)
+	assert.NoError(t, tx1.First(&Slave{}, 1).Update("port", 15).Error)
+	fmt.Println("Update slave 1 from tx1 done")
+
+	tx2 := db.Begin()
+	fmt.Println("begin tx2")
+
+	//Should be able to read slave 1 and see old state
+	var slaveReadX Slave
+	assert.NoError(t, tx2.First(&slaveReadX, 1).Error)
+	assert.Equal(t, "baz", slaveReadX.Hostname)
+	fmt.Println("Read slave 1 from tx2 done")
+
+	err := tx2.First(&Slave{}, 1).Update("hostname", "bar").Error
+	assert.Error(t, err)
+	driverErr, ok := err.(sqlite3.Error)
+	assert.True(t, ok)
+	assert.Equal(t, sqlite3.ErrBusy, driverErr.Code) //https://www.sqlite.org/rescode.html#busy
+	fmt.Println("Update slave 1 from tx2 done")
+
+	//Commit Tx2
+	assert.NoError(t, tx2.Commit().Error)
+	fmt.Println("tx2 done")
+	//Commit Tx1
+	assert.NoError(t, tx1.Commit().Error)
+	fmt.Println("tx1 done")
+
+	var slave Slave
+	db.First(&slave, 1)
+	assert.Equal(t, "foo", slave.Hostname)
 }

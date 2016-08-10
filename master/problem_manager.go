@@ -9,7 +9,7 @@ import (
 
 type ProblemManager struct {
 	DB             *gorm.DB
-	BusReadChannel chan interface{}
+	BusReadChannel <-chan interface{}
 }
 
 func (p *ProblemManager) Run() {
@@ -33,6 +33,31 @@ func (p *ProblemManager) Run() {
 				p.DB.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,
 					SlaveID:     connStatus.Slave.ID,
+				}).Delete(&model.Problem{})
+			}
+		case model.DesiredReplicaSetConstraintStatus:
+			constrStatus := message.(model.DesiredReplicaSetConstraintStatus)
+			if constrStatus.Unsatisfied {
+				var problem model.Problem
+				p.DB.Where(&model.Problem{
+					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
+					ReplicaSetID: constrStatus.ReplicaSet.ID,
+				}).Assign(&model.Problem{
+					Description: fmt.Sprintf("Replica set %s is degraded", constrStatus.ReplicaSet.Name),
+					LongDescription: fmt.Sprintf(
+						"Not enough free ports are available."+
+							"This replica set is now configured to have %d persistent and %d volatile mongods"+
+							" instead of the %d persistent and %d volatile mongods it should have",
+						constrStatus.ActualPersistentCount, constrStatus.ActualVolatileCount,
+						constrStatus.ReplicaSet.PersistentMemberCount, constrStatus.ReplicaSet.VolatileMemberCount),
+					LastUpdated: time.Now(),
+				}).Attrs(&model.Problem{
+					FirstOccurred: time.Now(),
+				}).FirstOrCreate(&problem)
+			} else {
+				p.DB.Where(&model.Problem{
+					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
+					ReplicaSetID: constrStatus.ReplicaSet.ID,
 				}).Delete(&model.Problem{})
 			}
 		}

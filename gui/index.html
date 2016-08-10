@@ -26,11 +26,10 @@
     <script src="/static/js/jquery.min.js"></script>
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="/static/js/c3/c3.min.js"></script>
-    <script src="/static/js/script.js"></script>
+    <script src="/static/js/mamid.js"></script>
 </head>
 
 <body ng-controller="mainController">
-
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -59,29 +58,33 @@
     <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
-                <li><a href="/#/"><span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+                <li ng-class="{'active': $location.path()=='/'}"><a href="/#/"><span
+                        class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
                     Overview</a></li>
-                <li><a href="/#problems"><span class="glyphicon glyphicon-alert" aria-hidden="true"></span>
+                <li ng-class="{'active': $location.path()=='/problems'}"><a href="/#problems"><span
+                        class="glyphicon glyphicon-alert" aria-hidden="true"></span>
                     Problems <span class="label label-danger" ng-if="problems.length > 0">{{problems.length}}</span></a>
                 </li>
-                <li><a href="/#slaves"><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span> Slaves</a>
+                <li ng-class="{'active': $location.path().indexOf('/slaves') == 0 && $location.path().indexOf('/slaves/new') != 0}">
+                    <a href="/#slaves"><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span> Slaves</a>
                 </li>
-                <li><a href="/#riskgroups"><span class="glyphicon glyphicon-flash" aria-hidden="true"></span> Risk
+                <li ng-class="{'active': $location.path()=='/riskgroups'}"><a href="/#riskgroups"><span
+                        class="glyphicon glyphicon-flash" aria-hidden="true"></span> Risk
                     Groups</a></li>
-                <li><a href="/#replicasets"><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> Replica
-                    Sets</a></li>
+                <li ng-class="{'active': $location.path().indexOf('/replicasets') == 0 && $location.path().indexOf('/replicasets/new') != 0}">
+                    <a href="/#replicasets"><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> Replica
+                        Sets</a></li>
             </ul>
             <ul class="nav nav-sidebar">
-                <li><a href="/#slaves/new"><span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span> New
+                <li ng-class="{'active': $location.path()=='/slaves/new'}"><a href="/#slaves/new"><span
+                        class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span> New
                     Slave</a></li>
-                <li><a href="/#replicasets/new"><span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+                <li ng-class="{'active': $location.path()=='/replicasets/new'}"><a href="/#replicasets/new"><span
+                        class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
                     New Replica Set</a></li>
             </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-            <ol class="breadcrumb">
-                <li><a href="/">Dashboard</a></li>
-            </ol>
             <div id="content">
                 <div ng-view></div>
             </div>

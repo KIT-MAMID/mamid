@@ -40,9 +40,9 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 $(ediv).hide();
                 root.insertBefore(ediv, root.firstChild);
                 $(ediv).alert();
-                $(ediv).fadeTo(5000, 500).slideUp(500, function(){
+                $(ediv).fadeTo(5000, 500).slideUp(500, function () {
                     $(ediv).alert('close');
-                    });
+                });
                 window.console.error(rejection);
             }
 
@@ -113,7 +113,6 @@ mamidApp.config(['$provide', '$httpProvider', function ($provide, $httpProvider)
 }]);
 
 
-
 mamidApp.config(function ($routeProvider) {
     $routeProvider
         .when('/', {
@@ -149,7 +148,7 @@ mamidApp.config(function ($routeProvider) {
 mamidApp.factory('SlaveService', function ($resource) {
     return $resource('/api/slaves/:slave', {slave: "@id"}, {
         create: {method: 'put'},
-        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/'},
+        queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/', isArray: true},
         getProblems: {method: 'get', url: '/api/slaves/:slave/problems', isArray: true}
     });
 });
@@ -184,16 +183,76 @@ mamidApp.factory('RiskGroupService', function ($resource) {
     });
 });
 
-mamidApp.controller('mainController', function ($scope) {
-    $scope.message = 'Greetings from the controller';
+mamidApp.controller('mainController', function ($scope, $location, filterFilter, SlaveService, ProblemService) {
+    $scope.problems = ProblemService.query();
+    $scope.$location = $location;
+    SlaveService.query(function (slaves) {
+
+        $scope.slaves = slaves;
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id}, function(problems) {
+                 $scope.genChart();
+            });
+        }
+    });
+    $scope.genChart = function() {
+        c3.generate({
+                bindto: '#slaves',
+                data: {
+                    columns: [
+                        ['Active', $scope.getStateCount('active')],
+                        ['Maintenance', $scope.getStateCount('maintenance')],
+                        ['Disabled', $scope.getStateCount('disabled')],
+                        ['Problematic', $scope.getProblemCount()]
+                    ],
+                    type: 'donut',
+                },
+                donut: {
+                    title: "Slave states"
+                }
+                ,
+                color: {
+                    pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+                }
+                ,
+            })
+            ;
+    };
+    $scope.getStateCount = function (state) {
+        var s = []
+        for(var i=0;i<$scope.slaves.length;i++){
+            if($scope.slaves[i].problems.length == 0) {
+                s.push($scope.slaves[i]);
+            }
+        }
+        return filterFilter(s, {configured_state: state}).length;
+    };
+
+    $scope.getProblemCount = function() {
+        var count = 0;
+        for(var i=0;i<$scope.slaves.length;i++){
+            window.console.log($scope.slaves[i].problems.length);
+            if($scope.slaves[i].problems.length > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
-    $scope.slaves = SlaveService.query()
+    SlaveService.query(function (slaves) {
+        $scope.slaves = slaves;
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id});
+        }
+    });
+
 });
 var problemPolling = false;
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
-    if(!problemPolling) {
+    if (!problemPolling) {
         (function tick() {
             ProblemService.query(function (problems) {
                 $scope.problems = problems;
@@ -202,7 +261,7 @@ mamidApp.controller('problemIndexController', function ($scope, $http, $timeout,
             });
         })();
     }
-    $scope.formatDate = function(date) {
+    $scope.formatDate = function (date) {
         return String(new Date(Date.parse(date)));
     }
 });
@@ -213,37 +272,43 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.new_riskgroup = new RiskGroupService();
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create();
-        $scope.new_riskgroup = null;
-        $scope.riskgroups = RiskGroupService.query();
+        $scope.new_riskgroup = new RiskGroupService();
+        $scope.refreshRiskGroups();
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
         if (slave.riskgroup == 0) {
             RiskGroupService.removeFromRiskGroup({slave: slave.id, riskgroup: oldriskgroup.id});
-            $scope.riskgroups = RiskGroupService.query();
+            $scope.refreshRiskGroups();
             $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
             return;
         }
         RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup});
-        $scope.riskgroups = RiskGroupService.query();
+        $scope.refreshRiskGroups();
         $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     };
     $scope.getSlaves = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.getSlaves({riskgroup: riskgroup.id});
-    }
+    };
     $scope.removeRiskGroup = function (riskgroup) {
         riskgroup.slaves = RiskGroupService.remove({riskgroup: riskgroup.id});
-        $scope.riskgroups = RiskGroupService.query();
+        $scope.refreshRiskGroups();
         $('#confirm_remove' + riskgroup.id).modal('hide');
-    }
+    };
     $scope.isDeletable = function (riskgroup) {
         if (riskgroup.slaves === undefined) {
             $scope.getSlaves(riskgroup);
         }
         return riskgroup.slaves.length == 0;
-    }
+    };
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
-    })
+    });
+
+    $scope.refreshRiskGroups = function () {
+        RiskGroupService.query(function (riskgroups) {
+            $scope.riskgroups = riskgroups;
+        });
+    }
 });
 
 mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService) {
@@ -269,11 +334,13 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     $scope.updateSlave = function () {
         angular.copy($scope.edit_slave, $scope.slave);
         if ($scope.is_create_view) {
-            $scope.slave.$create();
+            $scope.slave.$create(function () {
+                $location.path("/slaves");
+            });
         } else {
             $scope.slave.$save();
         }
-        $location.path("/slaves");
+
     };
 
     $scope.deleteSlave = function () {
@@ -289,7 +356,12 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 });
 
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
-    $scope.replicasets = ReplicaSetService.query()
+    ReplicaSetService.query(function (replicasets) {
+        $scope.replicasets = replicasets;
+        for (var i = 0; i < $scope.replicasets.length; i++) {
+            $scope.replicasets[i].problems = ReplicaSetService.getProblems({replicaset: $scope.replicasets[i].id});
+        }
+    });
 });
 
 mamidApp.controller('replicasetByIdController',

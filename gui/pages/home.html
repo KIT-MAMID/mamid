@@ -1,2 +1,16 @@
-<h1>Hello World</h1>
-<h2>{{message}}</h2>
+<h1 class="page-header">Your MongoDB Cluster</h1>
+<h2 class="sub-header">Latest problems</h2>
+<div class="bs-callout bs-callout-unknown"
+     ng-repeat="problem in problems | orderBy:problem.first_occurred:true | limitTo:3">
+    <h4>{{problem.description}}
+        <small>Known since {{formatDate(problem.first_occurred)}}</small>
+    </h4>
+    <p>{{problem.long_description}}</p>
+    <ul>
+        <li ng-if="problem.slave_id!=0"><a href="#/slaves/{{problem.slave_id}}">Inspect affected Slave</a></li>
+        <li ng-if="problem.replica_set_id!=0"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected
+            Replica Set</a></li>
+    </ul>
+</div>
+<h2 class="sub-header">Slave States</h2>
+<div id="slaves"></div>

@@ -1,15 +1,13 @@
 <h1 class="page-header" ng-if="is_create_view">New Replica Set</h1>
-<h1 class="page-header" ng-if="!is_create_view">Edit Replica Set</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Replica Set '{{replicaset.name}}'</h1>
 
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
     <h4>{{problem.description}} <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
     <p>{{problem.long_description}}</p>
 </div>
 
-<div class="bs-callout bs-callout-{{ state }}" ng-if="!is_create_view">
-    <h4><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> {{ replicaset.name }} is in
-        <b>$state</b>
-        state.</h4>
+<div class="bs-callout bs-callout-active" ng-if="!is_create_view && problems.length == 0">
+    <h4><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> {{ replicaset.name }} is working.</h4>
 </div>
 <div class="panel panel-default" ng-if="!is_create_view">
     <div class="panel-heading">

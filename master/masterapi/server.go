@@ -1,9 +1,11 @@
 package masterapi
 
 import (
+	"fmt"
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+	"net/http"
 )
 
 type MasterAPI struct {
@@ -41,4 +43,16 @@ func (m *MasterAPI) Setup() {
 	m.Router.Methods("GET").Path("/slaves/{slaveId}/problems").Name("ProblemBySlave").HandlerFunc(m.ProblemBySlave)
 	m.Router.Methods("GET").Path("/replicasets/{replicasetId}/problems").Name("ProblemByReplicaSet").HandlerFunc(m.ProblemByReplicaSet)
 
+}
+
+func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {
+	err = m.ClusterAllocator.CompileMongodLayout(tx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cluster allocator failure: %s\n", err)
+		if err = tx.Rollback().Error; err != nil {
+			fmt.Fprintf(w, "cluster allocator rollback failure: %s\n", err)
+		}
+	}
+	return err
 }

@@ -1,10 +1,12 @@
 package model
 
 import (
-	"github.com/KIT-MAMID/mamid/msp"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
+	"log"
+	"os"
 	"time"
 )
 
@@ -54,7 +56,7 @@ type Slave struct {
 	Problems []*Problem
 
 	// Foreign keys
-	RiskGroupID uint
+	RiskGroupID uint `sql:"type:integer REFERENCES risk_groups(id)"`
 }
 
 type PortNumber uint16
@@ -74,7 +76,7 @@ const (
 )
 
 type ReplicaSet struct {
-	ID                              uint   `gorm:"primary_key"`
+	ID                              uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1
 	Name                            string `gorm:"unique_index"`
 	PersistentMemberCount           uint
 	VolatileMemberCount             uint
@@ -85,7 +87,7 @@ type ReplicaSet struct {
 }
 
 type RiskGroup struct {
-	ID     uint   `gorm:"primary_key"`
+	ID     uint   `gorm:"primary_key"` //TODO needs to start incrementing at 1, 0 is special value for slaves "out of risk" => define a constant?
 	Name   string `gorm:"unique_index"`
 	Slaves []*Slave
 }
@@ -97,22 +99,22 @@ type Mongod struct {
 	ReplSetName string
 
 	ObservationError   MSPError
-	ObservationErrorID uint
+	ObservationErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 
 	LastEstablishStateError   MSPError
-	LastEstablishStateErrorID uint
+	LastEstablishStateErrorID uint `sql:"type:integer REFERENCES msp_errors(id)"`
 
 	ParentSlave   *Slave
-	ParentSlaveID uint
+	ParentSlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint
+	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
 
 	DesiredState   MongodState
-	DesiredStateID uint
+	DesiredStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 
 	ObservedState   MongodState
-	ObservedStateID uint
+	ObservedStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 }
 
 type MongodState struct {
@@ -139,27 +141,16 @@ type ReplicaSetMember struct { // was ReplicaSetMember in UML
 	Port     PortNumber
 
 	// Foreign key to parent MongodState
-	MongodStateID uint
+	MongodStateID uint `sql:"type:integer REFERENCES mongod_states(id)"`
 }
 
+// msp.Error
+// duplicated for decoupling protocol & internal representation
 type MSPError struct {
-	// Union type for the different errors returned by msp
-	// Necessary to decouple MSP from ORM / DB logic
-	ID                 uint `gorm:"primary_key"`
-	CommunicationError CommunicationError
-	SlaveError         SlaveError
-}
-
-type CommunicationError struct {
-	msp.CommunicationError
-	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint
-}
-
-type SlaveError struct {
-	msp.SlaveError
-	ID         uint `gorm:"primary_key"`
-	MSPErrorID uint
+	ID              uint `gorm:"primary_key"`
+	Identifier      string
+	Description     string
+	LongDescription string
 }
 
 type ProblemType uint
@@ -181,13 +172,13 @@ type Problem struct {
 	LastUpdated     time.Time
 
 	Slave   *Slave
-	SlaveID uint
+	SlaveID uint `sql:"type:integer REFERENCES slaves(id)"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID uint
+	ReplicaSetID uint `sql:"type:integer REFERENCES replica_sets(id)"`
 
 	Mongod   *Mongod
-	MongodID uint
+	MongodID uint `sql:"type:integer REFERENCES mongods(id)"`
 }
 
 func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
@@ -195,6 +186,46 @@ func InitializeFileFromFile(path string) (db *gorm.DB, err error) {
 	db, err = initializeDB(path)
 	if err != nil {
 		return nil, err
+	}
+
+	migrateDB(db)
+
+	return db, nil
+
+}
+
+func InitializeTestDB() (db *gorm.DB, err error) {
+
+	path := "/tmp/mamid_test.db"
+	os.Remove(path)
+	db, err = initializeDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	migrateDB(db)
+
+	return db, nil
+
+}
+
+func InitializeTestDBWithSQL(sqlFilePath string) (db *gorm.DB, err error) {
+
+	path := "/tmp/mamid_test.db"
+	os.Remove(path)
+	db, err = initializeDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if sqlFilePath != "" {
+		statements, err := ioutil.ReadFile(sqlFilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		db.Exec(string(statements), []interface{}{})
+
 	}
 
 	migrateDB(db)
@@ -238,5 +269,80 @@ func initializeDB(dsn string) (db *gorm.DB, err error) {
 }
 
 func migrateDB(db *gorm.DB) {
-	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{}, &CommunicationError{}, &SlaveError{})
+	db.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
+	if err := createSlaveUtilizationView(db); err != nil {
+		panic(err)
+	}
+	if err := createReplicaSetEffectiveMembersView(db); err != nil {
+		panic(err)
+	}
+	if err := createReplicaSetConfiguredMembersView(db); err != nil {
+		panic(err)
+	}
+}
+
+func createReplicaSetEffectiveMembersView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS replica_set_effective_members;
+		CREATE VIEW replica_set_effective_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN slaves s ON s.id = m.parent_slave_id
+		JOIN mongod_states observed ON observed.id = m.observed_state_id
+		JOIN mongod_states desired ON desired.id = m.desired_state_id
+		WHERE
+		observed.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `
+		AND
+		desired.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `;`).Error
+}
+
+func createSlaveUtilizationView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS slave_utilization;
+		CREATE VIEW slave_utilization AS
+		SELECT
+			*,
+			CASE WHEN max_mongods = 0 THEN 1 ELSE current_mongods*1.0/max_mongods END AS utilization,
+			(max_mongods - current_mongods) AS free_mongods
+		FROM (
+			SELECT
+				s.*,
+				s.mongod_port_range_end - s.mongod_port_range_begin AS max_mongods,
+				COUNT(DISTINCT m.id) as current_mongods
+			FROM slaves s
+			LEFT OUTER JOIN mongods m ON m.parent_slave_id = s.id
+			GROUP BY s.id
+		);`).Error
+}
+
+func createReplicaSetConfiguredMembersView(tx *gorm.DB) error {
+	return tx.Exec(`
+		DROP VIEW IF EXISTS replica_set_configured_members;
+		CREATE VIEW replica_set_configured_members AS
+		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
+		FROM replica_sets r
+		JOIN mongods m ON m.replica_set_id = r.id
+		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+		JOIN slaves s ON m.parent_slave_id = s.id
+		WHERE
+			s.configured_state != ` + fmt.Sprintf("%d", SlaveStateDisabled) + `
+			AND
+			desired_state.execution_state NOT IN (` +
+		fmt.Sprintf("%d", MongodExecutionStateNotRunning) +
+		`, ` + fmt.Sprintf("%d", MongodExecutionStateDestroyed) +
+		`);`).Error
+}
+
+func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
+	switch e := recover(); e {
+	case e == gorm.ErrInvalidTransaction:
+		log.Printf("ClusterAllocator: rolling back transaction after error: %v", e)
+		*rollbackError = tx.Rollback().Error
+		if *rollbackError != nil {
+			log.Printf("ClusterAllocator: failed rolling back transaction: %v", *rollbackError)
+		}
+	default:
+		panic(e)
+	}
 }

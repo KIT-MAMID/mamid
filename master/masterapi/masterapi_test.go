@@ -367,6 +367,21 @@ func TestMasterAPI_SlaveUpdate_change_desired_state_disabled(t *testing.T) {
 	assert.Equal(t, model.SlaveStateDisabled, updatedSlave.ConfiguredState)
 }
 
+func TestMasterAPI_SlaveUpdate_existingHostname(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	//Test invalid update (hostname already exists)
+	resp := httptest.NewRecorder()
+
+	req_body := "{\"id\":2,\"hostname\":\"host1\",\"slave_port\":2,\"mongod_port_range_begin\":101,\"mongod_port_range_end\":201,\"persistent_storage\":true,\"configured_state\":\"disabled\"}"
+	req, err := http.NewRequest("POST", "/api/slaves/2", strings.NewReader(req_body))
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.Equal(t, 400, resp.Code)
+}
+
 func TestMasterAPI_SlaveDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	assert.NoError(t, err)

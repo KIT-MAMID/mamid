@@ -30,7 +30,7 @@ func NewBus() *Bus {
 	return &b
 }
 
-func (b *Bus) GetNewReadChannel() chan interface{} {
+func (b *Bus) GetNewReadChannel() <-chan interface{} {
 	channel := make(chan interface{}, 1000)
 
 	b.readChannelsMutex.Lock()
@@ -40,7 +40,7 @@ func (b *Bus) GetNewReadChannel() chan interface{} {
 	return channel
 }
 
-func (b *Bus) GetNewWriteChannel() chan interface{} {
+func (b *Bus) GetNewWriteChannel() chan<- interface{} {
 	channel := make(chan interface{}, 1000)
 
 	b.writeChannelsMutex.Lock()

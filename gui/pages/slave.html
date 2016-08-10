@@ -1,4 +1,4 @@
-<h1 class="page-header" ng-if="!is_create_view">Edit Slave</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Slave '{{slave.hostname}}'</h1>
 <h1 class="page-header" ng-if="is_create_view">New Slave</h1>
 
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
@@ -6,7 +6,7 @@
     <p>{{problem.long_description}}</p>
 </div>
 
-<div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view">
+<div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view && problems.length == 0">
     <h4>{{ slave.hostname }} is in
         <b>{{ slave.configured_state }}</b>
         state.</h4>

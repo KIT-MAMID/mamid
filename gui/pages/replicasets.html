@@ -1,6 +1,21 @@
 <h1 class="page-header">Replica Sets</h1>
-<h2 class="sub-header">Some State</h2>
-<div class="bs-callout bs-callout-unknown" ng-repeat="replicaset in replicasets">
+<h2 class="sub-header">Replica Sets with problems</h2>
+<div class="bs-callout bs-callout-unknown" ng-repeat="replicaset in replicasets" ng-if="replicaset.problems.length > 0">
+    <h4>
+        <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+        {{ replicaset.name }}
+    </h4>
+    <span class="pull-right">
+            <a href="#/replicasets/{{replicaset.id}}" class="btn btn-default">
+                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+            </a>
+        </span>
+    <ul>
+        <li ng-repeat="p in replicaset.problmes">{{problem.description}}</li>
+    </ul>
+</div>
+<h2 class="sub-header">Working Replica Sets</h2>
+<div class="bs-callout bs-callout-active" ng-repeat="replicaset in replicasets" ng-if="replicaset.problems.length == 0">
     <h4>
         <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
         {{ replicaset.name }}
@@ -11,5 +26,4 @@
         </span>
 
     </h4>
-    <p>Slave <a href="/slave/mksuns11/edit/unknown">mksuns11</a> is not active. (TODO)</p>
 </div>

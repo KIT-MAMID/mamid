@@ -11,7 +11,7 @@ import (
 
 func createDB(t *testing.T) (db *gorm.DB, err error) {
 	// Setup database
-	db, err = model.InitializeInMemoryDB("")
+	db, err = model.InitializeTestDB()
 
 	dbSlave := model.Slave{
 		ID:                   1,
@@ -44,10 +44,10 @@ func createDB(t *testing.T) (db *gorm.DB, err error) {
 type FakeMSPClient struct {
 	msp.MSPClient
 	Status []msp.Mongod
-	Error  msp.Error
+	Error  *msp.Error
 }
 
-func (m FakeMSPClient) RequestStatus(Target msp.HostPort) ([]msp.Mongod, msp.Error) {
+func (m FakeMSPClient) RequestStatus(Target msp.HostPort) ([]msp.Mongod, *msp.Error) {
 	return m.Status, m.Error
 }
 
@@ -89,11 +89,11 @@ func TestMonitor_observeSlave(t *testing.T) {
 	var slave model.Slave
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
 
 	var mongod model.Mongod
 	db.First(&mongod, 1)
-	db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState")
+	assert.Nil(t, db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error, "after observation, the observed state should be != nil")
 	assert.Equal(t, model.MongodExecutionStateRunning, mongod.ObservedState.ExecutionState)
 
 	connStatusX := <-readChannel
@@ -105,15 +105,17 @@ func TestMonitor_observeSlave(t *testing.T) {
 	mismatch, ok := mismatchX.(model.MongodMatchStatus)
 	assert.False(t, mismatch.Mismatch)
 
+	//-----------------
 	//Slave cannot observe mongod
+	//-----------------
 	monitor.MSPClient = FakeMSPClient{
 		Status: []msp.Mongod{
 			msp.Mongod{
 				Port:           2000,
 				ReplicaSetName: "repl1",
-				StatusError: &msp.SlaveError{
+				StatusError: &msp.Error{
 					Identifier:  "foo",
-					Description: "bar",
+					Description: "cannot observe mongod",
 				},
 			},
 		},
@@ -122,12 +124,13 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
 
 	db.First(&mongod, 1)
 
 	//Mongod should have an observation error
 	db.Model(&mongod).Related(&mongod.ObservationError, "ObservationError")
+	assert.EqualValues(t, "cannot observe mongod", mongod.ObservationError.Description)
 	assert.NotZero(t, mongod.ObservationErrorID)
 
 	connStatusX = <-readChannel
@@ -137,15 +140,41 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	<-readChannel //mismatch
 
-	//Slave becomes unreachable
+	//-----------------
+	//Mongod gone
+	//-----------------
 	monitor.MSPClient = FakeMSPClient{
 		Status: []msp.Mongod{},
-		Error:  msp.CommunicationError{},
+		Error:  nil,
 	}
 
 	db.First(&slave, 1)
 
-	monitor.observeSlave(&slave)
+	monitor.observeSlave(slave)
+
+	db.First(&mongod, 1)
+
+	//Mongod should not have observed state anymore
+	assert.True(t, db.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").RecordNotFound())
+
+	connStatusX = <-readChannel
+	connStatus, ok = connStatusX.(model.ConnectionStatus)
+	assert.True(t, ok)
+	assert.False(t, connStatus.Unreachable)
+
+	<-readChannel //mismatch
+
+	//-----------------
+	//Slave becomes unreachable
+	//-----------------
+	monitor.MSPClient = FakeMSPClient{
+		Status: []msp.Mongod{},
+		Error:  &msp.Error{Identifier: msp.CommunicationError},
+	}
+
+	db.First(&slave, 1)
+
+	monitor.observeSlave(slave)
 
 	connStatusX = <-readChannel
 	connStatus, ok = connStatusX.(model.ConnectionStatus)

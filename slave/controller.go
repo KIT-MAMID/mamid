@@ -30,11 +30,11 @@ func NewController(dataDir string) *Controller {
 	}
 }
 
-func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.SlaveError) {
+func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	ports := c.processes.RunningProcesses()
 	mongods := make([]msp.Mongod, len(ports))
 	for k, port := range ports {
-		var err *msp.SlaveError
+		var err *msp.Error
 		mongods[k], err = c.configurator.MongodConfiguration(port)
 		if err != nil {
 			return nil, err
@@ -43,7 +43,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.SlaveError) {
 	return mongods, nil
 }
 
-func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.SlaveError {
+func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 	c.busyTableLock.Lock()
 	if _, exists := c.busyTable[m.Port]; exists {
 		c.busyTable[m.Port].Lock()
@@ -55,7 +55,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.SlaveError {
 		err := c.processes.SpawnProcess(m)
 
 		if err != nil {
-			return &msp.SlaveError{
+			return &msp.Error{
 				Identifier: fmt.Sprintf("spawn_%d", m.Port),
 				Description: fmt.Sprintf("Unable to start a mongod instance on port %d", m.Port),
 				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed for mongod on port %d with name %s\n%s", m.Port, m.ReplicaSetName, err.Error()),
