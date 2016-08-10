@@ -338,7 +338,11 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $location.path("/slaves");
             });
         } else {
-            $scope.slave.$save();
+            $scope.edit_slave.$save();
+            $scope.slave = SlaveService.get({slave: slaveId});
+            $scope.slave.$promise.then(function () {
+                $scope.edit_slave = angular.copy($scope.slave);
+            });
         }
 
     };
