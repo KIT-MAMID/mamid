@@ -43,6 +43,12 @@ func fixtureEmptyReplicaSet() *ReplicaSet {
 	}
 }
 
+func fixtureEmptyProblem() *Problem {
+	return &Problem{
+		Description: "Test",
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 func TestCanInitializeDB(t *testing.T) {
@@ -330,4 +336,93 @@ func TestGormTransactions(t *testing.T) {
 	tx.First(&slave, 1)
 	tx.Rollback()
 	assert.Equal(t, "foo", slave.Hostname)
+}
+
+func TestForeignKeyChecking(t *testing.T) {
+	db, _ := InitializeTestDB()
+
+	tx0 := db.Begin()
+
+	var foreignKeys int
+	tx0.Raw("PRAGMA foreign_keys;").Row().Scan(&foreignKeys)
+	assert.EqualValues(t, 1, foreignKeys)
+
+	res := tx0.Create(&Slave{
+		Hostname:             "host1",
+		Port:                 1,
+		MongodPortRangeBegin: 2,
+		MongodPortRangeEnd:   3,
+		PersistentStorage:    true,
+		Mongods:              []*Mongod{},
+		ConfiguredState:      SlaveStateActive,
+		RiskGroupID:          sql.NullInt64{99, true},
+	})
+	assert.NoError(t, res.Error)
+	assert.Error(t, tx0.Commit().Error)
+}
+
+func TestCascade(t *testing.T) {
+	db, _ := InitializeTestDB()
+
+	tx0 := db.Begin()
+	assert.NoError(t, tx0.Exec("CREATE TABLE foo(id int primary key);").Error)
+	assert.NoError(t, tx0.Exec("CREATE TABLE bar3(for int null references foo(id) on delete cascade deferrable initially deferred);").Error)
+	assert.NoError(t, tx0.Commit().Error)
+
+	tx1 := db.Begin()
+	assert.NoError(t, tx1.Exec("INSERT INTO foo VALUES(1); INSERT INTO bar3 VALUES(1);").Error)
+	assert.NoError(t, tx1.Commit().Error)
+
+	tx3 := db.Begin()
+	var count int
+	tx3.Raw("SELECT count(*) FROM bar3;").Row().Scan(&count)
+	assert.EqualValues(t, 1, count)
+	tx3.Commit()
+
+	tx2 := db.Begin()
+	tx2.Exec("DELETE FROM foo WHERE id = 1;")
+	assert.NoError(t, tx2.Commit().Error)
+
+	tx3 = db.Begin()
+	tx3.Raw("SELECT count(*) FROM bar3;").Row().Scan(&count)
+	assert.EqualValues(t, 0, count)
+	tx3.Commit()
+}
+
+func TestCascadeSlaves(t *testing.T) {
+	db, _ := InitializeTestDB()
+	tx := db.Begin()
+
+	r := fixtureEmptyRiskGroup()
+	tx.Create(r)
+
+	rs := fixtureEmptyReplicaSet()
+	tx.Create(rs)
+
+	s := fixtureEmptySlave()
+	s.RiskGroupID = NullIntValue(r.ID)
+	tx.Create(s)
+
+	m := fixtureEmptyMongod()
+	m.ParentSlaveID = s.ID
+	m.ReplicaSetID = rs.ID
+	tx.Create(m)
+
+	p := fixtureEmptyProblem()
+	p.SlaveID = NullIntValue(s.ID)
+	tx.Create(p)
+
+	assert.NoError(t, tx.Commit().Error)
+
+	tx1 := db.Begin()
+	tx1.Delete(&Mongod{}, m.ID)
+	assert.NoError(t, tx1.Commit().Error)
+
+	tx2 := db.Begin()
+	tx2.Delete(&Slave{}, s.ID)
+	assert.NoError(t, tx2.Commit().Error)
+
+	tx3 := db.Begin()
+	assert.True(t, tx3.First(&Problem{}, p.ID).RecordNotFound())
+	tx3.Rollback()
 }
