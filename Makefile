@@ -26,7 +26,7 @@ pkg_dirs      = $(addprefix $(GOPATH)/src/,$(pkgs))
 all: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$(BUILD_SUFFIX)
 
 .PHONY: clean
-clean: clean_master clean_slave clean_testbed
+clean: clean_master clean_slave clean_testbed clean_cover
 
 .PHONY: build
 build: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$(BUILD_SUFFIX)
@@ -76,9 +76,14 @@ cover:
 	mkdir -p cover
 	for pkg in $(pkgs) ; do \
 		basename=`basename $${pkg}` ; \
-		$(GO) test $${pkg} -coverprofile=$${basename}.out ; \
-		if [ -f $${basename}.out ] ; then $(GO) tool cover -html=$${basename}.out -o cover/$${basename}.html ; fi ; \
+		$(GO) test $${pkg} -coverprofile=cover/$${basename}.out ; \
+		if [ -f cover/$${basename}.out ] ; then $(GO) tool cover -html=cover/$${basename}.out -o cover/$${basename}.html ; fi ; \
 	done
+
+.PHONY: clean_cover
+clean_cover:
+	rm -rf cover/
+
 
 .PHONY: check-format
 check-format:
