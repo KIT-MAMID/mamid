@@ -90,6 +90,12 @@ func TestConfigFileMissingSection(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestConfigFileNoFile(t *testing.T) {
+	var p Parser
+	_, _, _, err := p.ParseConfig("")
+	assert.Error(t, err)
+}
+
 func TestContactsFile(t *testing.T) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
 	assert.NoError(t, err)
