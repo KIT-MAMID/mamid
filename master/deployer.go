@@ -12,7 +12,7 @@ import (
   Listens on the bus for state mismatches and tries to solve them by pushing the desired state to the Mongod
 */
 type Deployer struct {
-	DB             *gorm.DB
+	DB             *DB
 	MSPClient      msp.MSPClient
 	BusReadChannel <-chan interface{}
 }

@@ -33,25 +33,28 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 		DB: db,
 	}
 
+	tx := db.Begin()
+	defer tx.Rollback()
+
 	var dbMongod model.Mongod
 	var parentSlave model.Slave
 	var desiredState model.MongodState
-	assert.Nil(t, db.First(&dbMongod).Error)
-	assert.Nil(t, db.Model(&dbMongod).Related(&parentSlave, "ParentSlave").Error)
-	assert.Nil(t, db.Model(&dbMongod).Related(&desiredState, "DesiredState").Error)
+	assert.Nil(t, tx.First(&dbMongod).Error)
+	assert.Nil(t, tx.Model(&dbMongod).Related(&parentSlave, "ParentSlave").Error)
+	assert.Nil(t, tx.Model(&dbMongod).Related(&desiredState, "DesiredState").Error)
 	dbMongod.ParentSlave = &parentSlave
 	dbMongod.DesiredState = desiredState
 
-	hostPort, mspMongod, err = d.mspMongodStateRepresentation(d.DB, model.Mongod{ID: 1})
+	hostPort, mspMongod, err = d.mspMongodStateRepresentation(tx, model.Mongod{ID: 1})
 	assert.NotNil(t, err, "Should not be able to find hostPort for Mongod without ParentSlaveID")
 	assert.Zero(t, hostPort)
 
-	hostPort, mspMongod, err = d.mspMongodStateRepresentation(db, model.Mongod{
+	hostPort, mspMongod, err = d.mspMongodStateRepresentation(tx, model.Mongod{
 		ParentSlaveID: dbMongod.ParentSlaveID,
 	})
 	assert.NotNil(t, err, "Should not be able to find hostPort for Mongod without DesiredStateID")
 
-	hostPort, mspMongod, err = d.mspMongodStateRepresentation(db, dbMongod)
+	hostPort, mspMongod, err = d.mspMongodStateRepresentation(tx, dbMongod)
 	assert.Nil(t, err, "ParentSlaveID and DesiredStateID should suffice to build MSP MongodState representation")
 
 	assert.EqualValues(t, msp.HostPort{dbMongod.ParentSlave.Hostname, uint16(dbMongod.ParentSlave.Port)}, hostPort)
