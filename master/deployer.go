@@ -63,6 +63,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	var slave Slave
 	var desiredState MongodState
 	var mspMongodState msp.MongodState
+	var replicaSetMembers []msp.HostPort
 
 	// Fetch master representation
 	if err = tx.Model(&mongod).Related(&slave, "ParentSlave").Error; err != nil {
@@ -75,6 +76,9 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	if err != nil {
 		return
 	}
+	if replicaSetMembers, err = mspDesiredReplicaSetMembersForMongod(tx, mongod); err != nil {
+		return
+	}
 
 	// Construct msp representation
 	hostPort = msp.HostPort{
@@ -84,7 +88,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	mspMongod = msp.Mongod{
 		Port:                 uint16(mongod.Port),
 		ReplicaSetName:       mongod.ReplSetName,
-		ReplicaSetMembers:    []msp.HostPort{}, // TODO
+		ReplicaSetMembers:    replicaSetMembers,
 		ShardingConfigServer: desiredState.IsShardingConfigServer,
 		State:                mspMongodState,
 	}
@@ -106,4 +110,26 @@ func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, 
 	default:
 		return "", fmt.Errorf("deployer: unable to map `%v` from model.ExecutionState to msp.MongodState", s)
 	}
+}
+
+// Return the list of msp.HostPort a Mongod should have as members
+// Includes the mongod passed as parameter m
+func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMembers []msp.HostPort, err error) {
+
+	res := tx.Raw(`SELECT s.hostname, m.port
+		FROM mongods m
+		JOIN replica_sets r ON m.replica_set_id = r.id
+		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+		JOIN slaves s ON m.parent_slave_id = s.id
+		WHERE r.id = ?
+		      AND desired_state.execution_state = ?
+		`, m.ReplicaSetID, MongodExecutionStateRunning,
+	).Find(&replicaSetMembers)
+
+	if res.Error != nil {
+		return []msp.HostPort{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%s`: %s", m, res.Error)
+	}
+
+	return
+
 }

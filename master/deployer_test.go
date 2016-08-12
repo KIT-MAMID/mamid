@@ -75,3 +75,40 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 	}, mspMongod)
 
 }
+
+func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
+
+	var err error
+
+	db, err := createDB(t)
+	assert.Nil(t, err)
+
+	tx := db.Begin()
+	defer tx.Rollback()
+
+	var dbMongod model.Mongod
+	var parentSlave model.Slave
+	var desiredState model.MongodState
+	assert.Nil(t, tx.First(&dbMongod).Error)
+	assert.Nil(t, tx.Model(&dbMongod).Related(&parentSlave, "ParentSlave").Error)
+	assert.Nil(t, tx.Model(&dbMongod).Related(&desiredState, "DesiredState").Error)
+
+	var members []msp.HostPort
+
+	// Test for one slave in DB
+	members, err = mspDesiredReplicaSetMembersForMongod(tx, dbMongod)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, len(members))
+	assert.EqualValues(t, msp.HostPort{parentSlave.Hostname, uint16(dbMongod.Port)}, members[0],
+		"the list of replica set members of mongod m should include mongod m") // TODO do we actually want this?
+
+	// Set the desired state to not running
+	assert.EqualValues(t, 1, tx.Model(&desiredState).Update("ExecutionState", model.MongodExecutionStateNotRunning).RowsAffected)
+	members, err = mspDesiredReplicaSetMembersForMongod(tx, dbMongod)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 0, len(members),
+		"a mongod with desired execution state != running should have no replica set members")
+
+	// TODO test for multiple mongods and replica sets
+
+}
