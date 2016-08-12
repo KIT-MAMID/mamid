@@ -38,12 +38,21 @@ func main() {
 	}
 	masterAPI.Setup()
 
+	mspClient := msp.MSPClientImpl{}
+
 	monitor := master.Monitor{
 		DB:              db,
 		BusWriteChannel: bus.GetNewWriteChannel(),
-		MSPClient:       msp.MSPClientImpl{},
+		MSPClient:       mspClient,
 	}
 	go monitor.Run()
+
+	deployer := master.Deployer{
+		DB:             db,
+		BusReadChannel: bus.GetNewReadChannel(),
+		MSPClient:      mspClient,
+	}
+	go deployer.Run()
 
 	problemManager := master.ProblemManager{
 		DB:             db,

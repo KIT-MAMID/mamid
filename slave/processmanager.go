@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"fmt"
 	"strings"
+	"golang.org/x/sys/unix"
 )
 
 type ProcessManager struct {
@@ -22,9 +23,19 @@ func NewProcessManager(command string, dataDir string) ProcessManager {
 }
 
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
+
+	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetName)
+	if err := unix.Access(dbDir, unix.R_OK | unix.W_OK | unix.X_OK); err != nil {
+		if err := unix.Mkdir(dbDir, 0700); err != nil {
+			panic("Could not create a readable and writable directory at %s")
+		}
+	}
+
 	escName := strings.Replace(m.ReplicaSetName, "'", "'\\''", -1)
-	cmd := exec.Command(fmt.Sprintf("%s --dbPath '%s/%s/%s' --port %d --replSet '%s'", p.command, p.dataDir, DataDBDir, escName, m.Port, escName))
+	sh := fmt.Sprintf("/usr/bin/env %s --dbpath '%s/%s/%s' --port %d --replSet '%s'", p.command, p.dataDir, DataDBDir, escName, m.Port, escName)
+	cmd := exec.Command("/bin/sh", "-c", sh)
 	err := cmd.Start()
+
 	if err != nil {
 		return err
 	}

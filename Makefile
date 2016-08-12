@@ -175,5 +175,14 @@ testbed_down:
 		$(SUDO) docker rm -f slave$$i; \
 	done
 
+testbed_slave: docker/testbed_images.depend
+	-for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
+		$(SUDO) docker rm -f slave$$i; \
+	done
+	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
+		$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" --name=slave$$i mamid/slave; \
+	done
+
+
 ########################################################################################################################
 

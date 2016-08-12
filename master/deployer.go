@@ -12,7 +12,7 @@ import (
   Listens on the bus for state mismatches and tries to solve them by pushing the desired state to the Mongod
 */
 type Deployer struct {
-	DB             *gorm.DB
+	DB             *DB
 	MSPClient      msp.MSPClient
 	BusReadChannel <-chan interface{}
 }
@@ -60,8 +60,8 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 // When err != nil is returned, the tx. should be rolled back and the error be reported
 func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hostPort msp.HostPort, mspMongod msp.Mongod, err error) {
 
-	var slave *Slave
-	var desiredState *MongodState
+	var slave Slave
+	var desiredState MongodState
 	var mspMongodState msp.MongodState
 
 	// Fetch master representation
@@ -79,10 +79,10 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	// Construct msp representation
 	hostPort = msp.HostPort{
 		Hostname: slave.Hostname,
-		Port:     uint16(slave.Port),
+		Port:     msp.PortNumber(slave.Port),
 	}
 	mspMongod = msp.Mongod{
-		Port:                 uint16(mongod.Port),
+		Port:                 msp.PortNumber(mongod.Port),
 		ReplicaSetName:       mongod.ReplSetName,
 		ReplicaSetMembers:    []msp.HostPort{}, // TODO
 		ShardingConfigServer: desiredState.IsShardingConfigServer,
