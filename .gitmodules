@@ -10,9 +10,6 @@
 [submodule "vendor/github.com/jinzhu/gorm"]
 	path = vendor/github.com/jinzhu/gorm
 	url = https://github.com/jinzhu/gorm
-[submodule "vendor/github.com/mattn/go-sqlite3"]
-	path = vendor/github.com/mattn/go-sqlite3
-	url = https://github.com/KIT-MAMID/go-sqlite3
 [submodule "vendor/github.com/jinzhu/inflection"]
 	path = vendor/github.com/jinzhu/inflection
 	url = https://github.com/jinzhu/inflection
@@ -22,3 +19,30 @@
 [submodule "vendor/github.com/vaughan0/go-ini"]
 	path = vendor/github.com/vaughan0/go-ini
 	url = https://github.com/vaughan0/go-ini
+[submodule "vendor/golang.org/x/sys"]
+	path = vendor/golang.org/x/sys
+	url = https://go.googlesource.com/sys
+[submodule "vendor/golang.org/x/crypto"]
+	path = vendor/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
+[submodule "vendor/gopkg.in/check.v1"]
+	path = vendor/gopkg.in/check.v1
+	url = https://gopkg.in/check.v1
+[submodule "vendor/gopkg.in/mgo.v2"]
+	path = vendor/gopkg.in/mgo.v2
+	url = https://gopkg.in/mgo.v2
+[submodule "vendor/gopkg.in/tomb.v2"]
+	path = vendor/gopkg.in/tomb.v2
+	url = https://gopkg.in/tomb.v2
+[submodule "vendor/gopkg.in/yaml.v2"]
+	path = vendor/gopkg.in/yaml.v2
+	url = https://gopkg.in/yaml.v2
+[submodule "vendor/github.com/go-mgo/mgo"]
+	path = vendor/github.com/go-mgo/mgo
+	url = https://github.com/go-mgo/mgo
+[submodule "vendor/github.com/qor/inflection"]
+	path = vendor/github.com/qor/inflection
+	url = https://github.com/qor/inflection
+[submodule "vendor/github.com/mattn/go-sqlite3"]
+	path = vendor/github.com/mattn/go-sqlite3
+	url = https://github.com/KIT-MAMID/go-sqlite3
