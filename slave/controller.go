@@ -11,7 +11,7 @@ import (
 const DataDBDir = "db"
 
 type Controller struct {
-	processes    *ProcessManager // TODO rename variable
+	procManager  *ProcessManager
 	configurator MongodConfigurator
 
 	busyTable     map[msp.PortNumber]*sync.Mutex
@@ -22,7 +22,7 @@ type Controller struct {
 
 func NewController(processManager *ProcessManager, configurator MongodConfigurator, mongodHardShutdownTimeout time.Duration) *Controller {
 	return &Controller{
-		processes:                 processManager,
+		procManager:               processManager,
 		configurator:              configurator,
 		busyTable:                 make(map[msp.PortNumber]*sync.Mutex),
 		busyTableLock:             sync.Mutex{},
@@ -31,7 +31,7 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 }
 
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
-	ports := c.processes.RunningProcesses()
+	ports := c.procManager.RunningProcesses()
 	mongods := make([]msp.Mongod, len(ports))
 	for k, port := range ports {
 		var err *msp.Error
@@ -52,7 +52,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		c.busyTable[m.Port] = &sync.Mutex{}
 		c.busyTable[m.Port].Lock()
 		c.busyTableLock.Unlock()
-		err := c.processes.SpawnProcess(m)
+		err := c.procManager.SpawnProcess(m)
 
 		if err != nil {
 			return &msp.Error{
@@ -68,8 +68,8 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 	if m.State == msp.MongodStateDestroyed {
 		go func() {
 			time.Sleep(c.mongodHardShutdownTimeout)
-			c.processes.KillProcess(m.Port) // TODO error handling => log error
-			c.busyTable[m.Port].Unlock()    // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
+			c.procManager.KillProcess(m.Port) // TODO error handling => log error
+			c.busyTable[m.Port].Unlock()      // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
 		}()
 	}
 
