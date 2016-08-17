@@ -49,7 +49,7 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 
 	mspError := d.MSPClient.EstablishMongodState(hostPort, mspMongod)
 	if mspError != nil {
-		log.Printf("deployer: MSP error establishing mongod state for Mongod `(%s(id=%s),%s,)`: %s",
+		log.Printf("deployer: MSP error establishing mongod state for Mongod `(%s(id=%s),%s,)` in Rpelica Set `%s`: %s",
 			mongod.ParentSlave, mongod.ParentSlaveID, mongod.Port, mongod.ReplSetName, mspError)
 	}
 

@@ -11,12 +11,12 @@ import (
 func TestDeployer_mspMongodStateFromExecutionState_errorBehavior(t *testing.T) {
 
 	var err error
-	var executionState msp.MongodState
+	//var executionState msp.MongodState
 
-	executionState, err = mspMongodStateFromExecutionState(0)
-	assert.NotNil(t, err)
+	_, err = mspMongodStateFromExecutionState(0)
+	assert.Error(t, err)
 
-	executionState = executionState
+	//executionState = executionState
 
 }
 
