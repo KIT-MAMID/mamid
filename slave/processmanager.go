@@ -27,7 +27,7 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetName)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			panic("Could not create a readable and writable directory at %s")
+			panic(fmt.Sprintf("Could not create a readable and writable directory at %s", dbDir))
 		}
 	}
 

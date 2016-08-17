@@ -208,12 +208,12 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 	for _, modelMongod := range modelMongods {
 
 		if err := tx.Model(modelMongod).Related(&modelMongod.DesiredState, "DesiredState").Error; err != nil {
-			return fmt.Errorf("monitor: error fetching DesiredState for mongod `%s`: %s", modelMongod, err)
+			return fmt.Errorf("monitor: error fetching DesiredState for mongod `%v`: %s", modelMongod, err)
 		}
 
 		observedStateRes := tx.Model(modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
 		if !observedStateRes.RecordNotFound() && observedStateRes.Error != nil {
-			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%s`: %s", modelMongod, observedStateRes.Error)
+			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%v`: %s", modelMongod, observedStateRes.Error)
 		}
 
 		if observedStateRes.RecordNotFound() {

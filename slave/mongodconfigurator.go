@@ -194,6 +194,6 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	return &msp.Error{
 		Identifier:      "protocol",
 		Description:     "Protocol error",
-		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %d received", m.State),
+		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %s received", m.State),
 	}
 }

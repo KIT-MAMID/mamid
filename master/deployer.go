@@ -49,7 +49,7 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 
 	mspError := d.MSPClient.EstablishMongodState(hostPort, mspMongod)
 	if mspError != nil {
-		log.Printf("deployer: MSP error establishing mongod state for Mongod `(%s(id=%s),%s,)` in Rpelica Set `%s`: %s",
+		log.Printf("deployer: MSP error establishing mongod state for Mongod `(%v(id=%d),%d,)` in Replica Set `%s`: %s",
 			mongod.ParentSlave, mongod.ParentSlaveID, mongod.Port, mongod.ReplSetName, mspError)
 	}
 
@@ -127,7 +127,7 @@ func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMemb
 	).Find(&replicaSetMembers)
 
 	if res.Error != nil {
-		return []msp.HostPort{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%s`: %s", m, res.Error)
+		return []msp.HostPort{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%v`: %s", m, res.Error)
 	}
 
 	return

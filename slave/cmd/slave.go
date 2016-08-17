@@ -26,7 +26,7 @@ func main() {
 	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			println("Could not create a readable and writable directory at %s")
+			fmt.Printf("Could not create a readable and writable directory at %s", dbDir)
 			return
 		}
 	}
