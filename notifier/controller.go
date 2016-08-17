@@ -23,7 +23,14 @@ func main() {
 		log.Println("Error loading config:", configError)
 		return
 	}
-	contacts, _ := p.Parse(contactsFile)
+	contacts, contactsParseErr := p.Parse(contactsFile)
+
+	if contactsParseErr != nil {
+		log.Println("Error loading contacts file ", contactsFile)
+		log.Println(contactsParseErr)
+		return
+	}
+
 	emailContacts := make([]*EmailContact, 0)
 	for i := 0; i < len(contacts); i++ {
 		switch t := contacts[i].(type) {
