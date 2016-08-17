@@ -6,11 +6,20 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	. "github.com/KIT-MAMID/mamid/slave"
 	"golang.org/x/sys/unix"
+	"os/exec"
 )
 
+const MongodExecutableDefaultName = "mongod"
+
 func main() {
-	var dataDir string
+
+	var (
+		mongodExecutable, dataDir string
+	)
+
 	flag.StringVar(&dataDir, "data", "", "Persistent data and slave configuration directory")
+	mongodExecutableLookupPath, _ := exec.LookPath(MongodExecutableDefaultName)
+	flag.StringVar(&mongodExecutable, "mongodExecutable", mongodExecutableLookupPath, "Path to or name of Mongod binary")
 
 	flag.Parse()
 
@@ -31,7 +40,7 @@ func main() {
 		}
 	}
 
-	controller := NewController(dataDir)
+	controller := NewController(mongodExecutable, dataDir)
 	server := msp.NewServer(controller)
 	server.Run()
 }

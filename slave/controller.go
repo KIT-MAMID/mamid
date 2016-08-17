@@ -22,9 +22,9 @@ type Controller struct {
 	busyTableLock sync.Mutex
 }
 
-func NewController(dataDir string) *Controller {
+func NewController(mongodExecutablePath, dataDir string) *Controller {
 	return &Controller{
-		processes:     NewProcessManager("mongod", dataDir), // TODO make the binary path a cli parameter, defaulting to "mongod" from PATH environment variable (using os.Env)
+		processes:     NewProcessManager(mongodExecutablePath, dataDir),
 		configurator:  &ConcreteMongodConfigurator{mgo.Dial},
 		busyTable:     make(map[msp.PortNumber]*sync.Mutex),
 		busyTableLock: sync.Mutex{},
