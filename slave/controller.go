@@ -37,6 +37,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 		var err *msp.Error
 		mongods[k], err = c.configurator.MongodConfiguration(port) // TODO parallelize this? => use goroutines that send into a channel whic appends (single-threaded) to the array
 		if err != nil {
+			log.Errorf("controller: error querying Mongod configuration: %s", err)
 			return nil, err
 		}
 	}
@@ -55,6 +56,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		err := c.procManager.SpawnProcess(m)
 
 		if err != nil {
+			log.Errorf("controller: error spawning process: %s", err)
 			return &msp.Error{
 				Identifier:      msp.SlaveSpawnError,
 				Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
@@ -68,12 +70,17 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 	if m.State == msp.MongodStateDestroyed {
 		go func() {
 			time.Sleep(c.mongodHardShutdownTimeout)
-			c.procManager.KillProcess(m.Port) // TODO error handling => log error
-			c.busyTable[m.Port].Unlock()      // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
+			if killProcessError := c.procManager.KillProcess(m.Port); killProcessError != nil {
+				log.Error(killProcessError)
+			}
+			c.busyTable[m.Port].Unlock() // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
 		}()
 	}
 
 	err := c.configurator.ApplyMongodConfiguration(m)
+	if err != nil {
+		log.Errorf("controller: error applying Mongod configuration: %s", err)
+	}
 
 	// do wait until the old instance is destroyed. Having a half destroyed unlocked instance flying around should be dangerous
 	// TODO better refer to the hard shutdown timeout above. AND: restructure this code because this is really the else part of the `if` above.
