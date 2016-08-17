@@ -43,7 +43,8 @@ func main() {
 		println(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))
 		return
 	}
-	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
+
+	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir) // TODO directory creation should happen in the component that uses the path
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
 			fmt.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
