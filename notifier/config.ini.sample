@@ -3,4 +3,4 @@ api_host=localhost:8080
 contacts=contacts.ini
 [smtp]
 relay_host=
-mail_form=
+mail_from=

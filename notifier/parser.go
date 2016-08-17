@@ -57,7 +57,7 @@ func (p *Parser) ParseConfig(path string) (relay SMTPRelay, apiHost string, cont
 		err = fmt.Errorf("Missing 'smtp' section in config file")
 		return
 	}
-	relay.MailFrom, ok = smtp["mail_form"]
+	relay.MailFrom, ok = smtp["mail_from"]
 	if !ok {
 		err = fmt.Errorf("Missing 'mail_from' veriable in 'smtp' section in config file")
 		return
