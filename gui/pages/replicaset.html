@@ -20,10 +20,10 @@
         <table class="table" width="100%">
             <tr ng-repeat="slave in replicaset_slaves">
                 <td>
-                    <div class="bs-callout bs-callout-{{ slave.state }}">
+                    <div class="bs-callout bs-callout-{{ slave.configured_state }}">
                         <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true"
-                                  ng-if="slave.persistent_storage"></span> {{ slave.hostname }} - <b>
-                            {{ slave.state }}</b>
+                                  ng-if="slave.persistent_storage"></span> <a href="/#/slaves/{{slave.id}}">{{ slave.hostname }}</a> - <b>
+                            {{ slave.configured_state }}</b>
                         </h4>
                     </div>
                 </td>
