@@ -32,7 +32,7 @@ type ConcreteMongodConfigurator struct {
 }
 
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session, *msp.Error) {
-	sess, err := c.dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port))
+	sess, err := c.dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port)) // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
 
 	/*
 		mgo.SetDebug(true)
