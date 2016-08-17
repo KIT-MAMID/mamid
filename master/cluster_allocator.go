@@ -5,6 +5,7 @@ import (
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
+	"time"
 )
 
 var caLog = logrus.WithField("module", "cluster_allocator")
@@ -21,6 +22,33 @@ const (
 )
 
 type memberCountTuple map[persistence]uint
+
+func (c *ClusterAllocator) Run(db *DB) {
+	ticker := time.NewTicker(11 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				caLog.Info("Periodic cluster allocator run")
+				tx := db.Begin()
+				compileErr := c.CompileMongodLayout(tx)
+				if compileErr != nil {
+					caLog.WithError(compileErr).Error("Periodic cluster allocator run failed")
+					continue
+				}
+				if commitErr := tx.Commit().Error; commitErr != nil {
+					caLog.WithError(commitErr).Error("Periodic cluster allocator commit failed")
+					continue
+				}
+
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+}
 
 func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 

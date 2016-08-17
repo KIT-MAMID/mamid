@@ -28,6 +28,7 @@ func main() {
 	clusterAllocator := &master.ClusterAllocator{
 		BusWriteChannel: &clusterAllocatorBusWriteChannel,
 	}
+	go clusterAllocator.Run(db)
 
 	mainRouter := mux.NewRouter().StrictSlash(true)
 
