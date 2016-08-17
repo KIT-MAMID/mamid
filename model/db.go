@@ -3,13 +3,15 @@ package model
 import (
 	"database/sql"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
-	"log"
 	"os"
 	"time"
 )
+
+var modelLog = logrus.WithField("module", "model")
 
 /*
 	The structs defined in this file are stored in a database using the `gorm` package.
@@ -197,6 +199,8 @@ func initializeDB(dsn string) (*DB, error) {
 		gormDB: gormDB,
 	}
 
+	gormDB.SetLogger(modelLog)
+
 	return db, nil
 
 }
@@ -332,10 +336,10 @@ func createReplicaSetConfiguredMembersView(tx *gorm.DB) error {
 func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
 	switch e := recover(); e {
 	case e == gorm.ErrInvalidTransaction:
-		log.Printf("ClusterAllocator: rolling back transaction after error: %v", e)
+		modelLog.Infof("ClusterAllocator: rolling back transaction after error: %v", e)
 		*rollbackError = tx.Rollback().Error
 		if *rollbackError != nil {
-			log.Printf("ClusterAllocator: failed rolling back transaction: %v", *rollbackError)
+			modelLog.WithError(*rollbackError).Errorf("ClusterAllocator: failed rolling back transaction")
 		}
 	default:
 		panic(e)

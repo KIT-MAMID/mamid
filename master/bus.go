@@ -1,10 +1,12 @@
 package master
 
 import (
-	"log"
+	"github.com/Sirupsen/logrus"
 	"reflect"
 	"sync"
 )
+
+var busLog = logrus.WithField("module", "bus")
 
 type Bus struct {
 	//Channels the user can read from and the bus writes to
@@ -83,7 +85,7 @@ func (b *Bus) Run() {
 				select {
 				case channel <- recv.Interface():
 				default:
-					log.Println("Bus channel full - dropping message")
+					busLog.Error("Bus channel full - dropping message")
 				}
 			}
 			b.readChannelsMutex.Unlock()

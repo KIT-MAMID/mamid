@@ -3,9 +3,11 @@ package master
 import (
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
+	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-	"log"
 )
+
+var caLog = logrus.WithField("module", "cluster_allocator")
 
 type ClusterAllocator struct {
 	BusWriteChannel *chan<- interface{}
@@ -78,7 +80,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				continue
 			}
 
-			log.Printf("cluster allocator: removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", replicaSetID, deletable_count, p)
+			caLog.Infof("removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", replicaSetID, deletable_count, p)
 
 			var deletableMongds []*Mongod
 
@@ -98,10 +100,10 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				panic(err)
 			}
 
-			log.Printf("cluster allocator: setting %d mongods for replica set `%#v` to desired state `destroyed`", len(deletableMongds), replicaSetID)
+			caLog.Infof("setting %d mongods for replica set `%#v` to desired state `destroyed`", len(deletableMongds), replicaSetID)
 
 			for _, m := range deletableMongds {
-				log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed`", m)
+				caLog.Debugf("setting desired mongod_state of mongod `%#v` to `destroyed`", m)
 
 				res := tx.Exec("UPDATE mongod_states SET execution_state=? WHERE id=?", MongodExecutionStateDestroyed, m.DesiredStateID)
 				if res.Error != nil {
@@ -109,10 +111,10 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				}
 
 				if res.RowsAffected < 1 {
-					log.Printf("cluster allocator: setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
+					caLog.Errorf("setting desired mongod_state of mongod `%#v` to `destroyed` did not affect any row", m)
 				}
 				if res.RowsAffected > 1 {
-					log.Printf("cluster allocator: internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row", m)
+					caLog.Errorf("internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row", m)
 				}
 
 				// TODO side effects
@@ -163,13 +165,13 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			).Scan(&replicaSet)
 
 			if res.RecordNotFound() {
-				log.Printf("cluster allocator: finished repairing degraded replica sets in need of `%s` members", p)
+				caLog.Infof("finished repairing degraded replica sets in need of `%s` members", p)
 				break
 			} else if res.Error != nil {
 				panic(res.Error)
 			}
 
-			log.Printf("cluster allocator: looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
+			caLog.Debugf("looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
 
 			// TODO spawn twice on same slave if slave is in risk group 0???
 			var leastBusySuitableSlave Slave
@@ -197,7 +199,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			).Scan(&leastBusySuitableSlave)
 
 			if res.RecordNotFound() {
-				log.Printf("cluster allocator: unsatisfiable replica set `%s`: not enough suitable `%s` slaves", replicaSet.Name, p)
+				caLog.Warn("unsatisfiable replica set `%s`: not enough suitable `%s` slaves", replicaSet.Name, p)
 				unsatisfiable_replica_set_ids_by_persistance = append(unsatisfiable_replica_set_ids_by_persistance, replicaSet.ID)
 				unsatisfiable_replica_set_ids = append(unsatisfiable_replica_set_ids, replicaSet.ID)
 				continue
@@ -205,15 +207,15 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				panic(res.Error)
 			}
 
-			log.Printf("cluster allocator: found slave `%s` as host for new mongod for replica set `%s`", leastBusySuitableSlave.Hostname, replicaSet.Name)
+			caLog.Debug("found slave `%s` as host for new mongod for replica set `%s`", leastBusySuitableSlave.Hostname, replicaSet.Name)
 
 			m, err := c.spawnMongodOnSlave(tx, &leastBusySuitableSlave, &replicaSet.ReplicaSet)
 			if err != nil {
-				log.Printf("cluster allocator: could not spawn mongod on slave `%s`: %s", leastBusySuitableSlave.Hostname, err.Error())
+				caLog.Errorf("could not spawn mongod on slave `%s`: %s", leastBusySuitableSlave.Hostname, err.Error())
 				// the queries should have not returned a slave without free ports
 				panic(err)
 			} else {
-				log.Printf("cluster allocator: spawned mongod `%d` for replica set `%s` on slave `%s`", m.ID, replicaSet.Name, leastBusySuitableSlave.Hostname)
+				caLog.Debugf("spawned mongod `%d` for replica set `%s` on slave `%s`", m.ID, replicaSet.Name, leastBusySuitableSlave.Hostname)
 			}
 
 			// TODO side effects
@@ -263,9 +265,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	}
 
 	if err == nil {
-		log.Println("Cluster allocator done successfully")
+		caLog.Info("Cluster allocator done successfully")
 	} else {
-		log.Println("Cluster allocator done with error", err)
+		caLog.WithError(err).Error("Cluster allocator done with error")
 	}
 	return err
 }
@@ -353,7 +355,7 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 		panic(res.Error)
 	}
 
-	log.Printf("cluster allocator: slave: %#v: found used ports: %v", s, usedPorts)
+	caLog.Debugf("slave: %#v: found used ports: %v", s, usedPorts)
 
 	unusedPort, found := findUnusedPort(usedPorts, s.MongodPortRangeBegin, s.MongodPortRangeEnd)
 

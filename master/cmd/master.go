@@ -5,11 +5,16 @@ import (
 	"github.com/KIT-MAMID/mamid/master/masterapi"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
+var masterLog = logrus.WithField("module", "master")
+
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
+	masterLog.Info("Startup")
 
 	// Setup controllers
 

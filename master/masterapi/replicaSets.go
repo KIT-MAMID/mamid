@@ -6,7 +6,6 @@ import (
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
 	"github.com/mattn/go-sqlite3"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -234,7 +233,7 @@ func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.RowsAffected > 1 {
-		log.Printf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
+		masterapiLog.Errorf("inconsistency: slave DELETE affected more than one row. Slave.ID = %v", id)
 	}
 
 	// Trigger cluster allocator

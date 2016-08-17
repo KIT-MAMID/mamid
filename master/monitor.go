@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
+	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-	"log"
 	"time"
 )
+
+var monitorLog = logrus.WithField("module", "monitor")
 
 type Monitor struct {
 	DB              *model.DB
@@ -22,14 +24,14 @@ func (m *Monitor) Run() {
 		for {
 			select {
 			case <-ticker.C:
-				log.Println("Monitor running")
+				monitorLog.Info("Monitor running")
 
 				//Get all slaves from database
 				tx := m.DB.Begin()
 				var slaves []model.Slave
 				err := tx.Find(&slaves).Error
 				if err != nil {
-					log.Println(err.Error())
+					monitorLog.WithError(err).Error("Could not get slaves")
 				}
 				tx.Rollback()
 
@@ -71,20 +73,20 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 
 	if mspError != nil {
 		//TODO Handle other slave errors => check identifiers != CommunicationError
-		//log.Printf("monitor: error observing slave: %#v", mspError)
+		//monitorLog.Error("monitor: error observing slave: %#v", mspError)
 		return
 	}
 
 	tx := m.DB.Begin()
 
 	if err := m.updateObservedStateInDB(tx, slave, observedMongods); err != nil {
-		log.Println(err)
+		monitorLog.WithError(err).Error()
 		tx.Rollback()
 		return
 	}
 
 	if err := m.handleUnobservedMongodsOfSlave(tx, slave, observedMongods); err != nil {
-		log.Println(err)
+		monitorLog.WithError(err).Error()
 		tx.Rollback()
 		return
 	}
@@ -95,7 +97,7 @@ func (m *Monitor) observeSlave(slave model.Slave) {
 	tx = m.DB.Begin()
 	defer tx.Rollback()
 	if err := m.sendMongodMismatchStatusToBus(tx, slave); err != nil {
-		log.Println(err)
+		monitorLog.WithError(err).Error()
 	}
 
 }
@@ -106,7 +108,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observ
 
 	for _, observedMongod := range observedMongods {
 
-		log.Printf("monitor: updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+		monitorLog.Debug("monitor: updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
 
 		var dbMongod model.Mongod
 
@@ -157,7 +159,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observ
 				mongodTuple(slave, observedMongod), saveErr.Error())
 		}
 
-		log.Printf("monitor: finished updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+		monitorLog.Debug("monitor: finished updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
 
 	}
 

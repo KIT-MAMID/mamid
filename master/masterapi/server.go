@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/KIT-MAMID/mamid/model"
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"net/http"
 )
+
+var masterapiLog = logrus.WithField("module", "masterapi")
 
 type MasterAPI struct {
 	DB               *model.DB

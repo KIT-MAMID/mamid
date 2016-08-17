@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/Sirupsen/logrus"
 	"net/http"
 )
+
+var mspLog = logrus.WithField("module", "msp")
 
 type MSPClient interface {
 	RequestStatus(Target HostPort) ([]Mongod, *Error)
@@ -67,13 +69,13 @@ func (c MSPClientImpl) EstablishMongodState(target HostPort, m Mongod) *Error {
 	buffer := new(bytes.Buffer)
 	err := json.NewEncoder(buffer).Encode(m)
 	if err != nil {
-		log.Printf("msp: error serialzing monogd: %s", err)
+		mspLog.Errorf("msp: error serialzing monogd: %s", err)
 		panic(err)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", target.Hostname, target.Port), buffer)
 	if err != nil {
-		log.Printf("msp: error creating request object for monogd: %s", err)
+		mspLog.Errorf("msp: error creating request object for monogd: %s", err)
 		panic(err)
 	}
 
