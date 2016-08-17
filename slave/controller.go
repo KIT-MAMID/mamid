@@ -57,9 +57,9 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		if err != nil {
 			return &msp.Error{
-				Identifier:      fmt.Sprintf("spawn_%d", m.Port), // TODO this is not how msp.Error identifiers are supposed to be. Suggestion: ESLAVESPAWN or similar. This identifier needs defined as a constant in the msp dataobjects file.
-				Description:     fmt.Sprintf("Unable to start a mongod instance on port %d", m.Port),
-				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed for mongod on port %d with name %s\n%s", m.Port, m.ReplicaSetName, err.Error()), // TODO no newlines in errors?
+				Identifier:      msp.SlaveSpawnError,
+				Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
+				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
 			}
 		}
 	} else {
