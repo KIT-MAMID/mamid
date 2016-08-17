@@ -13,13 +13,15 @@ const (
 	MongodStateRunning    = "running"
 )
 
+type PortNumber uint16
+
 type HostPort struct {
 	Hostname string
-	Port     uint16
+	Port     PortNumber
 }
 
 type Mongod struct {
-	Port                    uint16
+	Port                    PortNumber
 	ReplicaSetName          string
 	ReplicaSetMembers       []HostPort
 	ShardingConfigServer    bool
@@ -27,8 +29,6 @@ type Mongod struct {
 	LastEstablishStateError *Error
 	State                   MongodState
 }
-
-type PortNumber uint16
 
 type Error struct {
 	// See constants in this package for list of identifiers

@@ -55,7 +55,7 @@ func mongodTuple(s model.Slave, m msp.Mongod) string {
 func (m *Monitor) observeSlave(slave model.Slave) {
 
 	//Request mongod states from slave
-	observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, uint16(slave.Port)})
+	observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
 
 	// Notify about reachablility
 	comErr := msp.Error{}
