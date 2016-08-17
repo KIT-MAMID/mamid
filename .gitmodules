@@ -27,16 +27,16 @@
 	url = https://go.googlesource.com/crypto
 [submodule "vendor/gopkg.in/check.v1"]
 	path = vendor/gopkg.in/check.v1
-	url = https://gopkg.in/check.v1
+	url = https://github.com/go-check/check.git
 [submodule "vendor/gopkg.in/mgo.v2"]
 	path = vendor/gopkg.in/mgo.v2
-	url = https://gopkg.in/mgo.v2
+	url = https://github.com/go-mgo/mgo.git
 [submodule "vendor/gopkg.in/tomb.v2"]
 	path = vendor/gopkg.in/tomb.v2
-	url = https://gopkg.in/tomb.v2
+	url = https://github.com/go-tomb/tomb.git
 [submodule "vendor/gopkg.in/yaml.v2"]
 	path = vendor/gopkg.in/yaml.v2
-	url = https://gopkg.in/yaml.v2
+	url = https://github.com/go-yaml/yaml.git
 [submodule "vendor/github.com/go-mgo/mgo"]
 	path = vendor/github.com/go-mgo/mgo
 	url = https://github.com/go-mgo/mgo
