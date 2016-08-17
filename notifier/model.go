@@ -23,6 +23,6 @@ type Problem struct {
 	LongDescription string
 	FirstOccured    time.Time
 	LastUpdate      time.Time
-	Slave           uint
-	ReplicaSet      uint
+	Slave           *uint
+	ReplicaSet      *uint
 }
