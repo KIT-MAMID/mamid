@@ -44,9 +44,9 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session,
 
 	if err != nil {
 		return nil, &msp.Error{
-			Identifier:      fmt.Sprintf("conn_%d", port),
+			Identifier:      msp.SlaveConnectMongodError,
 			Description:     fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.dial() failed with\n%s", err.Error()),
+			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.dial() failed with: %s", err),
 		}
 	}
 	sess.SetMode(mgo.Monotonic, true)
@@ -58,7 +58,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	running := bson.M{}
 	if err := sess.Run("isMaster", &running); err != nil {
 		return msp.Mongod{}, &msp.Error{
-			Identifier:      fmt.Sprintf("getstatus_%d", port),
+			Identifier:      msp.SlaveGetMongodStatusError,
 			Description:     fmt.Sprintf("Getting master information from mongod instance on port %d failed", port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"isMaster\") failed with\n%s", err.Error()),
 		}, replSetUnknown
@@ -79,7 +79,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	status := bson.M{}
 	if err := sess.Run("replSetGetStatus", &status); err != nil {
 		return msp.Mongod{}, &msp.Error{
-			Identifier:      fmt.Sprintf("getstatus_%d", port),
+			Identifier:      msp.SlaveGetMongodStatusError,
 			Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") failed with\n%s", err.Error()),
 		}, replSetUnknown
@@ -167,7 +167,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			err := sess.Run("replSetInitiate", &result)
 			if err != nil {
 				return &msp.Error{
-					Identifier:      fmt.Sprintf("replsetinit_%d", m.Port),
+					Identifier:      msp.SlaveReplicaSetInitError,
 					Description:     fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetName, m.Port),
 					LongDescription: fmt.Sprintf("Command replSetInitiate failed with\n%s", err.Error()),
 				}
@@ -184,7 +184,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		err := sess.Run(cmd, &result)
 		if err != nil {
 			return &msp.Error{
-				Identifier:      fmt.Sprintf("replsetreconfig_%d", m.Port),
+				Identifier:      msp.SlaveReplicaSetConfigError,
 				Description:     fmt.Sprintf("Replica set %s could not be reconfigured with replicaset members on instance on port %d", m.ReplicaSetName, m.Port),
 				LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, err.Error()),
 			}
@@ -194,7 +194,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 
 	return &msp.Error{
-		Identifier:      "protocol",
+		Identifier:      msp.SlaveMongodProtocolError,
 		Description:     "Protocol error",
 		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %s received", m.State),
 	}

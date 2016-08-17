@@ -58,3 +58,8 @@ func (e *Error) validateFields() error {
 const CommunicationError string = "COMM" // slave is unreachable or slave response not understood
 const BadStateDescription string = "BADSTATE"
 const SlaveSpawnError string = "SLAVESPAWN"
+const SlaveConnectMongodError string = "SLAVECONERR"
+const SlaveGetMongodStatusError string = "SLAVEGETSTATUSERR"
+const SlaveReplicaSetInitError string = "SLAVEREPLSETINIT"
+const SlaveReplicaSetConfigError string = "SLAVEREPLSETCONFIG"
+const SlaveMongodProtocolError string = "SLAVEMONGODPROTOERR"
