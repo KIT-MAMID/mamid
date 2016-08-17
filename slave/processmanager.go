@@ -1,31 +1,31 @@
 package slave
 
 import (
-	"github.com/KIT-MAMID/mamid/msp"
-	"os/exec"
 	"fmt"
-	"strings"
+	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
+	"os/exec"
+	"strings"
 )
 
 type ProcessManager struct {
-	command string
-	dataDir string
+	command          string
+	dataDir          string
 	runningProcesses map[msp.PortNumber]*exec.Cmd
 }
 
 func NewProcessManager(command string, dataDir string) ProcessManager {
 	return ProcessManager{
-		command: command,
-		dataDir: dataDir,
+		command:          command,
+		dataDir:          dataDir,
 		runningProcesses: make(map[msp.PortNumber]*exec.Cmd),
-	};
+	}
 }
 
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 
 	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetName)
-	if err := unix.Access(dbDir, unix.R_OK | unix.W_OK | unix.X_OK); err != nil {
+	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
 			panic("Could not create a readable and writable directory at %s")
 		}

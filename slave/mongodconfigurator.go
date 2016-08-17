@@ -1,22 +1,23 @@
 package slave
 
 import (
+	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
-	"fmt"
 	"gopkg.in/mgo.v2/bson"
-	"strings"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 const (
-	replSetStartup = 0
-	replSetPrimary = 1
-	replSetSecondary = 2
+	replSetStartup    = 0
+	replSetPrimary    = 1
+	replSetSecondary  = 2
 	replSetRecovering = 3
-	replSetUnknown = 6
+	replSetUnknown    = 6
 )
+
 type replSetState int
 
 type MongodConfigurator interface {
@@ -31,18 +32,18 @@ type ConcreteMongodConfigurator struct {
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session, *msp.Error) {
 	sess, err := c.dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port))
 
-/*
-	mgo.SetDebug(true)
+	/*
+		mgo.SetDebug(true)
 
-	var aLogger *log.Logger
-	aLogger = log.New(os.Stderr, "", log.LstdFlags)
-	mgo.SetLogger(aLogger)
-*/
+		var aLogger *log.Logger
+		aLogger = log.New(os.Stderr, "", log.LstdFlags)
+		mgo.SetLogger(aLogger)
+	*/
 
 	if err != nil {
 		return nil, &msp.Error{
-			Identifier: fmt.Sprintf("conn_%d", port),
-			Description: fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
+			Identifier:      fmt.Sprintf("conn_%d", port),
+			Description:     fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
 			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.dial() failed with\n%s", err.Error()),
 		}
 	}
@@ -55,19 +56,19 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	running := bson.M{}
 	if err := sess.Run("isMaster", &running); err != nil {
 		return msp.Mongod{}, &msp.Error{
-			Identifier: fmt.Sprintf("getstatus_%d", port),
-			Description: fmt.Sprintf("Getting master information from mongod instance on port %d failed", port),
+			Identifier:      fmt.Sprintf("getstatus_%d", port),
+			Description:     fmt.Sprintf("Getting master information from mongod instance on port %d failed", port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"isMaster\") failed with\n%s", err.Error()),
 		}, replSetUnknown
 	}
 
 	if _, exists := running["setName"]; !exists {
 		return msp.Mongod{
-			Port: port,
-			ReplicaSetName: "",
-			ReplicaSetMembers: nil,
-			ShardingConfigServer: false,
-			StatusError: nil,
+			Port:                    port,
+			ReplicaSetName:          "",
+			ReplicaSetMembers:       nil,
+			ShardingConfigServer:    false,
+			StatusError:             nil,
 			LastEstablishStateError: nil,
 			State: msp.MongodStateNotRunning,
 		}, nil, replSetStartup
@@ -76,8 +77,8 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	status := bson.M{}
 	if err := sess.Run("replSetGetStatus", &status); err != nil {
 		return msp.Mongod{}, &msp.Error{
-			Identifier: fmt.Sprintf("getstatus_%d", port),
-			Description: fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", port),
+			Identifier:      fmt.Sprintf("getstatus_%d", port),
+			Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") failed with\n%s", err.Error()),
 		}, replSetUnknown
 	}
@@ -86,7 +87,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	for k, member := range status["members"].([]interface{}) {
 		pair := strings.Split(member.(bson.M)["name"].(string), ":")
 		remotePort, _ := strconv.Atoi(pair[1])
-		members[k] = msp.HostPort{pair[0], msp.PortNumber(remotePort) }
+		members[k] = msp.HostPort{pair[0], msp.PortNumber(remotePort)}
 	}
 
 	var state msp.MongodState
@@ -97,11 +98,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	}
 
 	return msp.Mongod{
-		Port: port,
-		ReplicaSetName: status["set"].(string),
-		ReplicaSetMembers: members,
-		ShardingConfigServer: false,
-		StatusError: nil,
+		Port:                    port,
+		ReplicaSetName:          status["set"].(string),
+		ReplicaSetMembers:       members,
+		ShardingConfigServer:    false,
+		StatusError:             nil,
 		LastEstablishStateError: nil,
 		State: state,
 	}, nil, replSetState(status["myState"].(int))
@@ -154,7 +155,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 	if m.State == msp.MongodStateDestroyed {
 		var result interface{}
-		sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", MongodSoftShutdownTimeout }}, result)
+		sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", MongodSoftShutdownTimeout}}, result)
 		return nil // shutdown never errors ... We'll just try to force kill the process after another timeout
 	}
 
@@ -164,8 +165,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			err := sess.Run("replSetInitiate", &result)
 			if err != nil {
 				return &msp.Error{
-					Identifier: fmt.Sprintf("replsetinit_%d", m.Port),
-					Description: fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetName, m.Port),
+					Identifier:      fmt.Sprintf("replsetinit_%d", m.Port),
+					Description:     fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetName, m.Port),
 					LongDescription: fmt.Sprintf("Command replSetInitiate failed with\n%s", err.Error()),
 				}
 			}
@@ -173,7 +174,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 		members := make([]bson.M, len(m.ReplicaSetMembers))
 		for k, member := range m.ReplicaSetMembers {
-			members[k] = bson.M{ "_id": k, "host": fmt.Sprintf("%s:%d", member.Hostname, member.Port) }
+			members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.Hostname, member.Port)}
 		}
 
 		var result interface{}
@@ -181,8 +182,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		err := sess.Run(cmd, &result)
 		if err != nil {
 			return &msp.Error{
-				Identifier: fmt.Sprintf("replsetreconfig_%d", m.Port),
-				Description: fmt.Sprintf("Replica set %s could not be reconfigured with replicaset members on instance on port %d", m.ReplicaSetName, m.Port),
+				Identifier:      fmt.Sprintf("replsetreconfig_%d", m.Port),
+				Description:     fmt.Sprintf("Replica set %s could not be reconfigured with replicaset members on instance on port %d", m.ReplicaSetName, m.Port),
 				LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, err.Error()),
 			}
 		}
@@ -191,8 +192,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 
 	return &msp.Error{
-		Identifier: "protocol",
-		Description: "Protocol error",
+		Identifier:      "protocol",
+		Description:     "Protocol error",
 		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %d received", m.State),
 	}
 }

@@ -1,8 +1,8 @@
 package slave
 
 import (
-	"github.com/KIT-MAMID/mamid/msp"
 	"fmt"
+	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
 	"sync"
 	"time"
@@ -14,18 +14,18 @@ const MongodSoftShutdownTimeout = 3
 const MongodHardShutdownTimeout = 5
 
 type Controller struct {
-	processes ProcessManager
+	processes    ProcessManager
 	configurator MongodConfigurator
 
-	busyTable map[msp.PortNumber]*sync.Mutex
+	busyTable     map[msp.PortNumber]*sync.Mutex
 	busyTableLock sync.Mutex
 }
 
 func NewController(dataDir string) *Controller {
 	return &Controller{
-		processes: NewProcessManager("mongod", dataDir),
-		configurator: &ConcreteMongodConfigurator{ mgo.Dial },
-		busyTable: make(map[msp.PortNumber]*sync.Mutex),
+		processes:     NewProcessManager("mongod", dataDir),
+		configurator:  &ConcreteMongodConfigurator{mgo.Dial},
+		busyTable:     make(map[msp.PortNumber]*sync.Mutex),
 		busyTableLock: sync.Mutex{},
 	}
 }
@@ -56,8 +56,8 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		if err != nil {
 			return &msp.Error{
-				Identifier: fmt.Sprintf("spawn_%d", m.Port),
-				Description: fmt.Sprintf("Unable to start a mongod instance on port %d", m.Port),
+				Identifier:      fmt.Sprintf("spawn_%d", m.Port),
+				Description:     fmt.Sprintf("Unable to start a mongod instance on port %d", m.Port),
 				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed for mongod on port %d with name %s\n%s", m.Port, m.ReplicaSetName, err.Error()),
 			}
 		}
