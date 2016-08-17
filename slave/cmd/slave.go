@@ -5,16 +5,21 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	. "github.com/KIT-MAMID/mamid/slave"
+	"github.com/Sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"gopkg.in/mgo.v2"
 	"os/exec"
 )
+
+var log = logrus.WithField("module", "slave")
 
 const MongodExecutableDefaultName = "mongod"
 const DefaultMongodSoftShutdownTimeout = "3s" // seconds
 const DefaultMongodHardShutdownTimeout = "5s" // seconds
 
 func main() {
+
+	log.SetLevel(logrus.DebugLevel)
 
 	var (
 		mongodExecutable, dataDir                                  string
@@ -35,19 +40,17 @@ func main() {
 	// Assert dataDir is valid. TODO should we do this lazyly?
 
 	if dataDir == "" {
-		println("No root data directory passed; specify with -data=/path/to/root/dir")
-		return
+		log.Fatal("No root data directory passed; specify with -data=/path/to/root/dir")
 	}
 
 	if err := unix.Access(dataDir, unix.W_OK); err != nil {
-		println(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))
-		return
+		log.Fatal(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))
 	}
 
 	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir) // TODO directory creation should happen in the component that uses the path
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			fmt.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
+			log.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
 			return
 		}
 	}
@@ -56,14 +59,12 @@ func main() {
 
 	mongodSoftShutdownTimeout, err := time.ParseDuration(mongodSoftShutdownTimeoutStr)
 	if !err {
-		fmt.Printf("could not convert soft shutdown timeout to time.Duration: %s", err)
-		return
+		log.Fatal("could not convert soft shutdown timeout to time.Duration: %s", err)
 	}
 
 	mongodHardShutdownTimeout, err := time.Duration(mongodHardShutdownTimeoutStr)
 	if !err {
-		fmt.Printf("could not convert hard shutdown timeout to time.Duration: %s", err)
-		return
+		log.Fatal("could not convert hard shutdown timeout to time.Duration: %s", err)
 	}
 
 	processManager := NewProcessManager(mongodExecutable, dataDir)
