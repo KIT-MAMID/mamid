@@ -57,18 +57,18 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 	hostPort, mspMongod, err = d.mspMongodStateRepresentation(tx, dbMongod)
 	assert.Nil(t, err, "ParentSlaveID and DesiredStateID should suffice to build MSP MongodState representation")
 
-	assert.EqualValues(t, msp.HostPort{dbMongod.ParentSlave.Hostname, uint16(dbMongod.ParentSlave.Port)}, hostPort)
+	assert.EqualValues(t, msp.HostPort{dbMongod.ParentSlave.Hostname, msp.PortNumber(dbMongod.ParentSlave.Port)}, hostPort)
 
 	expectedMongodState, _ := mspMongodStateFromExecutionState(dbMongod.DesiredState.ExecutionState)
 
 	assert.Equal(t, msp.Mongod{
-		Port:           uint16(dbMongod.Port),
+		Port:           msp.PortNumber(dbMongod.Port),
 		ReplicaSetName: dbMongod.ReplSetName,
 
 		// TODO: this is hardcoded knowlege about the contents of the test database.
 		// Use something auto-generated instead.
 		// Also: is this field actually relevant in an EstablishState call?
-		ReplicaSetMembers: []msp.HostPort{msp.HostPort{"host1", 2000}},
+		ReplicaSetMembers: []msp.HostPort{{"host1", 2000}},
 
 		ShardingConfigServer: dbMongod.DesiredState.IsShardingConfigServer,
 		State:                expectedMongodState,
@@ -99,7 +99,7 @@ func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
 	members, err = mspDesiredReplicaSetMembersForMongod(tx, dbMongod)
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(members))
-	assert.EqualValues(t, msp.HostPort{parentSlave.Hostname, uint16(dbMongod.Port)}, members[0],
+	assert.EqualValues(t, msp.HostPort{parentSlave.Hostname, msp.PortNumber(dbMongod.Port)}, members[0],
 		"the list of replica set members of mongod m should include mongod m") // TODO do we actually want this?
 
 	// Set the desired state to not running
