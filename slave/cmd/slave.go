@@ -6,6 +6,7 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	. "github.com/KIT-MAMID/mamid/slave"
 	"golang.org/x/sys/unix"
+	"gopkg.in/mgo.v2"
 	"os/exec"
 )
 
@@ -64,6 +65,13 @@ func main() {
 		return
 	}
 
+	processManager := NewProcessManager(mongodExecutable, dataDir)
+	configurator := &ConcreteMongodConfigurator{
+		dial: mgo.Dial,
+		MongodSoftShutdownTimeout: mongodSoftShutdownTimeout,
+	}
+
+	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)
 	server := msp.NewServer(controller)
 	server.Run()
 }

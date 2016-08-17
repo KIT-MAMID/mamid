@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -26,7 +27,8 @@ type MongodConfigurator interface {
 }
 
 type ConcreteMongodConfigurator struct {
-	dial func(url string) (*mgo.Session, error)
+	dial                      func(url string) (*mgo.Session, error)
+	MongodSoftShutdownTimeout time.Duration
 }
 
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session, *msp.Error) {
@@ -155,7 +157,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 	if m.State == msp.MongodStateDestroyed {
 		var result interface{}
-		sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", MongodSoftShutdownTimeout}}, result)
+		sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
 		return nil // shutdown never errors ... We'll just try to force kill the process after another timeout
 	}
 

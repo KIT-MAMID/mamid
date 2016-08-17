@@ -3,7 +3,6 @@ package slave
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
-	"gopkg.in/mgo.v2"
 	"sync"
 	"time"
 )
@@ -11,23 +10,23 @@ import (
 // TODO make all these constants defaults for CLI parameters.
 const DataDBDir = "db"
 
-const MongodSoftShutdownTimeout = 3
-const MongodHardShutdownTimeout = 5
-
 type Controller struct {
-	processes    ProcessManager // TODO rename variable
+	processes    *ProcessManager // TODO rename variable
 	configurator MongodConfigurator
 
 	busyTable     map[msp.PortNumber]*sync.Mutex
 	busyTableLock sync.Mutex
+
+	mongodHardShutdownTimeout time.Duration
 }
 
-func NewController(mongodExecutablePath, dataDir string) *Controller {
+func NewController(processManager *ProcessManager, configurator MongodConfigurator, mongodHardShutdownTimeout time.Duration) *Controller {
 	return &Controller{
-		processes:     NewProcessManager(mongodExecutablePath, dataDir),
-		configurator:  &ConcreteMongodConfigurator{mgo.Dial},
-		busyTable:     make(map[msp.PortNumber]*sync.Mutex),
-		busyTableLock: sync.Mutex{},
+		processes:                 processManager,
+		configurator:              configurator,
+		busyTable:                 make(map[msp.PortNumber]*sync.Mutex),
+		busyTableLock:             sync.Mutex{},
+		mongodHardShutdownTimeout: mongodHardShutdownTimeout,
 	}
 }
 
@@ -68,9 +67,9 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 	if m.State == msp.MongodStateDestroyed {
 		go func() {
-			time.Sleep(MongodHardShutdownTimeout * time.Second)
-			c.processes.KillProcess(m.Port)
-			c.busyTable[m.Port].Unlock() // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
+			time.Sleep(c.mongodHardShutdownTimeout)
+			c.processes.KillProcess(m.Port) // TODO error handling => log error
+			c.busyTable[m.Port].Unlock()    // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
 		}()
 	}
 
