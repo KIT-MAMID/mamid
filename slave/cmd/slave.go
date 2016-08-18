@@ -9,30 +9,32 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/mgo.v2"
 	"os/exec"
+	"time"
 )
 
 var log = logrus.WithField("module", "slave")
 
 const MongodExecutableDefaultName = "mongod"
-const DefaultMongodSoftShutdownTimeout = "3s" // seconds
-const DefaultMongodHardShutdownTimeout = "5s" // seconds
+
+var DefaultMongodSoftShutdownTimeout, _ = time.ParseDuration("3s") // seconds
+var DefaultMongodHardShutdownTimeout, _ = time.ParseDuration("5s") // seconds
 
 func main() {
 
-	log.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.DebugLevel)
 
 	var (
-		mongodExecutable, dataDir                                  string
-		mongodSoftShutdownTimeoutStr, mongodHardShutdownTimeoutStr string
+		mongodExecutable, dataDir                            string
+		mongodSoftShutdownTimeout, mongodHardShutdownTimeout time.Duration
 	)
 
 	flag.StringVar(&dataDir, "data", "", "Persistent data and slave configuration directory")
 	mongodExecutableLookupPath, _ := exec.LookPath(MongodExecutableDefaultName)
 	flag.StringVar(&mongodExecutable, "mongodExecutable", mongodExecutableLookupPath, "Path to or name of Mongod binary")
 
-	flag.StringVar(&mongodSoftShutdownSeconds, "mongod.shutdownTimeout.soft", DefaultMongodSoftShutdownTimeout,
+	flag.DurationVar(&mongodSoftShutdownTimeout, "mongod.shutdownTimeout.soft", DefaultMongodSoftShutdownTimeout,
 		"Duration to wait for regular Mongod shutdown call to return. Specify with suffix [ms,s,min,...]")
-	flag.StringVar(&mongodHardShutdownSeconds, "mongod.shutdownTimeout.hard", DefaultMongodHardShutdownTimeout,
+	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.shutdownTimeout.hard", DefaultMongodHardShutdownTimeout,
 		"Duration to wait after issuing a shutdown call before the Mongod is killed (SIGKILL). Specify with suffix [ms,s,min,...]")
 
 	flag.Parse()
@@ -55,21 +57,9 @@ func main() {
 		}
 	}
 
-	// Convert timeouts to internal representation
-
-	mongodSoftShutdownTimeout, err := time.ParseDuration(mongodSoftShutdownTimeoutStr)
-	if !err {
-		log.Fatal("could not convert soft shutdown timeout to time.Duration: %s", err)
-	}
-
-	mongodHardShutdownTimeout, err := time.Duration(mongodHardShutdownTimeoutStr)
-	if !err {
-		log.Fatal("could not convert hard shutdown timeout to time.Duration: %s", err)
-	}
-
 	processManager := NewProcessManager(mongodExecutable, dataDir)
 	configurator := &ConcreteMongodConfigurator{
-		dial: mgo.Dial,
+		Dial: mgo.Dial,
 		MongodSoftShutdownTimeout: mongodSoftShutdownTimeout,
 	}
 

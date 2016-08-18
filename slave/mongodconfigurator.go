@@ -27,12 +27,12 @@ type MongodConfigurator interface {
 }
 
 type ConcreteMongodConfigurator struct {
-	dial                      func(url string) (*mgo.Session, error)
+	Dial                      func(url string) (*mgo.Session, error)
 	MongodSoftShutdownTimeout time.Duration
 }
 
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session, *msp.Error) {
-	sess, err := c.dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port)) // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
+	sess, err := c.Dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port)) // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
 
 	/*
 		mgo.SetDebug(true)
@@ -46,7 +46,7 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session,
 		return nil, &msp.Error{
 			Identifier:      msp.SlaveConnectMongodError,
 			Description:     fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.dial() failed with: %s", err),
+			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.connect() failed with: %s", err),
 		}
 	}
 	sess.SetMode(mgo.Monotonic, true)

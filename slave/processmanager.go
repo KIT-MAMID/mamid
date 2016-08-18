@@ -14,8 +14,8 @@ type ProcessManager struct {
 	runningProcesses map[msp.PortNumber]*exec.Cmd
 }
 
-func NewProcessManager(command string, dataDir string) ProcessManager {
-	return ProcessManager{
+func NewProcessManager(command string, dataDir string) *ProcessManager {
+	return &ProcessManager{
 		command:          command,
 		dataDir:          dataDir,
 		runningProcesses: make(map[msp.PortNumber]*exec.Cmd),
