@@ -4,9 +4,11 @@ import (
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
+	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-	"log"
 )
+
+var deployerLog = logrus.WithField("module", "deployer")
 
 /*
   Listens on the bus for state mismatches and tries to solve them by pushing the desired state to the Mongod
@@ -42,14 +44,14 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 
 	hostPort, mspMongod, err := d.mspMongodStateRepresentation(tx, mongod)
 	if err != nil {
-		log.Println(err)
+		deployerLog.Println(err)
 	}
 	// Readonly tx
 	tx.Rollback()
 
 	mspError := d.MSPClient.EstablishMongodState(hostPort, mspMongod)
 	if mspError != nil {
-		log.Printf("deployer: MSP error establishing mongod state for Mongod `(%v(id=%d),%d,)` in Replica Set `%s`: %s",
+		deployerLog.Printf("deployer: MSP error establishing mongod state for Mongod `(%v(id=%d),%d,)` in Replica Set `%s`: %s",
 			mongod.ParentSlave, mongod.ParentSlaveID, mongod.Port, mongod.ReplSetName, mspError)
 	}
 
