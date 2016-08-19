@@ -22,15 +22,18 @@
                    aria-expanded="true"
                    aria-controls="collapseOne">
                     Unassigned slaves
-                </a> <span class="label label-primary">{{unassigned_slaves.length}}</span> <span data-toggle="tooltip" data-placement="right"
-                          title="Slaves need to be in 'disabled' state to be assignable to a risk group."><span
+                </a> <span class="label label-primary">{{unassigned_slaves.length}}</span> <span data-toggle="tooltip"
+                                                                                                 data-placement="right"
+                                                                                                 title="Slaves need to be in 'disabled' state to be assignable to a risk group."><span
                     class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></span>
             </h4>
         </div>
         <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
             <ul class="list-group">
-                <li ng-repeat="slave in unassigned_slaves" class="list-group-item">{{slave.hostname}}
-                        <span class="pull-right">Assign to
+                <li ng-repeat="slave in unassigned_slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
+                        class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    {{slave.hostname}}</a>
+                    <span class="pull-right">Assign to
                             <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave)">
                                 <option value="" selected>Select group..</option>
                                 <option ng-repeat="riskgroup in riskgroups"
@@ -43,7 +46,9 @@
     </div>
     <div ng-repeat="riskgroup in riskgroups" class="panel panel-default">
         <div class="panel-heading clearfix" data-toggle="collapse" role="tab" id="heading{{riskgroup.id}}">
-            <span class="pull-right"><button class="btn btn-danger" ng-disabled="!isDeletable(riskgroup)" data-toggle="modal" data-target="#confirm_remove{{riskgroup.id}}"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></span>
+            <span class="pull-right"><button class="btn btn-danger" ng-disabled="!isDeletable(riskgroup)"
+                                             data-toggle="modal" data-target="#confirm_remove{{riskgroup.id}}"><span
+                    class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></span>
             <h4 class="panel-title" style="padding-top: 7.2px;">
                 <a class="collapsed" role="button" href="" data-toggle="collapse"
                    data-target="#collapse{{riskgroup.id}}" data-parent="#accordion" aria-expanded="false"
@@ -55,12 +60,15 @@
         <div id="collapse{{riskgroup.id}}" class="panel-collapse collapse" role="tabpanel"
              aria-labelledby="heading{{riskgroup.id}}">
             <ul class="list-group">
-                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span> {{slave.hostname}}</a>
+                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
+                        class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    {{slave.hostname}}</a>
                     <span class="pull-right">Assign to
                         <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave, riskgroup)">
                             <option value="" selected>Select group..</option>
                             <option value="0">Remove from risk group</option>
-                            <option ng-repeat="riskgroup_sel in riskgroups" value="{{riskgroup_sel.id}}" ng-if="riskgroup_sel.id!=riskgroup.id">{{riskgroup_sel.name}}</option>
+                            <option ng-repeat="riskgroup_sel in riskgroups" value="{{riskgroup_sel.id}}"
+                                    ng-if="riskgroup_sel.id!=riskgroup.id">{{riskgroup_sel.name}}</option>
                             </select>
                         </span>
                 </li>
@@ -70,7 +78,8 @@
 </div>
 
 
-<div ng-repeat="riskgroup in riskgroups" class="modal fade" id="confirm_remove{{riskgroup.id}}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel{{riskgroup.id}}">
+<div ng-repeat="riskgroup in riskgroups" class="modal fade" id="confirm_remove{{riskgroup.id}}" tabindex="-1"
+     role="dialog" aria-labelledby="myModalLabel{{riskgroup.id}}">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -82,7 +91,9 @@
                 You are about to remove the risk group '{{riskgroup.name}}'.
             </div>
             <div class="modal-footer">
-                <button type="button" ng-click="removeRiskGroup(riskgroup)" class="btn btn-danger">Remove Risk Group '{{riskgroup.name}}'</button>
+                <button type="button" ng-click="removeRiskGroup(riskgroup)" class="btn btn-danger">Remove Risk Group
+                    '{{riskgroup.name}}'
+                </button>
                 <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
             </div>
         </div>
