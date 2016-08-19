@@ -2,7 +2,8 @@
 
 <h2 class="sub-header">Slaves with Problems</h2>
 <div class="bs-callout bs-callout-unknown" ng-repeat="slave in slaves" ng-if="slave.problems.length > 0">
-    <h4>{{ slave.hostname }} - <b>Problems</b></h4>
+    <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+        {{ slave.hostname }} - <b>Problems</b></h4>
     <span class="pull-right">
                     <a href="#/slaves/{{slave.id}}" class="btn btn-default"><span class="glyphicon glyphicon-wrench"
                                                                                   aria-hidden="true"></span></a>
@@ -17,7 +18,9 @@
 <h2 class="sub-header">Maintenance</h2>
 <div class="bs-callout bs-callout-maintenance" ng-repeat="slave in slaves"
      ng-if="slave.configured_state == 'maintenance' && slave.problems.length == 0">
-    <h4>{{ slave.hostname }} - <b>Maintenance</b>
+    <h4><span
+            class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span> {{ slave.hostname
+        }} - <b>Maintenance</b>
         <span class="pull-right">
                     <a href="#/slaves/{{slave.id}}" class="btn btn-default"><span class="glyphicon glyphicon-wrench"
                                                                                   aria-hidden="true"></span></a>
@@ -28,7 +31,8 @@
 <h2 class="sub-header">Disabled</h2>
 <div class="bs-callout bs-callout-disabled" ng-repeat="slave in slaves"
      ng-if="slave.configured_state == 'disabled' && slave.problems.length == 0">
-    <h4>{{ slave.hostname }} - <b>Disabled</b>
+    <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span> {{
+        slave.hostname }} - <b>Disabled</b>
         <span class="pull-right">
                     <a href="#/slaves/{{slave.id}}" class="btn btn-default"><span class="glyphicon glyphicon-wrench"
                                                                                   aria-hidden="true"></span></a>
@@ -39,7 +43,9 @@
 <h2 class="sub-header">Active</h2>
 <div class="bs-callout bs-callout-active" ng-repeat="slave in slaves"
      ng-if="slave.configured_state == 'active' && slave.problems.length == 0">
-    <h4>{{ slave.hostname }} - <b>Active</b>
+    <h4><span
+            class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span> {{ slave.hostname
+        }} - <b>Active</b>
         <span class="pull-right">
                     <a href="#/slaves/{{slave.id}}" class="btn btn-default"><span class="glyphicon glyphicon-wrench"
                                                                                   aria-hidden="true"></span></a>
