@@ -10,7 +10,9 @@ import (
 
 func createDB(t *testing.T) (db *model.DB, err error) {
 	// Setup database
-	db, err = model.InitializeTestDB()
+	db, path, err := model.InitializeTestDB()
+	t.Logf("creating test db: %s", path)
+
 	tx := db.Begin()
 
 	dbSlave := model.Slave{

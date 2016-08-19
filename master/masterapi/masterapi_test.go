@@ -16,7 +16,10 @@ import (
 
 func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, err error) {
 	// Setup database
-	db, err = model.InitializeTestDB()
+	db, path, err := model.InitializeTestDB()
+	assert.Nil(t, err)
+	t.Logf("creating test db: %s", path)
+
 	tx := db.Begin()
 
 	dbRiskGroup := model.RiskGroup{

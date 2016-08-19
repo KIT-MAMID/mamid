@@ -223,35 +223,43 @@ func InitializeFileFromFile(path string) (db *DB, err error) {
 
 }
 
-func InitializeTestDB() (db *DB, err error) {
+func createTestDBFile() (path string) {
+	file, err := ioutil.TempFile(os.TempDir(), "mamid-")
+	if err != nil {
+		modelLog.Fatalf("could not create test database file: %s", err)
+	} else {
+		modelLog.Debugf("created test database: %s", file.Name())
+	}
+	return file.Name()
+}
 
-	path := "/tmp/mamid_test.db"
-	os.Remove(path)
+func InitializeTestDB() (db *DB, path string, err error) {
+
+	path = createTestDBFile()
 	db, err = initializeDB(path)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	migrateDB(db)
 
-	return db, nil
+	return db, path, nil
 
 }
 
-func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, err error) {
+func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, path string, err error) {
 
-	path := "/tmp/mamid_test.db"
-	os.Remove(path)
+	path = createTestDBFile()
 	db, err = initializeDB(path)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	tx := db.Begin()
 	if sqlFilePath != "" {
 		statements, err := ioutil.ReadFile(sqlFilePath)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		tx.Exec(string(statements), []interface{}{})
@@ -261,7 +269,7 @@ func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, err error) {
 
 	migrateDB(db)
 
-	return db, nil
+	return db, path, nil
 
 }
 

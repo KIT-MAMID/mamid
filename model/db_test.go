@@ -51,7 +51,7 @@ func fixtureEmptyProblem() *Problem {
 ////////////////////////////////////////////////////////////////////////////////
 
 func TestCanInitializeDB(t *testing.T) {
-	_, err := InitializeTestDB()
+	_, _, err := InitializeTestDB()
 	assert.NoError(t, err)
 }
 
@@ -61,7 +61,7 @@ func TestCanInitializeDB(t *testing.T) {
 */
 func TestRelationshipMongodParentSlave(t *testing.T) {
 
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -107,7 +107,7 @@ func TestRelationshipMongodParentSlave(t *testing.T) {
 // Test RiskGroup Slave relationship
 func TestRiskGroupSlaveRelationship(t *testing.T) {
 
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -136,7 +136,7 @@ func TestRiskGroupSlaveRelationship(t *testing.T) {
 // Test ReplicaSet - Mongod Relationship
 func TestReplicaSetMongodRelationship(t *testing.T) {
 
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -165,7 +165,7 @@ func TestReplicaSetMongodRelationship(t *testing.T) {
 // Test Mongod - MongodState relationship
 func TestMongodMongodStateRelationship(t *testing.T) {
 
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -206,7 +206,7 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 
 // Test MongodState - ReplicaSetMember relationship
 func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -230,7 +230,7 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 
 func TestDeleteBehavior(t *testing.T) {
 
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -264,7 +264,7 @@ func TestDeleteBehavior(t *testing.T) {
 }
 
 func TestGormFirstBehavior(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -273,7 +273,7 @@ func TestGormFirstBehavior(t *testing.T) {
 }
 
 func TestGormFindBehavior(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -287,7 +287,7 @@ func TestGormFindBehavior(t *testing.T) {
 }
 
 func TestGormTransactions(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 
 	//Create a slave
 	tx0 := db.Begin()
@@ -338,7 +338,7 @@ func TestGormTransactions(t *testing.T) {
 }
 
 func TestForeignKeyChecking(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 
 	tx0 := db.Begin()
 
@@ -361,7 +361,7 @@ func TestForeignKeyChecking(t *testing.T) {
 }
 
 func TestCascade(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 
 	tx0 := db.Begin()
 	assert.NoError(t, tx0.Exec("CREATE TABLE foo(id int primary key);").Error)
@@ -389,7 +389,7 @@ func TestCascade(t *testing.T) {
 }
 
 func TestCascadeSlaves(t *testing.T) {
-	db, _ := InitializeTestDB()
+	db, _, _ := InitializeTestDB()
 	tx := db.Begin()
 
 	r := fixtureEmptyRiskGroup()
