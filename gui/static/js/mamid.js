@@ -190,49 +190,49 @@ mamidApp.controller('mainController', function ($scope, $location, filterFilter,
 
         $scope.slaves = slaves;
         for (var i = 0; i < $scope.slaves.length; i++) {
-            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id}, function(problems) {
-                 $scope.genChart();
+            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id}, function (problems) {
+                $scope.genChart();
             });
         }
     });
-    $scope.genChart = function() {
+    $scope.genChart = function () {
         c3.generate({
-                bindto: '#slaves',
-                data: {
-                    columns: [
-                        ['Active', $scope.getStateCount('active')],
-                        ['Maintenance', $scope.getStateCount('maintenance')],
-                        ['Disabled', $scope.getStateCount('disabled')],
-                        ['Problematic', $scope.getProblemCount()]
-                    ],
-                    type: 'donut',
-                },
-                donut: {
-                    title: "Slave states"
-                }
-                ,
-                color: {
-                    pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
-                }
-                ,
-            })
-            ;
+            bindto: '#slaves',
+            data: {
+                columns: [
+                    ['Active', $scope.getStateCount('active')],
+                    ['Maintenance', $scope.getStateCount('maintenance')],
+                    ['Disabled', $scope.getStateCount('disabled')],
+                    ['Problematic', $scope.getProblemCount()]
+                ],
+                type: 'donut',
+            },
+            donut: {
+                title: "Slave states"
+            }
+            ,
+            color: {
+                pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+            }
+            ,
+        })
+        ;
     };
     $scope.getStateCount = function (state) {
         var s = []
-        for(var i=0;i<$scope.slaves.length;i++){
-            if($scope.slaves[i].problems.length == 0) {
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            if ($scope.slaves[i].problems.length == 0) {
                 s.push($scope.slaves[i]);
             }
         }
         return filterFilter(s, {configured_state: state}).length;
     };
 
-    $scope.getProblemCount = function() {
+    $scope.getProblemCount = function () {
         var count = 0;
-        for(var i=0;i<$scope.slaves.length;i++){
+        for (var i = 0; i < $scope.slaves.length; i++) {
             window.console.log($scope.slaves[i].problems.length);
-            if($scope.slaves[i].problems.length > 0) {
+            if ($scope.slaves[i].problems.length > 0) {
                 count++;
             }
         }
@@ -311,7 +311,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     }
 });
 
-mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService) {
+mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService, RiskGroupService) {
     var slaveId = $routeParams['slaveId'];
     $scope.is_create_view = slaveId === "new";
     if ($scope.is_create_view) {
@@ -327,6 +327,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.slave.$promise.then(function () {
+            $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             $scope.edit_slave = angular.copy($scope.slave);
         });
     }

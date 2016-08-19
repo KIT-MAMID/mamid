@@ -1,8 +1,13 @@
-<h1 class="page-header" ng-if="!is_create_view">Edit Slave '{{slave.hostname}}'</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Slave '{{slave.hostname}}'
+    <small><a href="/#/riskgroups"><span class="label label-primary"
+                 ng-if="slave.risk_group_id != null">{{slave.riskgroup.name}}</span></a></small>
+</h1>
 <h1 class="page-header" ng-if="is_create_view">New Slave</h1>
 
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
-    <h4>{{problem.description}} <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
+    <h4>{{problem.description}}
+        <small>Known since {{formatDate(problem.first_occurred)}}</small>
+    </h4>
     <p>{{problem.long_description}}</p>
 </div>
 
@@ -43,7 +48,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <th>Slave with persistent storage <span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>
+                        <th>Slave with persistent storage <span class="glyphicon glyphicon-hdd"
+                                                                aria-hidden="true"></span>
                         </th>
                         <td colspan="2">
                             <input type="checkbox" class="form-control" ng-model="edit_slave.persistent_storage"/>
@@ -54,10 +60,12 @@
                         <td>
                             <button type="submit"
                                     class="btn btn-primary pull-right" ng-if="!is_create_view">
-                                Apply</button>
+                                Apply
+                            </button>
                             <button type="submit"
                                     class="btn btn-success pull-right" ng-if="is_create_view">
-                                Create Slave</button>
+                                Create Slave
+                            </button>
                         </td>
                     </tr>
                 </table>
@@ -72,14 +80,22 @@
     <div class="panel-body">
         <div class="btn-group btn-group-justified" role="group">
             <div class="btn-group" role="group">
-                <button ng-disabled="slave.configured_state == 'unknown'" ng-class="{active: slave.configured_state == 'active'}"
-                   class="btn btn-default" ng-click="setSlaveState('active')">Active</button>
+                <button ng-disabled="slave.configured_state == 'unknown'"
+                        ng-class="{active: slave.configured_state == 'active'}"
+                        class="btn btn-default" ng-click="setSlaveState('active')">Active
+                </button>
             </div>
             <div class="btn-group" role="group">
-                <button ng-disabled="slave.configured_state == 'unknown'" ng-class="{active: slave.configured_state == 'maintenance'}" class="btn btn-default" ng-click="setSlaveState('maintenance')">Maintenance mode</button>
+                <button ng-disabled="slave.configured_state == 'unknown'"
+                        ng-class="{active: slave.configured_state == 'maintenance'}" class="btn btn-default"
+                        ng-click="setSlaveState('maintenance')">Maintenance mode
+                </button>
             </div>
-            <div  class="btn-group" role="group">
-                <button ng-disabled="slave.configured_state == 'unknown'" class="btn btn-default" ng-class="{active: slave.configured_state == 'disabled'}" ng-click="setSlaveState('disabled')">Disabled</button>
+            <div class="btn-group" role="group">
+                <button ng-disabled="slave.configured_state == 'unknown'" class="btn btn-default"
+                        ng-class="{active: slave.configured_state == 'disabled'}" ng-click="setSlaveState('disabled')">
+                    Disabled
+                </button>
             </div>
         </div>
     </div>
@@ -91,10 +107,12 @@
     <div class="panel-body">
         <p>Removal is only possible with the slave in disabled mode.</p>
         <button ng-disabled="slave.configured_state != 'disabled'" type="button" role="button" class="btn btn-danger"
-           data-toggle="modal" data-target="#confirm_remove">Remove slave '{{ slave.hostname }}' from system</button>
+                data-toggle="modal" data-target="#confirm_remove">Remove slave '{{ slave.hostname }}' from system
+        </button>
     </div>
 </div>
-<div class="modal fade" id="confirm_remove" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" ng-if="!is_create_view">
+<div class="modal fade" id="confirm_remove" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     ng-if="!is_create_view">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -106,7 +124,9 @@
                 You are about to remove the slave '{{ slave.hostname }}'.
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" ng-click="deleteSlave()">Remove slave '{{ slave.hostname }}'</button>
+                <button type="button" class="btn btn-danger" ng-click="deleteSlave()">Remove slave '{{ slave.hostname
+                    }}'
+                </button>
                 <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
             </div>
         </div>
