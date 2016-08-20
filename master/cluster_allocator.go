@@ -222,8 +222,14 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			      	      		-- i.e from which multiple slaves can be allocated for the same replica set
 			      	      		OR s.risk_group_id IS NULL
 			      	      	)
+					AND
+					s.id NOT IN ( -- Slaves already hosting a Mongod of the Replica Set
+						SELECT DISTINCT m.parent_slave_id
+						FROM mongods m
+						WHERE m.replica_set_id = ?
+					)
 			      	      ORDER BY s.utilization ASC
-			      	      LIMIT 1`, p.PersistentStorage(), SlaveStateActive, replicaSet.ID,
+			      	      LIMIT 1`, p.PersistentStorage(), SlaveStateActive, replicaSet.ID, replicaSet.ID,
 			).Scan(&leastBusySuitableSlave)
 
 			if res.RecordNotFound() {
