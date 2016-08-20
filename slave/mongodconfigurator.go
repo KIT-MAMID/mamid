@@ -110,10 +110,10 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 
 func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (msp.Mongod, *msp.Error) {
 	sess, err := c.connect(port)
-	defer sess.Close()
 	if err != nil {
 		return msp.Mongod{}, err
 	}
+	defer sess.Close()
 
 	mongod, err, _ := c.fetchConfiguration(sess, port)
 	return mongod, err
