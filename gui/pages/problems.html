@@ -1,5 +1,5 @@
 <h1 class="page-header">Problems</h1>
-<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems">
+<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems | orderBy:problem.first_occurred:true">
     <h4>{{problem.description}} <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
     <p>{{problem.long_description}}</p>
     <ul>
