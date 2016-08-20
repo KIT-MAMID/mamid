@@ -301,7 +301,15 @@ func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *
 	}
 
 	if len(currentSlave.Mongods) != 0 {
-		return fmt.Errorf("slave has active Mongods"), nil
+		//The port range of a slave with mongods may not be reduced because the mongods may be using the ports
+		if updatedSlave.MongodPortRangeBegin > currentSlave.MongodPortRangeBegin || updatedSlave.MongodPortRangeEnd < currentSlave.MongodPortRangeEnd {
+			return fmt.Errorf("The port range may not be reduced since the slave still has Mongods"), nil
+		}
+
+		//The persistence of slaves with mongods may not be changed because the mongods depend on the persistence
+		if updatedSlave.PersistentStorage != currentSlave.PersistentStorage {
+			return fmt.Errorf("The persistence may not be changed since the slave still has Mongods"), nil
+		}
 	}
 
 	return nil, nil
