@@ -66,19 +66,19 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		c.busyTableLock.Unlock()
 	} else if m.State == msp.MongodStateDestroyed {
 		return nil
-	}
+	} else {
+		c.busyTable[m.Port] = &sync.Mutex{}
+		c.busyTable[m.Port].Lock()
+		c.busyTableLock.Unlock()
+		err := c.procManager.SpawnProcess(m)
 
-	c.busyTable[m.Port] = &sync.Mutex{}
-	c.busyTable[m.Port].Lock()
-	c.busyTableLock.Unlock()
-	err := c.procManager.SpawnProcess(m)
-
-	if err != nil {
-		log.Errorf("controller: error spawning process: %s", err)
-		return &msp.Error{
-			Identifier:      msp.SlaveSpawnError,
-			Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
-			LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
+		if err != nil {
+			log.Errorf("controller: error spawning process: %s", err)
+			return &msp.Error{
+				Identifier:      msp.SlaveSpawnError,
+				Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
+				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
+			}
 		}
 	}
 
