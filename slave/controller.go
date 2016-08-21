@@ -60,15 +60,30 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 }
 
 func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
+	var mutex *sync.Mutex = nil
+
 	c.busyTableLock.Lock()
+	// acquire a lock if possible [otherwise there is no process and we need to respawn immediately]
 	if _, exists := c.busyTable[m.Port]; exists {
-		c.busyTable[m.Port].Lock()
+		mutex = c.busyTable[m.Port]
 		c.busyTableLock.Unlock()
+		mutex.Lock()
+		c.busyTableLock.Lock()
 	} else if m.State == msp.MongodStateDestroyed {
+		// if not existing, we have to do nothing
+		c.busyTableLock.Unlock()
 		return nil
-	} else {
+	}
+
+	// check if still existing after locking [else possible race condition: process might have been in destruction phase while we were waiting for the lock],
+	// else we need to respawn
+	if _, exists := c.busyTable[m.Port]; !exists {
 		c.busyTable[m.Port] = &sync.Mutex{}
 		c.busyTable[m.Port].Lock()
+		if mutex != nil {
+			mutex.Unlock() // prevent deadlock, there might be multiple goroutines waiting on the same mutex
+		}
+		mutex = c.busyTable[m.Port]
 		c.busyTableLock.Unlock()
 		err := c.procManager.SpawnProcess(m)
 
@@ -88,7 +103,9 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 			if killProcessError := c.procManager.KillProcess(m.Port); killProcessError != nil {
 				log.Error(killProcessError)
 			}
-			c.busyTable[m.Port].Unlock() // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
+			// do wait until the old instance is destroyed. Having a half destroyed unlocked instance flying around should be dangerous
+			delete(c.busyTable, m.Port)
+			mutex.Unlock()
 		}()
 		c.configurator.ApplyMongodConfiguration(m) // ignore error of destruction
 		return nil
@@ -99,9 +116,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		log.Errorf("controller: error applying Mongod configuration: %s", applyErr)
 	}
 
-	// do wait until the old instance is destroyed. Having a half destroyed unlocked instance flying around should be dangerous
-	if m.State != msp.MongodStateDestroyed {
-		c.busyTable[m.Port].Unlock()
-	}
+	// release lock preventing simultaneous configuration
+	mutex.Unlock()
 	return applyErr
 }
