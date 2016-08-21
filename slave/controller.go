@@ -33,13 +33,24 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	ports := c.procManager.RunningProcesses()
 	mongods := make([]msp.Mongod, len(ports))
+	channels := make([]chan msp.Mongod, len(ports))
 	for k, port := range ports {
-		var err *msp.Error
-		mongods[k], err = c.configurator.MongodConfiguration(port) // TODO parallelize this? => use goroutines that send into a channel whic appends (single-threaded) to the array
-		if err != nil {
-			log.Errorf("controller: error querying Mongod configuration: %s", err)
-			return nil, err
-		}
+		go func(channel chan msp.Mongod, port msp.PortNumber) {
+			mongod, err := c.configurator.MongodConfiguration(port)
+			if err != nil {
+				log.Errorf("controller: error querying Mongod configuration: %s", err)
+				channel <- msp.Mongod{
+					Port: port,
+					StatusError: err,
+					State: msp.MongodStateNotRunning,
+				}
+			} else {
+				channel <- mongod
+			}
+		}(channels[k], port)
+	}
+	for k := range ports {
+		mongods[k] = <- channels[k]
 	}
 	return mongods, nil
 }
