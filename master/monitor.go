@@ -296,10 +296,11 @@ func (m *Monitor) observeReplicaSets() {
 					AS actual_volatile_members
 				FROM replica_sets r
 				`, true, false, true, false).Rows()
+	tx.Rollback()
 	if err != nil {
 		monitorLog.WithError(err).Error("Error getting configured and actual member counts of replica sets")
+		return
 	}
-	tx.Rollback()
 
 	for replicaSetsWithMemberCounts.Next() {
 		var replicaSet model.ReplicaSet
