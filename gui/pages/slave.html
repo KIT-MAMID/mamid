@@ -25,7 +25,7 @@
     </div>
     <div class="panel-body">
         <form ng-submit="updateSlave()">
-            <fieldset ng-disabled="slave.configured_state != 'disabled'">
+            <fieldset ng-disabled="slave.configured_state != 'disabled' && slave.configured_state != 'maintenance'">
                 <table width="100%">
                     <tr>
                         <th>Hostname</th>

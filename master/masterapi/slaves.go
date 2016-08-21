@@ -292,8 +292,8 @@ func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *
 		currentSlave.RiskGroupID == updatedSlave.RiskGroupID {
 		return nil, nil
 	}
-	if currentSlave.ConfiguredState != model.SlaveStateDisabled {
-		return fmt.Errorf("slave's desired state must be `disabled`"), nil
+	if currentSlave.ConfiguredState != model.SlaveStateDisabled && currentSlave.ConfiguredState != model.SlaveStateMaintenance {
+		return fmt.Errorf("slave's desired state must be `maintenance` or `disabled`"), nil
 	}
 
 	if err := tx.Model(&currentSlave).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
