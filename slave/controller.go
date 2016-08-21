@@ -64,22 +64,22 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 	if _, exists := c.busyTable[m.Port]; exists {
 		c.busyTable[m.Port].Lock()
 		c.busyTableLock.Unlock()
-	} else if m.State != msp.MongodStateDestroyed {
-		c.busyTable[m.Port] = &sync.Mutex{}
-		c.busyTable[m.Port].Lock()
-		c.busyTableLock.Unlock()
-		err := c.procManager.SpawnProcess(m)
-
-		if err != nil {
-			log.Errorf("controller: error spawning process: %s", err)
-			return &msp.Error{
-				Identifier:      msp.SlaveSpawnError,
-				Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
-				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
-			}
-		}
-	} else {
+	} else if m.State == msp.MongodStateDestroyed {
 		return nil
+	}
+
+	c.busyTable[m.Port] = &sync.Mutex{}
+	c.busyTable[m.Port].Lock()
+	c.busyTableLock.Unlock()
+	err := c.procManager.SpawnProcess(m)
+
+	if err != nil {
+		log.Errorf("controller: error spawning process: %s", err)
+		return &msp.Error{
+			Identifier:      msp.SlaveSpawnError,
+			Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
+			LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
+		}
 	}
 
 	if m.State == msp.MongodStateDestroyed {
@@ -90,17 +90,18 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 			}
 			c.busyTable[m.Port].Unlock() // TODO document this line together with the Unlock() in m.State != msp.MongodStateDestroyed
 		}()
+		c.configurator.ApplyMongodConfiguration(m) // ignore error of destruction
+		return nil
 	}
 
-	err := c.configurator.ApplyMongodConfiguration(m)
-	if err != nil {
-		log.Errorf("controller: error applying Mongod configuration: %s", err)
+	applyErr := c.configurator.ApplyMongodConfiguration(m)
+	if applyErr != nil {
+		log.Errorf("controller: error applying Mongod configuration: %s", applyErr)
 	}
 
 	// do wait until the old instance is destroyed. Having a half destroyed unlocked instance flying around should be dangerous
-	// TODO better refer to the hard shutdown timeout above. AND: restructure this code because this is really the else part of the `if` above.
 	if m.State != msp.MongodStateDestroyed {
 		c.busyTable[m.Port].Unlock()
 	}
-	return err
+	return applyErr
 }
