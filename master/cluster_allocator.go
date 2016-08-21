@@ -284,10 +284,10 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			}
 
 			*c.BusWriteChannel <- DesiredReplicaSetConstraintStatus{
-				Unsatisfied:           unsatisfied,
-				ReplicaSet:            replicaSet,
-				ActualPersistentCount: configuredMemberCounts.ConfiguredPersistentMembers,
-				ActualVolatileCount:   configuredMemberCounts.ConfiguredVolatileMembers,
+				Unsatisfied:               unsatisfied,
+				ReplicaSet:                replicaSet,
+				ConfiguredPersistentCount: configuredMemberCounts.ConfiguredPersistentMembers,
+				ConfiguredVolatileCount:   configuredMemberCounts.ConfiguredVolatileMembers,
 			}
 		}
 	}

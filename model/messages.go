@@ -17,15 +17,17 @@ type MongodMatchStatus struct {
 }
 
 type DesiredReplicaSetConstraintStatus struct {
-	Unsatisfied           bool
-	ReplicaSet            ReplicaSet
-	ActualVolatileCount   uint
-	ActualPersistentCount uint
+	Unsatisfied               bool
+	ReplicaSet                ReplicaSet
+	ConfiguredVolatileCount   uint
+	ConfiguredPersistentCount uint
 }
 
 type ObservedReplicaSetConstraintStatus struct {
-	Unsatisfied           bool
-	ReplicaSet            ReplicaSet
-	ActualVolatileCount   uint
-	ActualPersistentCount uint
+	Unsatisfied               bool
+	ReplicaSet                ReplicaSet
+	ConfiguredVolatileCount   uint
+	ConfiguredPersistentCount uint
+	ActualVolatileCount       uint
+	ActualPersistentCount     uint
 }

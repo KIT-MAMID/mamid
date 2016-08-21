@@ -6,6 +6,7 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
+	"sync"
 	"time"
 )
 
@@ -35,12 +36,24 @@ func (m *Monitor) Run() {
 				}
 				tx.Rollback()
 
+				wg := sync.WaitGroup{}
+
 				//Observe active slaves
 				for _, slave := range slaves {
 					if slave.ConfiguredState == model.SlaveStateActive {
-						go m.observeSlave(slave)
+						wg.Add(1)
+						go func() {
+							m.observeSlave(slave)
+							wg.Done()
+						}()
 					}
 				}
+
+				//Wait for all slaves to be observed
+				wg.Wait()
+
+				//Check degradation of replica sets
+				m.observeReplicaSets()
 
 			case <-quit:
 				ticker.Stop()
@@ -264,5 +277,52 @@ func mspErrorToModelMSPError(mspError *msp.Error) model.MSPError {
 		Identifier:      mspError.Identifier,
 		Description:     mspError.Description,
 		LongDescription: mspError.LongDescription,
+	}
+}
+
+func (m *Monitor) observeReplicaSets() {
+	tx := m.DB.Begin()
+
+	// Get replica sets and the count of their actually configured members from the database
+	replicaSetsWithMemberCounts, err := tx.Raw(`SELECT
+				r.*,
+				(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+					AS configured_persistent_members,
+				(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+					AS configured_volatile_members,
+				(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+					AS actual_persistent_members,
+				(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+					AS actual_volatile_members
+				FROM replica_sets r
+				`, true, false, true, false).Rows()
+	if err != nil {
+		monitorLog.WithError(err).Error("Error getting configured and actual member counts of replica sets")
+	}
+	tx.Rollback()
+
+	for replicaSetsWithMemberCounts.Next() {
+		var replicaSet model.ReplicaSet
+		tx.ScanRows(replicaSetsWithMemberCounts, &replicaSet)
+
+		memberCounts := struct {
+			ConfiguredPersistentMembers uint
+			ConfiguredVolatileMembers   uint
+			ActualPersistentMembers     uint
+			ActualVolatileMembers       uint
+		}{}
+		tx.ScanRows(replicaSetsWithMemberCounts, &memberCounts)
+
+		unsatisfied := memberCounts.ConfiguredVolatileMembers > memberCounts.ActualVolatileMembers ||
+			memberCounts.ConfiguredPersistentMembers > memberCounts.ActualPersistentMembers
+
+		m.BusWriteChannel <- model.ObservedReplicaSetConstraintStatus{
+			Unsatisfied:               unsatisfied,
+			ReplicaSet:                replicaSet,
+			ConfiguredPersistentCount: memberCounts.ConfiguredPersistentMembers,
+			ConfiguredVolatileCount:   memberCounts.ConfiguredVolatileMembers,
+			ActualPersistentCount:     memberCounts.ActualPersistentMembers,
+			ActualVolatileCount:       memberCounts.ActualVolatileMembers,
+		}
 	}
 }
