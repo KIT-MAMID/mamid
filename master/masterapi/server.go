@@ -47,6 +47,8 @@ func (m *MasterAPI) Setup() {
 	m.Router.Methods("GET").Path("/slaves/{slaveId}/problems").Name("ProblemBySlave").HandlerFunc(m.ProblemBySlave)
 	m.Router.Methods("GET").Path("/replicasets/{replicasetId}/problems").Name("ProblemByReplicaSet").HandlerFunc(m.ProblemByReplicaSet)
 
+	m.Router.Methods("GET").Path("/slaves/{slaveId}/mongods").Name("MongodsBySlave").HandlerFunc(m.MongodsBySlave)
+	m.Router.Methods("GET").Path("/replicasets/{replicasetId}/mongods").Name("MongodsByReplicaSet").HandlerFunc(m.MongodsByReplicaSet)
 }
 
 func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {

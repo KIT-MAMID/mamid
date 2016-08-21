@@ -1077,3 +1077,43 @@ func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
 	assert.Equal(t, 1, len(getSlaveResult))
 	assert.Equal(t, "host3", getSlaveResult[0].Hostname)
 }
+
+func TestMasterAPI_MongodsBySlave(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/slaves/1/mongods", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getMongodsResult []Mongod
+	err = json.NewDecoder(resp.Body).Decode(&getMongodsResult)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, 1, len(getMongodsResult))
+	assert.EqualValues(t, 5001, getMongodsResult[0].Port)
+}
+
+func TestMasterAPI_MongodsByReplicaSet(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/api/replicasets/1/mongods", nil)
+	assert.NoError(t, err)
+	mainRouter.ServeHTTP(resp, req)
+
+	assert.EqualValues(t, 200, resp.Code)
+
+	var getMongodsResult []Mongod
+	err = json.NewDecoder(resp.Body).Decode(&getMongodsResult)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, 1, len(getMongodsResult))
+	assert.EqualValues(t, 5001, getMongodsResult[0].Port)
+}
