@@ -33,24 +33,28 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	ports := c.procManager.RunningProcesses()
 	mongods := make([]msp.Mongod, len(ports))
-	channels := make([]chan msp.Mongod, len(ports))
-	for k, port := range ports {
-		go func(channel chan msp.Mongod, port msp.PortNumber) {
+	mongodChannel := make(chan msp.Mongod, len(ports))
+	for _, port := range ports {
+		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber) {
 			mongod, err := c.configurator.MongodConfiguration(port)
 			if err != nil {
 				log.Errorf("controller: error querying Mongod configuration: %s", err)
-				channel <- msp.Mongod{
-					Port: port,
+				resultsChan <- msp.Mongod{
+					Port:        port,
 					StatusError: err,
-					State: msp.MongodStateNotRunning,
+					State:       msp.MongodStateNotRunning,
 				}
 			} else {
-				channel <- mongod
+				resultsChan <- mongod
 			}
-		}(channels[k], port)
+		}(mongodChannel, port)
 	}
-	for k := range ports {
-		mongods[k] = <- channels[k]
+
+	for m := range mongodChannel {
+		mongods = append(mongods, m)
+		if len(mongods) == len(ports) {
+			break
+		}
 	}
 	return mongods, nil
 }
