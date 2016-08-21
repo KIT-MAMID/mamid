@@ -282,7 +282,8 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 
 func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
 
-	//Allow change of state if nothing else is changed
+	// Allow change of state if nothing else is changed
+	// NOTE: changing the slave state is an indication to the ClusterAllocator but has no direct consequences in deployment
 	if currentSlave.ID == updatedSlave.ID &&
 		currentSlave.Hostname == updatedSlave.Hostname &&
 		currentSlave.Port == updatedSlave.Port &&
