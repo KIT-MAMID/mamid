@@ -16,10 +16,11 @@ type Monitor struct {
 	DB              *model.DB
 	BusWriteChannel chan<- interface{}
 	MSPClient       msp.MSPClient
+	Interval        time.Duration
 }
 
 func (m *Monitor) Run() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(m.Interval)
 	quit := make(chan struct{})
 	go func() {
 		for {

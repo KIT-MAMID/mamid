@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"net/http"
+	"time"
 )
 
 var masterLog = logrus.WithField("module", "master")
@@ -32,11 +33,15 @@ func main() {
 	var (
 		logLevel             LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
 		dbPath, listenString string
+		monitorInterval      time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
 	flag.StringVar(&dbPath, "db.path", "", "path to the SQLite file where MAMID data is stored")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
+	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
+		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
+
 	flag.Parse()
 
 	if dbPath == "" {
@@ -81,6 +86,7 @@ func main() {
 		DB:              db,
 		BusWriteChannel: bus.GetNewWriteChannel(),
 		MSPClient:       mspClient,
+		Interval:        monitorInterval,
 	}
 	go monitor.Run()
 
