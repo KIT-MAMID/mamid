@@ -2,7 +2,6 @@ package msp
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -13,15 +12,15 @@ type Consumer interface {
 }
 
 type Listener struct {
-	port     PortNumber
-	listener Consumer
-	router   *mux.Router
+	listenString string
+	listener     Consumer
+	router       *mux.Router
 }
 
-func NewServer(listener Consumer, port PortNumber) *Listener {
+func NewServer(listener Consumer, listenString string) *Listener {
 	s := new(Listener)
 	s.listener = listener
-	s.port = port
+	s.listenString = listenString
 
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
@@ -50,6 +49,6 @@ func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.R
 	}
 }
 
-func (s Listener) Run() {
-	http.ListenAndServe(fmt.Sprintf(":%d", s.port), s.router)
+func (s Listener) Run() error {
+	return http.ListenAndServe(s.listenString, s.router)
 }

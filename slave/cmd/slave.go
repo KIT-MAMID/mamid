@@ -24,7 +24,7 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	var (
-		mongodExecutable, dataDir                            string
+		mongodExecutable, dataDir, listenString              string
 		mongodSoftShutdownTimeout, mongodHardShutdownTimeout time.Duration
 	)
 
@@ -37,7 +37,7 @@ func main() {
 	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.shutdownTimeout.hard", DefaultMongodHardShutdownTimeout,
 		"Duration to wait after issuing a shutdown call before the Mongod is killed (SIGKILL). Specify with suffix [ms,s,min,...]")
 
-	port := flag.Uint("port", 8081, "Listening port number of slave server")
+	flag.StringVar(&listenString, "listen", ":8081", "net.Listen() string, e.g. addr:port")
 
 	flag.Parse()
 
@@ -67,6 +67,8 @@ func main() {
 	}
 
 	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)
-	server := msp.NewServer(controller, msp.PortNumber(*port))
-	server.Run()
+	server := msp.NewServer(controller, listenString)
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
