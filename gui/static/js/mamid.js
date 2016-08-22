@@ -333,8 +333,17 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     }
 
     $scope.updateSlave = function () {
-        angular.copy($scope.edit_slave, $scope.slave);
         if ($scope.is_create_view) {
+            if(!$scope.edit_slave.slave_port) {
+                $scope.edit_slave.slave_port = 8081;
+            }
+            if(!$scope.edit_slave.mongod_port_range_begin) {
+                $scope.edit_slave.mongod_port_range_begin = 18080;
+            }
+            if(!$scope.edit_slave.mongod_port_range_end) {
+                $scope.edit_slave.mongod_port_range_end = 18081;
+            }
+            angular.copy($scope.edit_slave, $scope.slave);
             $scope.slave.$create(function () {
                 $location.path("/slaves");
             });
