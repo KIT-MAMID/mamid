@@ -358,6 +358,12 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         $scope.slave.configured_state = state;
         $scope.edit_slave.configured_state = state;
         $scope.slave.$save();
+        SlaveService.get({slave: slaveId}, function (slave) {
+            $scope.slave = slave;
+            $scope.slave.$promise.then(function () {
+                $scope.edit_slave = angular.copy($scope.slave);
+            });
+        });
     }
 });
 
