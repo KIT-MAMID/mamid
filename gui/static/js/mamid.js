@@ -381,22 +381,24 @@ mamidApp.controller('replicasetByIdController',
             $scope.edit_replicaset = angular.copy($scope.replicaset);
         } else {
             $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
-            $scope.replicaset.slaves = SlaveService.queryByReplicaSet({replicaset: replicasetId});
-            $scope.problems = ReplicaSetService.getProblems({replicaset: replicasetId});
-
-            //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
-            $scope.replicaset.$promise.then(function () {
-                $scope.replicaset.mongods = ReplicaSetService.getMongods({replicaset: replicasetId}, function () {
-                    for(var i=0;i<$scope.replicaset.mongods.length;i++) {
-                        for (var j = 0; j < $scope.replicaset.slaves.length;j++) { // we want a dict here, but... meh...
-                            if($scope.replicaset_slaves[j].id == $scope.replicaset.mongods[i].parent_slave_id){
-                                $scope.replicaset.mongods[i].slave = $scope.replicaset.slaves[j]
+            SlaveService.queryByReplicaSet({replicaset: replicasetId}, function (slaves) {
+                $scope.replicaset.slaves = slaves;
+                //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
+                $scope.replicaset.$promise.then(function () {
+                    $scope.replicaset.mongods = ReplicaSetService.getMongods({replicaset: replicasetId}, function () {
+                        for (var i = 0; i < $scope.replicaset.mongods.length; i++) {
+                            for (var j = 0; j < $scope.replicaset.slaves.length; j++) { // we want a dict here, but... meh...
+                                if ($scope.replicaset.slaves[j].id == $scope.replicaset.mongods[i].parent_slave_id) {
+                                    $scope.replicaset.mongods[i].slave = $scope.replicaset.slaves[j]
+                                }
                             }
                         }
-                    }
-                    $scope.edit_replicaset = angular.copy($scope.replicaset);
+                        $scope.edit_replicaset = angular.copy($scope.replicaset);
+                    });
                 });
             });
+            $scope.problems = ReplicaSetService.getProblems({replicaset: replicasetId});
+
         }
 
         $scope.updateReplicaSet = function () {
