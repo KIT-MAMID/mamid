@@ -27,7 +27,7 @@ func (p *ProblemManager) Run() {
 					ProblemType: model.ProblemTypeConnection,
 					SlaveID:     model.NullIntValue(connStatus.Slave.ID),
 				}).Assign(&model.Problem{
-					Description: fmt.Sprintf("Slave %s is unreachable", connStatus.Slave.Hostname),
+					Description: fmt.Sprintf("Slave `%s` is unreachable", connStatus.Slave.Hostname),
 					LastUpdated: time.Now(),
 				}).Attrs(&model.Problem{
 					FirstOccurred: time.Now(),
@@ -46,13 +46,12 @@ func (p *ProblemManager) Run() {
 					ProblemType:  model.ProblemTypeDesiredReplicaSetConstraint,
 					ReplicaSetID: model.NullIntValue(constrStatus.ReplicaSet.ID),
 				}).Assign(&model.Problem{
-					Description: fmt.Sprintf("Replica set %s is degraded", constrStatus.ReplicaSet.Name),
+					Description: fmt.Sprintf("Replica Set `%s` with unsatisfiable constraints", constrStatus.ReplicaSet.Name),
 					LongDescription: fmt.Sprintf(
-						"Not enough free ports are available."+
-							"This replica set is now configured to have %d persistent and %d volatile mongods"+
-							" instead of the %d persistent and %d volatile mongods it should have",
-						constrStatus.ConfiguredPersistentCount, constrStatus.ConfiguredVolatileCount,
-						constrStatus.ReplicaSet.PersistentMemberCount, constrStatus.ReplicaSet.VolatileMemberCount),
+						"Not enough free ports on suitable Slaves are available.\n"+
+							"This Replica Set's member counts are less than desired (%d/%d persistent, %d/%d volatile).",
+						constrStatus.ConfiguredPersistentCount, constrStatus.ReplicaSet.PersistentMemberCount,
+						constrStatus.ConfiguredVolatileCount, constrStatus.ReplicaSet.VolatileMemberCount),
 					LastUpdated: time.Now(),
 				}).Attrs(&model.Problem{
 					FirstOccurred: time.Now(),
@@ -71,13 +70,11 @@ func (p *ProblemManager) Run() {
 					ProblemType:  model.ProblemTypeObservedReplicaSetConstraint,
 					ReplicaSetID: model.NullIntValue(constrStatus.ReplicaSet.ID),
 				}).Assign(&model.Problem{
-					Description: fmt.Sprintf("Replica set %s is degraded", constrStatus.ReplicaSet.Name),
+					Description: fmt.Sprintf("Replica Set `%s` is degraded", constrStatus.ReplicaSet.Name),
 					LongDescription: fmt.Sprintf(
-						"A mongod in this replica set is not running."+
-							"This replica set is configured to have %d persistent and %d volatile mongods"+
-							" but only %d persistent and %d volatile mongods are running",
-						constrStatus.ConfiguredPersistentCount, constrStatus.ConfiguredVolatileCount,
-						constrStatus.ActualPersistentCount, constrStatus.ActualVolatileCount),
+						"One or more Mongods in this Replica Set are not running (%d/%d persistent, %d/%d volatile).",
+						constrStatus.ActualPersistentCount, constrStatus.ConfiguredPersistentCount,
+						constrStatus.ActualVolatileCount, constrStatus.ConfiguredVolatileCount),
 					LastUpdated: time.Now(),
 				}).Attrs(&model.Problem{
 					FirstOccurred: time.Now(),
