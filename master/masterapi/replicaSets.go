@@ -289,7 +289,12 @@ func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) 
 
 	out := make([]*Slave, len(slaves))
 	for i, v := range slaves {
-		out[i] = ProjectModelSlaveToSlave(v)
+		out[i], err = ProjectModelSlaveToSlave(tx, v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
+			return
+		}
 	}
 	json.NewEncoder(w).Encode(out)
 	return

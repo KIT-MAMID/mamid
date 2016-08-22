@@ -18,7 +18,8 @@ func Test_ProjectModelSlaveToSlave(t *testing.T) {
 		ConfiguredState:      model.SlaveStateActive,
 	}
 
-	s := ProjectModelSlaveToSlave(&dbSlave)
+	s, err := ProjectModelSlaveToSlave(nil, &dbSlave) // we can get away without DB because ConfiguredState = Active
+	assert.Nil(t, err)
 
 	assert.EqualValues(t, dbSlave.Hostname, s.Hostname)
 	assert.EqualValues(t, dbSlave.Port, s.Port)

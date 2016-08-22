@@ -175,6 +175,7 @@ func TestMasterAPI_SlaveById(t *testing.T) {
 	assert.EqualValues(t, 3, getSlaveResult.MongodPortRangeEnd)
 	assert.Equal(t, true, getSlaveResult.PersistentStorage)
 	assert.Equal(t, "active", getSlaveResult.ConfiguredState)
+	assert.Equal(t, false, getSlaveResult.ConfiguredStateTransitioning)
 }
 
 func TestMasterAPI_SlavePut(t *testing.T) {

@@ -3,20 +3,49 @@ package masterapi
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
+	"github.com/jinzhu/gorm"
 )
 
-func ProjectModelSlaveToSlave(m *model.Slave) *Slave {
+func ProjectModelSlaveToSlave(tx *gorm.DB, m *model.Slave) (*Slave, error) {
+
+	configuredStateTransitioning, err := SlaveConfiguredStateTransitioning(tx, m)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Slave{
-		ID:                   m.ID,
-		Hostname:             m.Hostname,
-		Port:                 uint(m.Port),
-		MongodPortRangeBegin: uint(m.MongodPortRangeBegin),
-		MongodPortRangeEnd:   uint(m.MongodPortRangeEnd),
-		PersistentStorage:    m.PersistentStorage,
-		ConfiguredState:      SlaveStateToJSONRepresentation(m.ConfiguredState),
-		RiskGroupID:          model.NullIntToPtr(m.RiskGroupID),
+		ID:                           m.ID,
+		Hostname:                     m.Hostname,
+		Port:                         uint(m.Port),
+		MongodPortRangeBegin:         uint(m.MongodPortRangeBegin),
+		MongodPortRangeEnd:           uint(m.MongodPortRangeEnd),
+		PersistentStorage:            m.PersistentStorage,
+		ConfiguredState:              SlaveStateToJSONRepresentation(m.ConfiguredState),
+		ConfiguredStateTransitioning: configuredStateTransitioning,
+		RiskGroupID:                  model.NullIntToPtr(m.RiskGroupID),
+	}, nil
+}
+
+func SlaveConfiguredStateTransitioning(tx *gorm.DB, s *model.Slave) (bool, error) {
+
+	switch s.ConfiguredState {
+	case model.SlaveStateDisabled:
+		var res struct {
+			Count int
+		}
+		err := tx.Raw("SELECT COUNT(*) FROM mongods m WHERE m.parent_slave_id = ?", s.ID).Scan(&res).Error
+		if err != nil {
+			return false, err
+		}
+		if res.Count == 0 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	default:
+		return false, nil
 	}
+
 }
 
 func ProjectSlaveToModelSlave(s *Slave) (*model.Slave, error) {

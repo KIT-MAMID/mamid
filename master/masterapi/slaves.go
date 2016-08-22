@@ -12,14 +12,15 @@ import (
 )
 
 type Slave struct {
-	ID                   int64  `json:"id"`
-	Hostname             string `json:"hostname"`
-	Port                 uint   `json:"slave_port"`
-	MongodPortRangeBegin uint   `json:"mongod_port_range_begin"` //inclusive
-	MongodPortRangeEnd   uint   `json:"mongod_port_range_end"`   //exclusive
-	PersistentStorage    bool   `json:"persistent_storage"`
-	ConfiguredState      string `json:"configured_state"`
-	RiskGroupID          *int64 `json:"risk_group_id"`
+	ID                           int64  `json:"id"`
+	Hostname                     string `json:"hostname"`
+	Port                         uint   `json:"slave_port"`
+	MongodPortRangeBegin         uint   `json:"mongod_port_range_begin"` //inclusive
+	MongodPortRangeEnd           uint   `json:"mongod_port_range_end"`   //exclusive
+	PersistentStorage            bool   `json:"persistent_storage"`
+	ConfiguredState              string `json:"configured_state"`
+	ConfiguredStateTransitioning bool   `json:"configured_state_transitioning"`
+	RiskGroupID                  *int64 `json:"risk_group_id"`
 }
 
 func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
@@ -36,8 +37,14 @@ func (m *MasterAPI) SlaveIndex(w http.ResponseWriter, r *http.Request) {
 
 	out := make([]*Slave, len(slaves))
 	for i, v := range slaves {
-		out[i] = ProjectModelSlaveToSlave(v)
+		out[i], err = ProjectModelSlaveToSlave(tx, v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "cannot project model slave to slave: %s", err)
+			return
+		}
 	}
+
 	json.NewEncoder(w).Encode(out)
 }
 
@@ -72,7 +79,15 @@ func (m *MasterAPI) SlaveById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(&slave))
+	apiSlave, err := ProjectModelSlaveToSlave(tx, &slave)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot project model slave to slave: %s", err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(apiSlave)
+
 	return
 }
 
@@ -126,11 +141,18 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
-
 	// Return created slave
+	apiSlave, err := ProjectModelSlaveToSlave(tx, modelSlave)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot project model slave to slave: %s", err)
+		tx.Rollback()
+		return
+	}
 
-	json.NewEncoder(w).Encode(ProjectModelSlaveToSlave(modelSlave))
+	json.NewEncoder(w).Encode(apiSlave)
+
+	tx.Commit()
 
 	return
 }
