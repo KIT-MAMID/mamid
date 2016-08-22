@@ -2,9 +2,9 @@ package msp
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
-	"fmt"
 )
 
 type Consumer interface {
@@ -13,7 +13,7 @@ type Consumer interface {
 }
 
 type Listener struct {
-	port PortNumber
+	port     PortNumber
 	listener Consumer
 	router   *mux.Router
 }
