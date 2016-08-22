@@ -39,7 +39,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <th>mongod port range</th>
+                        <th>Mongod port range</th>
                         <td>
                             <input type="number" class="form-control" ng-model="edit_slave.mongod_port_range_begin"/>
                         </td>
@@ -78,6 +78,11 @@
         <h3 class="panel-title">Slave Control</h3>
     </div>
     <div class="panel-body">
+        <ul>
+            <li><b>Active</b> This Slave eligible to host Mongods.</li>
+            <li><b>Maintenance mode</b> No new Mongods will be spawned on this Slave. Existing Mongods will be left untouched. Monitoring is disabled.</li>
+            <li><b>Disabled</b> This Slave should not host Mongods. Existing Mongods are attempted to be migrated to eligible Slaves.</li>
+        </ul>
         <div class="btn-group btn-group-justified pull-right" role="group">
             <div class="btn-group" role="group">
                 <button ng-disabled="slave.configured_state == 'unknown'"
