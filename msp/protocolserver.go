@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"net/http"
+	"fmt"
 )
 
 type Consumer interface {
@@ -12,13 +13,15 @@ type Consumer interface {
 }
 
 type Listener struct {
+	port PortNumber
 	listener Consumer
 	router   *mux.Router
 }
 
-func NewServer(listener Consumer) *Listener {
+func NewServer(listener Consumer, port PortNumber) *Listener {
 	s := new(Listener)
 	s.listener = listener
+	s.port = port
 
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
@@ -48,5 +51,5 @@ func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.R
 }
 
 func (s Listener) Run() {
-	http.ListenAndServe(":8081", s.router)
+	http.ListenAndServe(fmt.Sprintf(":%d", s.port), s.router)
 }

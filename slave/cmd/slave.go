@@ -37,6 +37,8 @@ func main() {
 	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.shutdownTimeout.hard", DefaultMongodHardShutdownTimeout,
 		"Duration to wait after issuing a shutdown call before the Mongod is killed (SIGKILL). Specify with suffix [ms,s,min,...]")
 
+	port := flag.Uint("port", 8081, "Listening port number of slave server")
+
 	flag.Parse()
 
 	// Assert dataDir is valid. TODO should we do this lazyly?
@@ -49,7 +51,8 @@ func main() {
 		log.Fatal(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))
 	}
 
-	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir) // TODO directory creation should happen in the component that uses the path
+	// ensure that main database directory exists
+	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
 			log.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
@@ -64,6 +67,6 @@ func main() {
 	}
 
 	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)
-	server := msp.NewServer(controller)
+	server := msp.NewServer(controller, msp.PortNumber(*port))
 	server.Run()
 }
