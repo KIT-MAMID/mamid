@@ -160,7 +160,8 @@ mamidApp.factory('ProblemService', function ($resource) {
 mamidApp.factory('ReplicaSetService', function ($resource) {
     return $resource('/api/replicasets/:replicaset', {replicaset: "@id"}, {
         create: {method: 'put'},
-        getProblems: {method: 'get', url: '/api/replicasets/:replicaset/problems', isArray: true}
+        getProblems: {method: 'get', url: '/api/replicasets/:replicaset/problems', isArray: true},
+        getMongods: {method: 'get', url: '/api/replicasets/:replicaset/mongods', isArray: true}
     });
 });
 
@@ -386,7 +387,16 @@ mamidApp.controller('replicasetByIdController',
 
             //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
             $scope.replicaset.$promise.then(function () {
-                $scope.edit_replicaset = angular.copy($scope.replicaset);
+                $scope.replicaset.mongods = ReplicaSetService.getMongods({replicaset: replicasetId}, function () {
+                    for(var i=0;i<$scope.replicaset.mongods.length;i++) {
+                        for (var j = 0; j < $scope.replicaset_slaves.length;j++) { // we want a dict here, but... meh...
+                            if($scope.replicaset_slaves[j].id == $scope.replicaset.mongods[i].parent_slave_id){
+                                $scope.replicaset.mongods[i].slave = $scope.replicaset_slaves[j]
+                            }
+                        }
+                    }
+                    $scope.edit_replicaset = angular.copy($scope.replicaset);
+                });
             });
         }
 
