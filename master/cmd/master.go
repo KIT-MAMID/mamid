@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/KIT-MAMID/mamid/master"
 	"github.com/KIT-MAMID/mamid/master/masterapi"
 	"github.com/KIT-MAMID/mamid/model"
@@ -12,8 +13,38 @@ import (
 
 var masterLog = logrus.WithField("module", "master")
 
+type LogLevelFlag struct { // flag.Value
+	lvl logrus.Level
+}
+
+func (f LogLevelFlag) String() string { return f.lvl.String() }
+func (f LogLevelFlag) Set(val string) error {
+	l, err := logrus.ParseLevel(val)
+	if err != nil {
+		f.lvl = l
+	}
+	return err
+}
+
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
+
+	// Command Line Flags
+	var (
+		logLevel             LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
+		dbPath, listenString string
+	)
+
+	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
+	flag.StringVar(&dbPath, "db.path", "", "path to the SQLite file where MAMID data is stored")
+	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
+	flag.Parse()
+
+	if dbPath == "" {
+		masterLog.Fatal("-db.path cannot be empty")
+	}
+
+	// Start application
+	logrus.SetLevel(logLevel.lvl)
 	masterLog.Info("Startup")
 
 	// Setup controllers
@@ -21,7 +52,7 @@ func main() {
 	bus := master.NewBus()
 	go bus.Run()
 
-	db, err := model.InitializeFileFromFile("mamid.sqlite3")
+	db, err := model.InitializeFileFromFile(dbPath)
 	dieOnError(err)
 
 	clusterAllocatorBusWriteChannel := bus.GetNewWriteChannel()
@@ -68,7 +99,7 @@ func main() {
 
 	// Listen
 
-	err = http.ListenAndServe(":8080", mainRouter)
+	err = http.ListenAndServe(listenString, mainRouter)
 	dieOnError(err)
 }
 
