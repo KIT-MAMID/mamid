@@ -38,9 +38,9 @@ func SlaveConfiguredStateTransitioning(tx *gorm.DB, s *model.Slave) (bool, error
 			return false, err
 		}
 		if res.Count == 0 {
-			return true, nil
-		} else {
 			return false, nil
+		} else {
+			return true, nil
 		}
 	default:
 		return false, nil
