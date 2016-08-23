@@ -365,9 +365,10 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     };
 
     $scope.deleteSlave = function () {
-        $scope.slave.$delete();
+        $scope.slave.$delete(function () {
+            $location.path("/slaves");
+        });
         $('#confirm_remove').modal('hide');
-        $location.path("/slaves");
     };
 
     $scope.setSlaveState = function (state) {
