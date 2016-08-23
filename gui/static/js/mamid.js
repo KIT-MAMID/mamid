@@ -371,6 +371,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             $scope.slave = slave;
             $scope.slave.$promise.then(function () {
                 $scope.edit_slave = angular.copy($scope.slave);
+                $('#confirm_disable').modal('hide');
             });
         });
     }

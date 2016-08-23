@@ -100,7 +100,7 @@
             </div>
             <div class="btn-group" role="group">
                 <button ng-disabled="slave.configured_state == 'unknown'" class="btn btn-default"
-                        ng-class="{active: slave.configured_state == 'disabled'}" ng-click="setSlaveState('disabled')">
+                        ng-class="{active: slave.configured_state == 'disabled'}" data-toggle="modal" data-target="#confirm_disable">
                     Disabled
                 </button>
             </div>
@@ -144,6 +144,25 @@
                 <button type="button" class="btn btn-danger" ng-click="deleteSlave()">Remove slave '{{ slave.hostname
                     }}'
                 </button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirm_disable" tabindex="-1" role="dialog" aria-labelledby="confirmDisableLabel"
+     ng-if="!is_create_view">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cancel"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="confirmDisableLabel">Confirm Slave state change</h4>
+            </div>
+            <div class="modal-body">
+                You are about to disable the slave '{{ slave.hostname }}'.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" ng-click="setSlaveState('disabled')">Disable slave</button>
                 <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
             </div>
         </div>
