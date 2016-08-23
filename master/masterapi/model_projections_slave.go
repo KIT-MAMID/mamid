@@ -33,7 +33,7 @@ func SlaveConfiguredStateTransitioning(tx *gorm.DB, s *model.Slave) (bool, error
 		var res struct {
 			Count int
 		}
-		err := tx.Raw("SELECT COUNT(*) FROM mongods m WHERE m.parent_slave_id = ?", s.ID).Scan(&res).Error
+		err := tx.Raw("SELECT COUNT(*) as count FROM mongods m WHERE m.parent_slave_id = ?", s.ID).Scan(&res).Error
 		if err != nil {
 			return false, err
 		}
