@@ -393,6 +393,10 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             end = 18081;
         return end - begin;
     };
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+
 });
 
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
