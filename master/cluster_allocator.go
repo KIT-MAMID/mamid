@@ -145,7 +145,6 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					caLog.Errorf("internal inconsistency: setting desired mongod_state of mongod `%#v` to `destroyed` affected more than one row", m)
 				}
 
-				// TODO side effects
 			}
 
 		}
@@ -201,7 +200,6 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 
 			caLog.Debugf("looking for least busy `%s` slave suitable as mongod host for replica set `%s`", p, replicaSet.Name)
 
-			// TODO spawn twice on same slave if slave is in risk group 0???
 			var leastBusySuitableSlave Slave
 			res = tx.Raw(`SELECT s.*
 			      	      FROM slave_utilization s
@@ -251,8 +249,6 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			} else {
 				caLog.Debugf("spawned mongod `%d` for replica set `%s` on slave `%s`", m.ID, replicaSet.Name, leastBusySuitableSlave.Hostname)
 			}
-
-			// TODO side effects
 
 		}
 	}
