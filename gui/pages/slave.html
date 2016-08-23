@@ -175,7 +175,9 @@
                 <h4 class="modal-title" id="confirmDisableLabel">Confirm Slave state change</h4>
             </div>
             <div class="modal-body">
-                You are about to disable the slave <code>{{ slave.hostname }}</code>.
+                <p>You are about to disable the slave <code>{{ slave.hostname }}</code>.</p>
+                <p>This indicates to <span class="mamid"></span> that slave <code>{{ slave.hostname }}</code> should not host Mongods.
+                <span class="mamid"></span> will attempt to migrate this Slave's Mongods to other eligible Slaves.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger" ng-click="setSlaveState('disabled')">Disable slave</button>
