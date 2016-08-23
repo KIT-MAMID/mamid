@@ -43,10 +43,10 @@ func (m *Monitor) Run() {
 				for _, slave := range slaves {
 					if slave.ConfiguredState == model.SlaveStateActive {
 						wg.Add(1)
-						go func() {
-							m.observeSlave(slave)
+						go func(s model.Slave) {
+							m.observeSlave(s)
 							wg.Done()
-						}()
+						}(slave)
 					}
 				}
 
