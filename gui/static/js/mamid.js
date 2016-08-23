@@ -312,7 +312,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     }
 });
 
-mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService, RiskGroupService) {
+mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService, RiskGroupService, ReplicaSetService) {
     var slaveId = $routeParams['slaveId'];
     $scope.is_create_view = slaveId === "new";
     if ($scope.is_create_view) {
@@ -330,6 +330,11 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         $scope.slave.$promise.then(function () {
             $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             $scope.mongods = SlaveService.getMongods({slave: $scope.slave.id});
+            $scope.mongods.$promise.then(function () {
+               for(var i=0;i<$scope.mongods.length;i++){
+                   $scope.mongods[i].replicaset = ReplicaSetService.get({replicaset:$scope.mongods[i].replica_set_id});
+               }
+            });
             $scope.edit_slave = angular.copy($scope.slave);
         });
     }

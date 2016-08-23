@@ -19,11 +19,12 @@
 
 <div class="panel panel-default" ng-if="!is_create_view">
     <div class="panel-heading">
-        <h3 class="panel-title">Running mongods on Slave</h3>
+        <h3 class="panel-title">Running Mongods on Slave</h3>
     </div>
     <table class="table">
         <tr ng-repeat="mongod in mongods">
-            <td>Mongod at <code>{{slave.hostname}}:{{mongod.slave_port}}</code></td>
+            <td>Mongod at <code>{{slave.hostname}}:{{mongod.slave_port}}</code> on Replica Set <a
+                    href="/#/replicasets/{{mongod.replica_set_id}}"><code>{{mongod.replicaset.name}}</code></a></td>
         </tr>
     </table>
 </div>
