@@ -1,30 +1,31 @@
 <h1 class="page-header">Replica Sets<span class="pull-right"><a href="/#/replicasets/new" class="btn btn-success">Create new Replica Set</a></span>
 </h1>
-<h2 class="sub-header">Replica Sets with problems</h2>
-<div class="bs-callout bs-callout-unknown" ng-repeat="replicaset in replicasets" ng-if="replicaset.problems.length > 0">
-    <h4>
-        <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
-        {{ replicaset.name }}
-    </h4>
-    <span class="pull-right">
-            <a href="#/replicasets/{{replicaset.id}}" class="btn btn-default">
-                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-            </a>
-        </span>
-    <ul>
-        <li ng-repeat="p in replicaset.problems">{{p.description}}</li>
-    </ul>
-</div>
-<h2 class="sub-header">Working Replica Sets</h2>
-<div class="bs-callout bs-callout-active" ng-repeat="replicaset in replicasets" ng-if="replicaset.problems.length == 0">
-    <h4>
-        <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
-        {{ replicaset.name }}
-        <span class="pull-right">
-            <a href="#/replicasets/{{replicaset.id}}" class="btn btn-default">
-                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-            </a>
-        </span>
+<div class="panel panel-danger">
+    <div class="panel-heading">
+        <h3 class="panel-title">Replicasets with Problems</h3>
+    </div>
+    <div class="list-group">
+        <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
+           ng-if="replicaset.problems.length > 0">
+            <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+            <code>{{ replicaset.name }}</code> - <b>Problems</b>
+            <ul>
+                <li ng-repeat="p in replicaset.problems">{{p.description}}</li>
+            </ul>
 
-    </h4>
+        </a>
+    </div>
+</div>
+
+<div class="panel panel-success">
+    <div class="panel-heading">
+        <h3 class="panel-title">Working Replicasets</h3>
+    </div>
+    <div class="list-group">
+        <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
+           ng-if="replicaset.problems.length == 0">
+            <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+            <code>{{ replicaset.name }}</code>
+        </a>
+    </div>
 </div>
