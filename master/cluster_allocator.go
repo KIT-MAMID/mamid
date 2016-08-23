@@ -83,6 +83,33 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		caLog.Debugf("marked `%d` Mongod.DesiredState of orphaned Mongods as `destroyed`", markOrphanedMongodsDestroyedRes.RowsAffected)
 	}
 
+	// remove destroyed Mongods from the database
+	// destroyed: desired & observed state is `destroyed` OR no observed state
+	caLog.Debug("removing destroyed Mongods from the database")
+	removeDestroyedMongodsRes := tx.Exec(`
+		DELETE FROM mongods WHERE id IN ( -- we use cascadation to also delete the mongod states
+			-- all mongod id's whose desired and observed state are in ExecutionState destroyed
+			SELECT m.id
+			FROM mongods m
+			LEFT OUTER JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+			LEFT OUTER JOIN mongod_states observed_state ON m.observed_state_id = observed_state.id
+			WHERE
+				desired_state.execution_state = ?
+				AND
+				(
+					observed_state.execution_state = ?
+					OR
+					observed_state.execution_state IS NULL --don't have observed state
+				)
+		)
+	`, MongodExecutionStateDestroyed, MongodExecutionStateDestroyed)
+	if removeDestroyedMongodsRes.Error != nil {
+		caLog.Errorf("error removing destroyed Mongods from the database: %s", removeDestroyedMongodsRes.Error)
+		panic(removeDestroyedMongodsRes.Error)
+	} else {
+		caLog.Debugf("removed `%d` destroyed Mongods from the database", removeDestroyedMongodsRes.RowsAffected)
+	}
+
 	// list of replica sets with number of excess mongods
 	replicaSets, err := tx.Raw(`SELECT
 			r.id,
