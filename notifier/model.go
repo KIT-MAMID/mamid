@@ -18,11 +18,11 @@ type SMTPRelay struct {
 }
 
 type Problem struct {
-	Id              uint
-	Description     string
-	LongDescription string
-	FirstOccured    time.Time
-	LastUpdate      time.Time
-	Slave           *uint
-	ReplicaSet      *uint
+	Id              uint      `json:"id"`
+	Description     string    `json:"description"`
+	LongDescription string    `json:"long_description"`
+	FirstOccured    time.Time `json:"first_occured"`
+	LastUpdate      time.Time `json:"last_update"`
+	Slave           *uint     `json:"slave_id"`
+	ReplicaSet      *uint     `json:"replica_set_id"`
 }

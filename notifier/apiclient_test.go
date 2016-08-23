@@ -15,7 +15,7 @@ func createAPIMock(retCode int, jsonAdd string) *httptest.Server {
 		fmt.Fprintln(w, `[{"id":1,"description":"Slave testneu is unreachable",
 		"long_description":"","first_occurred":"2016-08-01T14:24:12.681005208+02:00",
 		"last_updated":"2016-08-10T19:33:47.871593537+02:00","slave_id":1,"replica_set_id":0},
-		{"id":2,"description":"Slave test4 is unreachable","long_description":"",
+		{"id":2,"description":"Slave test4 is unreachable","long_description":"Test full",
 		"first_occurred":"2016-08-06T14:46:18.149470116+02:00",
 		"last_updated":"2016-08-06T20:39:53.267461615+02:00","slave_id":2,"replica_set_id":0`+jsonAdd+"}]")
 	}))

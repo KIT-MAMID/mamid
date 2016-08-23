@@ -17,13 +17,13 @@ type EmailNotifier struct {
 func (n *EmailNotifier) SendProblem(problem Problem) error {
 	content := "A Problem occured: " + problem.Description + "\r\n"
 	if problem.ReplicaSet != nil {
-		content += "ReplicaSet: " + fmt.Sprint(problem.ReplicaSet) + "\r\n"
+		content += fmt.Sprintf("Replica Set id: %d \r\n", *problem.ReplicaSet)
 	}
 	if problem.Slave != nil {
-		content += "Slave: " + fmt.Sprint(problem.Slave) + "\r\n"
+		content += fmt.Sprintf("Slave id: %d \r\n", *problem.Slave)
 	}
-	content += "long Description:" + problem.LongDescription + "\r\n"
-	subject := ("Subject: [MAMID] Problem: " + problem.Description)
+	content += "Detailed Description: " + problem.LongDescription + "\r\n"
+	subject := "Subject: [MAMID] Problem: " + problem.Description
 	msg := []byte("From: " + n.Relay.MailFrom + "\r\n" +
 		subject + "\r\n" +
 		content)
