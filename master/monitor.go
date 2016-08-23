@@ -185,6 +185,8 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observ
 // Errors returned by this method should be handled by aborting the transaction tx
 func (m *Monitor) handleUnobservedMongodsOfSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
 
+	monitorLog.Debugf("monitor: handling unobserved Mongods of slave `%s`", slave.Hostname)
+
 	var modelMongods []model.Mongod
 	if err := tx.Model(&slave).Related(&modelMongods, "Mongods").Error; err != nil {
 		return err
@@ -201,12 +203,16 @@ outer:
 			}
 		}
 
+		monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
 		//Else remove observed state
 		deleteErr := tx.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID).Error
 		if deleteErr != nil {
+			monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
 			return deleteErr
 		}
 	}
+
+	monitorLog.Debugf("monitor: finished handling unobserved Mongods of slave `%s`", slave.Hostname)
 
 	return nil
 
@@ -215,6 +221,8 @@ outer:
 // Check every Mongod of the Slave for mismatches between DesiredState and ObservedState
 // and send an appropriate MongodMismatchStatus to the Bus
 func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) (err error) {
+
+	monitorLog.Debugf("monitor: preparing Mongod Mismatch Status messages for slave `%s`", slave.Hostname)
 
 	var modelMongods []model.Mongod
 	if err := tx.Model(&slave).Related(&modelMongods, "Mongods").Error; err != nil {
@@ -232,19 +240,25 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%v`: %s", modelMongod, observedStateRes.Error)
 		}
 
+		var busMessage interface{}
 		if observedStateRes.RecordNotFound() {
 			// This happens when
 			// 	a new Mongod with no observations is found
 			// 	a Mongod with desired state = destroyed is still in the database
-			m.BusWriteChannel <- model.MongodMatchStatus{
+			busMessage = model.MongodMatchStatus{
 				Mismatch: true,
 				Mongod:   modelMongod,
 			}
 		} else {
-			m.BusWriteChannel <- compareStates(modelMongod)
+			busMessage = compareStates(modelMongod)
 		}
+		monitorLog.Debugf("monitor: sending bus message for slave `%s`: %#v", slave.Hostname, busMessage)
+		m.BusWriteChannel <- busMessage
+		monitorLog.Debugf("monitor: sent bus message for slave `%s`: %#v", slave.Hostname, busMessage)
 
 	}
+
+	monitorLog.Debugf("monitor: finished sending Mongod Mismatch Status messages for slave `%s`", slave.Hostname)
 
 	return nil
 }
