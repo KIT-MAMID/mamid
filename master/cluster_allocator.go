@@ -67,6 +67,22 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		}
 	}()
 
+	// mark orphaned Mongod.DesiredState as destroyed
+	// orphaned = Mongods whose parent Replica Set has been destroyed
+	// NOTE: slaves do not cause orphaned Mongods as only slaves without Monogds can be deleted from the DB
+	caLog.Debug("updating desired state of orphaned Mongods")
+	markOrphanedMongodsDestroyedRes := tx.Exec(`
+                       UPDATE mongod_states SET execution_state=?
+                       WHERE id IN (
+		         SELECT desired_state_id FROM mongods m WHERE replica_set_id IS NULL
+		       )`, MongodExecutionStateDestroyed)
+	if markOrphanedMongodsDestroyedRes.Error != nil {
+		caLog.Errorf("error updating desired state of orphaned Mongods: %s", markOrphanedMongodsDestroyedRes.Error)
+		panic(markOrphanedMongodsDestroyedRes.Error)
+	} else {
+		caLog.Debugf("marked `%d` Mongod.DesiredState of orphaned Mongods as `destroyed`", markOrphanedMongodsDestroyedRes.RowsAffected)
+	}
+
 	// list of replica sets with number of excess mongods
 	replicaSets, err := tx.Raw(`SELECT
 			r.id,
