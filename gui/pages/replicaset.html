@@ -1,5 +1,5 @@
 <h1 class="page-header" ng-if="is_create_view">New Replica Set</h1>
-<h1 class="page-header" ng-if="!is_create_view">Edit Replica Set '{{replicaset.name}}'</h1>
+<h1 class="page-header" ng-if="!is_create_view">Edit Replica Set <code>{{replicaset.name}}</code></h1>
 
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
     <h4>{{problem.description}}
