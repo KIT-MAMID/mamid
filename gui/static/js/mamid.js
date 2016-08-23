@@ -451,8 +451,9 @@ mamidApp.controller('replicasetByIdController',
         };
 
         $scope.deleteReplicaSet = function () {
-            $scope.replicaset.$delete();
+            $scope.replicaset.$delete(function () {
+                $location.path("/replicasets");
+            });
             $('#confirm_remove').modal('hide');
-            $location.path("/replicasets");
         };
     });
