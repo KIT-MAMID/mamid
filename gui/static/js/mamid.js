@@ -438,10 +438,10 @@ mamidApp.controller('replicasetByIdController',
             angular.copy($scope.edit_replicaset, $scope.replicaset);
             if ($scope.is_create_view) {
                 $scope.replicaset.$create();
+                $location.path("/replicasets");
             } else {
                 $scope.replicaset.$save();
             }
-            $location.path("/replicasets");
         };
 
         $scope.deleteReplicaSet = function () {
