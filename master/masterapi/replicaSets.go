@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 	"github.com/mattn/go-sqlite3"
 	"net/http"
 	"strconv"
@@ -97,6 +98,19 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 
 	tx := m.DB.Begin()
 
+	// Validation
+	if allowed, msg, err := changeToReplicaSetAllowed(tx, nil, modelReplSet); !allowed || err != nil {
+		tx.Rollback()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "error validating update permission: %s", err)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, msg)
+		}
+		return
+	}
+
 	// Persist to database
 
 	err = tx.Create(&modelReplSet).Error
@@ -177,11 +191,15 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if replSet.ConfigureAsShardingConfigServer != modelReplSet.ConfigureAsShardingConfigServer ||
-		replSet.Name != modelReplSet.Name {
+	if allowed, msg, err := changeToReplicaSetAllowed(tx, &modelReplSet, replSet); !allowed || err != nil {
 		tx.Rollback()
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "name and configure_as_sharding_server may not be changed")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "error validating update permission: %s", err)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, msg)
+		}
 		return
 	}
 
@@ -298,4 +316,31 @@ func (m *MasterAPI) ReplicaSetGetSlaves(w http.ResponseWriter, r *http.Request) 
 	}
 	json.NewEncoder(w).Encode(out)
 	return
+}
+
+// Validate attributes of a replica set.
+// `current` may be nil if there is no current replica set
+func changeToReplicaSetAllowed(tx *gorm.DB, current *model.ReplicaSet, new *model.ReplicaSet) (allowed bool, msg string, err error) {
+
+	if current != nil {
+
+		if current.ConfigureAsShardingConfigServer != new.ConfigureAsShardingConfigServer {
+			return false, "cannot change sharding config server role of a replica set after creation", nil
+		}
+
+		if current.Name != new.Name {
+			return false, "cannot change name of a replica set after creation", nil
+		}
+
+	}
+
+	if (new.VolatileMemberCount+new.PersistentMemberCount)%2 == 0 {
+		// TODO remove this once deployment of arbiters is enabled
+		// TODO the above sum assumes all members are eligible to vote. This may not be true, because #voting_members must be < 7
+		// 	https://docs.mongodb.com/manual/core/replica-set-architectures/
+		return false, "sum of persistent and volatile member counts must be odd", nil
+	}
+
+	return true, "", nil
+
 }

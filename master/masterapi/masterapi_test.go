@@ -531,7 +531,7 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	//Test correct put
 	resp := httptest.NewRecorder()
 
-	req_body := "{\"id\":0,\"name\":\"repl2\",\"persistent_node_count\":2," +
+	req_body := "{\"id\":0,\"name\":\"repl2\",\"persistent_node_count\":1," +
 		"\"volatile_node_count\":2,\"configure_as_sharding_config_server\":true}"
 	req, err := http.NewRequest("PUT", "/api/replicasets", strings.NewReader(req_body))
 	assert.NoError(t, err)
@@ -551,7 +551,7 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	//Check created database entry
 	assert.NotEmpty(t, createdReplSet.ID)
 	assert.Equal(t, "repl2", createdReplSet.Name)
-	assert.EqualValues(t, 2, createdReplSet.PersistentMemberCount)
+	assert.EqualValues(t, 1, createdReplSet.PersistentMemberCount)
 	assert.EqualValues(t, 2, createdReplSet.VolatileMemberCount)
 	assert.Equal(t, true, createdReplSet.ConfigureAsShardingConfigServer)
 
@@ -598,7 +598,7 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	req_body := "{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":0," +
-		"\"volatile_node_count\":4,\"configure_as_sharding_config_server\":false}"
+		"\"volatile_node_count\":3,\"configure_as_sharding_config_server\":false}"
 	req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -614,7 +614,7 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 
 	assert.Equal(t, "repl1", updateReplSet.Name)
 	assert.EqualValues(t, 0, updateReplSet.PersistentMemberCount)
-	assert.EqualValues(t, 4, updateReplSet.VolatileMemberCount)
+	assert.EqualValues(t, 3, updateReplSet.VolatileMemberCount)
 	assert.Equal(t, false, updateReplSet.ConfigureAsShardingConfigServer)
 }
 
@@ -631,6 +631,30 @@ func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
 	mainRouter.ServeHTTP(resp, req)
 
 	assert.Equal(t, 404, resp.Code)
+}
+
+func TestMasterAPI_ReplicaSetUpdate_oddMemberCounts(t *testing.T) {
+	_, mainRouter, err := createDBAndMasterAPI(t)
+	assert.NoError(t, err)
+
+	testRequest := func(persistent, volatile, expectedResponseCode int, msg ...interface{}) {
+		resp := httptest.NewRecorder()
+
+		req_body := fmt.Sprintf("{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":%d,"+
+			"\"volatile_node_count\":%d,\"configure_as_sharding_config_server\":false}",
+			persistent, volatile)
+		req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
+		assert.NoError(t, err)
+		mainRouter.ServeHTTP(resp, req)
+
+		assert.Equal(t, expectedResponseCode, resp.Code, msg...)
+	}
+
+	testRequest(0, 1, 200, "odd volatile-only replica set member count should be allowed")
+	testRequest(0, 2, 400, "even volatile-only replica set member count should be forbidden")
+	testRequest(1, 1, 400, "even mixed replica set member count should be forbidden")
+	testRequest(1, 0, 200, "odd persistent-only replica set member count should be allowed")
+
 }
 
 func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
