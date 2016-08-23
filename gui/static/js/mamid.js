@@ -381,7 +381,17 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $('#confirm_disable').modal('hide');
             });
         });
-    }
+    };
+
+    $scope.calcMongodCount = function () {
+        var begin = $scope.edit_slave.mongod_port_range_begin;
+        var end = $scope.edit_slave.mongod_port_range_end;
+        if(begin + "" === 'undefined' || begin === null)
+            begin = 18080;
+        if(end + "" === 'undefined' || end == null)
+            end = 18081;
+        return end - begin;
+    };
 });
 
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {

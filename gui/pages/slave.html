@@ -40,13 +40,13 @@
                 <table width="100%">
                     <tr>
                         <th>Hostname</th>
-                        <td colspan="2">
+                        <td colspan="3">
                             <input type="text" class="form-control" ng-model="edit_slave.hostname"/>
                         </td>
                     </tr>
                     <tr>
                         <th>Slave port</th>
-                        <td colspan="2">
+                        <td colspan="3">
                             <input type="number" class="form-control" placeholder="8081"
                                    ng-model="edit_slave.slave_port"/>
                         </td>
@@ -63,29 +63,25 @@
                             <input type="number" class="form-control" placeholder="18081"
                                    ng-model="edit_slave.mongod_port_range_end"/>
                         </td>
+                        <td style="text-align: right">≙ <b>{{ calcMongodCount() }}</b> Mongods</td>
                     </tr>
                     <tr>
                         <th>Slave with persistent storage <span class="glyphicon glyphicon-hdd"
                                                                 aria-hidden="true"></span>
                         </th>
-                        <td colspan="2">
+                        <td colspan="3">
                             <input type="checkbox" class="form-control" ng-model="edit_slave.persistent_storage"/>
                         </td>
                     </tr>
-                    <tr>
-                        <td colspan="2"></td>
-                        <td>
-                            <button type="submit"
-                                    class="btn btn-primary pull-right" ng-if="!is_create_view">
-                                Apply
-                            </button>
-                            <button type="submit"
-                                    class="btn btn-success pull-right" ng-if="is_create_view">
-                                Create Slave
-                            </button>
-                        </td>
-                    </tr>
                 </table>
+                <button type="submit"
+                        class="btn btn-primary pull-right" ng-if="!is_create_view">
+                    Apply
+                </button>
+                <button type="submit"
+                        class="btn btn-success pull-right" ng-if="is_create_view">
+                    Create Slave
+                </button>
             </fieldset>
         </form>
     </div>
