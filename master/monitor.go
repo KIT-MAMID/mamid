@@ -176,6 +176,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observ
 		if observedMongod.StatusError == nil {
 			//TODO Finish this
 			//Put observations into model
+			dbMongod.ObservedState.ParentMongodID = model.NullIntValue(dbMongod.ID) // we could be creating the ObservedState of Mongod on first observation
 			dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
 			dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
 			dbMongod.ObservationError = model.MSPError{}

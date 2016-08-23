@@ -183,10 +183,13 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 		ReplicaSetMembers:      []ReplicaSetMember{},
 	}
 
-	m.ObservedState = o
-	m.DesiredState = d
-
 	assert.NoError(t, tx.Create(m).Error)
+	o.ParentMongodID = NullIntValue(m.ID)
+	d.ParentMongodID = NullIntValue(m.ID)
+	assert.NoError(t, tx.Create(&o).Error)
+	assert.NoError(t, tx.Create(&d).Error)
+	assert.NoError(t, tx.Model(&m).Update("DesiredStateID", d.ID).Error)
+	assert.NoError(t, tx.Model(&m).Update("ObservedStateID", o.ID).Error)
 
 	var mdb Mongod
 
@@ -214,7 +217,10 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 
 	s := MongodState{ReplicaSetMembers: []ReplicaSetMember{m}}
 
+	assert.NoError(t, tx.Create(&m).Error)
+	s.ParentMongodID = NullIntValue(m.ID)
 	assert.NoError(t, tx.Create(&s).Error)
+	assert.NoError(t, tx.Model(&m).Update("DesiredStateID", s.ID).Error)
 
 	var sdb MongodState
 

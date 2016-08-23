@@ -393,24 +393,26 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 		return nil, fmt.Errorf("could not spawn Mongod: no free port on slave `%s`", s.Hostname)
 	}
 
+	m := &Mongod{
+		Port:          unusedPort,
+		ReplSetName:   r.Name,
+		ParentSlaveID: s.ID,
+		ReplicaSetID:  r.ID,
+	}
+	if err := tx.Create(&m).Error; err != nil {
+		panic(err)
+	}
+
 	desiredState := MongodState{
+		ParentMongodID:         NullIntValue(m.ID),
 		IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
 		ExecutionState:         MongodExecutionStateRunning,
 	}
-
 	if err := tx.Create(&desiredState).Error; err != nil {
 		panic(err)
 	}
 
-	m := &Mongod{
-		Port:           unusedPort,
-		ReplSetName:    r.Name,
-		ParentSlaveID:  s.ID,
-		ReplicaSetID:   r.ID,
-		DesiredStateID: NullIntValue(desiredState.ID),
-	}
-
-	if err := tx.Create(&m).Error; err != nil {
+	if err := tx.Model(&m).Update("DesiredStateID", desiredState.ID).Error; err != nil {
 		panic(err)
 	}
 

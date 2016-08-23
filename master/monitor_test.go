@@ -32,6 +32,7 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 	}
 	assert.NoError(t, tx.Create(&dbReplSet).Error)
 	m1 := model.Mongod{
+		ID:             1,
 		Port:           2000,
 		ReplSetName:    "repl1",
 		ParentSlaveID:  1,
@@ -39,12 +40,13 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 		DesiredStateID: model.NullIntValue(1),
 	}
 	des1 := model.MongodState{
-		ID: 1,
+		ID:                     1,
+		ParentMongodID:         model.NullIntValue(1),
 		IsShardingConfigServer: false,
 		ExecutionState:         model.MongodExecutionStateRunning,
 	}
-	assert.NoError(t, tx.Create(&des1).Error)
 	assert.NoError(t, tx.Create(&m1).Error)
+	assert.NoError(t, tx.Create(&des1).Error)
 
 	tx.Commit()
 	return
