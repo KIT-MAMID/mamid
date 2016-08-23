@@ -143,6 +143,10 @@ mamidApp.config(function ($routeProvider) {
             templateUrl: 'pages/riskgroups.html',
             controller: 'riskGroupIndexController'
         })
+        .when('/system', {
+            templateUrl: 'pages/system.html',
+            controller: 'systemController'
+        })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
@@ -457,3 +461,7 @@ mamidApp.controller('replicasetByIdController',
             $('#confirm_remove').modal('hide');
         };
     });
+
+mamidApp.controller('systemController', function ($scope, $http) {
+
+});
