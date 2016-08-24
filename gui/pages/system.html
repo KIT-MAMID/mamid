@@ -28,12 +28,14 @@
         <p>The shared secret for the Mongods in the cluster.</p>
         <div class="row">
             <div class="col-lg-6">
-                <div class="input-group">
-                    <input type="text" class="form-control">
-                    <span class="input-group-btn">
-        <button class="btn btn-primary" type="button">Save</button>
-      </span>
-                </div><!-- /input-group -->
+                <form>
+                    <div class="input-group">
+                        <input minlength="6" maxlength="1024" required type="text" class="form-control">
+                        <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary" type="button">Save</button>
+                        </span>
+                    </div><!-- /input-group -->
+                </form>
             </div>
         </div>
     </div>
