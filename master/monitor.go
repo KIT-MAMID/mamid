@@ -39,19 +39,41 @@ func (m *Monitor) Run() {
 
 				wg := sync.WaitGroup{}
 
+				type observation struct {
+					result []msp.Mongod
+					err    *msp.Error
+					slave  model.Slave
+				}
+				observationChan := make(chan observation)
+
 				//Observe active slaves
 				for _, slave := range slaves {
 					if slave.ConfiguredState == model.SlaveStateActive {
 						wg.Add(1)
 						go func(s model.Slave) {
-							m.observeSlave(s)
+							//Request mongod states from slave
+							observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
+							observationChan <- observation{
+								result: observedMongods,
+								err:    mspError,
+								slave:  s,
+							}
 							wg.Done()
 						}(slave)
 					}
 				}
 
-				//Wait for all slaves to be observed
-				wg.Wait()
+				//Wait for all slaves to be observed and close channel to make consumer loop break
+				go func() {
+					wg.Wait()
+					close(observationChan)
+				}()
+
+				//Consumer loop that saves result to database
+				//We do this so that all transactions happen after eachother == prevent concurrent database access
+				for observationRes := range observationChan {
+					m.handleObservation(observationRes.result, observationRes.err, observationRes.slave)
+				}
 
 				//Check degradation of replica sets
 				m.observeReplicaSets()
@@ -68,11 +90,7 @@ func mongodTuple(s model.Slave, m msp.Mongod) string {
 	return fmt.Sprintf("(%s(id=%d),%d,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetName)
 }
 
-func (m *Monitor) observeSlave(slave model.Slave) {
-
-	//Request mongod states from slave
-	observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
-
+func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.Error, slave model.Slave) {
 	// Notify about reachablility
 	comErr := msp.Error{}
 	if mspError != nil {

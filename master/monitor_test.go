@@ -64,28 +64,12 @@ func TestMonitor_observeSlave(t *testing.T) {
 	db, err := createDB(t)
 	assert.NoError(t, err)
 
-	mspClient := FakeMSPClient{
-		Status: []msp.Mongod{
-			msp.Mongod{
-				Port:                    2000,
-				ReplicaSetName:          "repl1",
-				ReplicaSetMembers:       []msp.HostPort{},
-				ShardingConfigServer:    false,
-				StatusError:             nil,
-				LastEstablishStateError: nil,
-				State: msp.MongodStateRunning,
-			},
-		},
-		Error: nil,
-	}
-
 	wg := new(sync.WaitGroup)
 	bus := NewBus()
 	readChannel := bus.GetNewReadChannel()
 	monitor := Monitor{
 		DB:              db,
 		BusWriteChannel: bus.GetNewWriteChannel(),
-		MSPClient:       mspClient,
 	}
 
 	wg.Add(1)
@@ -102,7 +86,17 @@ func TestMonitor_observeSlave(t *testing.T) {
 		tx.Rollback()
 	}
 
-	monitor.observeSlave(slave)
+	monitor.handleObservation([]msp.Mongod{
+		msp.Mongod{
+			Port:                    2000,
+			ReplicaSetName:          "repl1",
+			ReplicaSetMembers:       []msp.HostPort{},
+			ShardingConfigServer:    false,
+			StatusError:             nil,
+			LastEstablishStateError: nil,
+			State: msp.MongodStateRunning,
+		},
+	}, nil, slave)
 
 	var mongod model.Mongod
 	{
@@ -125,26 +119,22 @@ func TestMonitor_observeSlave(t *testing.T) {
 	//-----------------
 	//Slave cannot observe mongod
 	//-----------------
-	monitor.MSPClient = FakeMSPClient{
-		Status: []msp.Mongod{
-			msp.Mongod{
-				Port:           2000,
-				ReplicaSetName: "repl1",
-				StatusError: &msp.Error{
-					Identifier:  "foo",
-					Description: "cannot observe mongod",
-				},
-			},
-		},
-		Error: nil,
-	}
 	{
 		tx := db.Begin()
 		tx.First(&slave, 1)
 		tx.Rollback()
 	}
 
-	monitor.observeSlave(slave)
+	monitor.handleObservation([]msp.Mongod{
+		msp.Mongod{
+			Port:           2000,
+			ReplicaSetName: "repl1",
+			StatusError: &msp.Error{
+				Identifier:  "foo",
+				Description: "cannot observe mongod",
+			},
+		},
+	}, nil, slave)
 
 	{
 		tx := db.Begin()
@@ -178,7 +168,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 		tx.Rollback()
 	}
 
-	monitor.observeSlave(slave)
+	monitor.handleObservation([]msp.Mongod{}, nil, slave)
 
 	{
 		tx := db.Begin()
@@ -210,7 +200,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 		tx.Rollback()
 	}
 
-	monitor.observeSlave(slave)
+	monitor.handleObservation([]msp.Mongod{}, &msp.Error{Identifier: msp.CommunicationError}, slave)
 
 	connStatusX = <-readChannel
 	connStatus, ok = connStatusX.(model.ConnectionStatus)
