@@ -140,7 +140,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observ
 
 	for _, observedMongod := range observedMongods {
 
-		monitorLog.Debug("monitor: updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+		monitorLog.Debugf("monitor: updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
 
 		var dbMongod model.Mongod
 
