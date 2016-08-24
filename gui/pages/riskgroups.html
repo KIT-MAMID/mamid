@@ -4,16 +4,16 @@
     downtimes in case of a fault.
 </p>
 <form ng-submit="createRiskGroup()">
-    <table width="100%">
-        <tr>
-            <td><input type="text" placeholder="New Risk Group Name" class="form-control"
-                       ng-model="new_riskgroup.name"/></td>
-            <td>
-                <button class="btn btn-success">Create</button>
-            </td>
-        </tr>
-    </table>
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="input-group">
+                <input type="text" ng-model="new_riskgroup.name" placeholder="New Risk Group Name" class="form-control">
+                <span class="input-group-btn"><button class="btn btn-success" type="button">Create</button></span>
+            </div><!-- /input-group -->
+        </div>
+    </div>
 </form>
+<br/>
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
     <div class="panel panel-default">
         <div class="panel-heading" role="tab" id="headingOne">
