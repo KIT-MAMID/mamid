@@ -49,6 +49,9 @@ func (m *MasterAPI) Setup() {
 
 	m.Router.Methods("GET").Path("/slaves/{slaveId}/mongods").Name("MongodsBySlave").HandlerFunc(m.MongodsBySlave)
 	m.Router.Methods("GET").Path("/replicasets/{replicasetId}/mongods").Name("MongodsByReplicaSet").HandlerFunc(m.MongodsByReplicaSet)
+
+	m.Router.Methods("GET").Path("/system/secret").Name("SecretGet").HandlerFunc(m.SecretGet)
+	m.Router.Methods("POST").Path("/system/secret").Name("SecretUpdate").HandlerFunc(m.SecretUpdate)
 }
 
 func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {
