@@ -61,12 +61,15 @@ func main() {
 	}
 
 	processManager := NewProcessManager(mongodExecutable, dataDir)
+	processManager.Run()
+
 	configurator := &ConcreteMongodConfigurator{
 		Dial: mgo.Dial,
 		MongodSoftShutdownTimeout: mongodSoftShutdownTimeout,
 	}
 
 	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)
+
 	server := msp.NewServer(controller, listenString)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
