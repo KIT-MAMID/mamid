@@ -102,10 +102,10 @@ type Mongod struct {
 	ReplSetName string
 
 	ObservationError   MSPError
-	ObservationErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
+	ObservationErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"` // TODO not cleaned up on Mongod deletion right now
 
 	LastEstablishStateError   MSPError
-	LastEstablishStateErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
+	LastEstablishStateErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"` // TODO not cleaned up on Mongod deletion right now
 
 	ParentSlave   *Slave
 	ParentSlaveID int64 `sql:"type:integer REFERENCES slaves(id) DEFERRABLE INITIALLY DEFERRED"`
