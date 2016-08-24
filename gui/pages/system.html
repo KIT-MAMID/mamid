@@ -5,12 +5,12 @@
     </div>
     <div class="panel-body">
         <p>Backup the running configuration as sql-dump.</p>
-        <a href="/export" class="btn btn-primary"><span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+        <a download="/api/system/runningconfig" href="/api/system/runningconfig" class="btn btn-primary"><span class="glyphicon glyphicon-export" aria-hidden="true"></span>
             Export dump</a>
         <hr/>
         <p>Import a configuration as sql-dump.</p>
-        <form class="upload">
-            <input class="form-inline" name="file" id="file"
+        <form enctype="multipart/form-data" action="/api/system/runningconfig" method="post" class="upload">
+            <input class="form-inline" name="config" id="file"
                    ng-model="file" type="file">
             <button type="submit" id="submit" disabled class="form-inline btn btn-primary disabled"><span
                     class="glyphicon glyphicon-import"
