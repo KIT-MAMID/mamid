@@ -447,7 +447,7 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 	}
 
 	desiredState := MongodState{
-		ParentMongodID:         NullIntValue(m.ID),
+		ParentMongodID:         m.ID,
 		IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
 		ExecutionState:         MongodExecutionStateRunning,
 	}

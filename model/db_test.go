@@ -26,6 +26,10 @@ func fixtureEmptyMongod() *Mongod {
 	}
 }
 
+func fixtureEmptyMongodState() MongodState {
+	return MongodState{}
+}
+
 func fixtureEmptyRiskGroup() *RiskGroup {
 	return &RiskGroup{
 		Name:   "rg1",
@@ -184,8 +188,8 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 	}
 
 	assert.NoError(t, tx.Create(m).Error)
-	o.ParentMongodID = NullIntValue(m.ID)
-	d.ParentMongodID = NullIntValue(m.ID)
+	o.ParentMongodID = m.ID
+	d.ParentMongodID = m.ID
 	assert.NoError(t, tx.Create(&o).Error)
 	assert.NoError(t, tx.Create(&d).Error)
 	assert.NoError(t, tx.Model(&m).Update("DesiredStateID", d.ID).Error)
@@ -218,7 +222,7 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 	s := MongodState{ReplicaSetMembers: []ReplicaSetMember{m}}
 
 	assert.NoError(t, tx.Create(&m).Error)
-	s.ParentMongodID = NullIntValue(m.ID)
+	s.ParentMongodID = m.ID
 	assert.NoError(t, tx.Create(&s).Error)
 	assert.NoError(t, tx.Model(&m).Update("DesiredStateID", s.ID).Error)
 
@@ -399,23 +403,28 @@ func TestCascadeSlaves(t *testing.T) {
 	tx := db.Begin()
 
 	r := fixtureEmptyRiskGroup()
-	tx.Create(r)
+	assert.NoError(t, tx.Create(r).Error)
 
 	rs := fixtureEmptyReplicaSet()
-	tx.Create(rs)
+	assert.NoError(t, tx.Create(rs).Error)
 
 	s := fixtureEmptySlave()
 	s.RiskGroupID = NullIntValue(r.ID)
-	tx.Create(s)
+	assert.NoError(t, tx.Create(s).Error)
+
+	ds := fixtureEmptyMongodState()
+	assert.NoError(t, tx.Create(&ds).Error)
 
 	m := fixtureEmptyMongod()
 	m.ParentSlaveID = s.ID
 	m.ReplicaSetID = rs.ID
-	tx.Create(m)
+	m.DesiredStateID = ds.ID
+	assert.NoError(t, tx.Create(m).Error)
+	assert.NoError(t, tx.Model(&ds).Update("ParentMongodID", m.ID).Error)
 
 	p := fixtureEmptyProblem()
 	p.SlaveID = NullIntValue(s.ID)
-	tx.Create(p)
+	assert.NoError(t, tx.Create(p).Error)
 
 	assert.NoError(t, tx.Commit().Error)
 

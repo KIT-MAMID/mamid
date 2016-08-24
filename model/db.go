@@ -117,7 +117,7 @@ type Mongod struct {
 	ReplicaSetID int64 `sql:"type:integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	DesiredState   MongodState
-	DesiredStateID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"` // NOTE: we cascade on delete, i.e. when a desired state is deleted, the Mongod is deleted, too. This is the inversion of the semantic object hierarchy, but we'll stay with it for now.
+	DesiredStateID int64 `sql:"type:integer NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"` // NOTE: we cascade on delete because Monogd cannot be without DesiredState
 
 	ObservedState   MongodState
 	ObservedStateID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
@@ -126,7 +126,7 @@ type Mongod struct {
 type MongodState struct {
 	ID                     int64 `gorm:"primary_key"`
 	ParentMongod           *Mongod
-	ParentMongodID         sql.NullInt64 `sql:"type:integer NOT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
+	ParentMongodID         int64 `sql:"type:integer NOT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 	IsShardingConfigServer bool
 	ExecutionState         MongodExecutionState
 	ReplicaSetMembers      []ReplicaSetMember

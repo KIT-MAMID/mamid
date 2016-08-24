@@ -63,12 +63,19 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	assert.NoError(t, tx.Create(&dbReplicaset).Error)
 
 	m1 := model.Mongod{
-		Port:          5001,
-		ReplSetName:   "repl1",
-		ReplicaSetID:  1,
-		ParentSlaveID: 1,
+		ID:             1,
+		Port:           5001,
+		ReplSetName:    "repl1",
+		ReplicaSetID:   1,
+		ParentSlaveID:  1,
+		DesiredStateID: 1,
 	}
 	assert.NoError(t, tx.Create(&m1).Error)
+	ds1 := model.MongodState{
+		ID:             1,
+		ParentMongodID: m1.ID,
+	}
+	assert.NoError(t, tx.Create(&ds1).Error)
 
 	dbSlave2 := model.Slave{
 		ID:                   2,

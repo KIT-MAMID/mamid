@@ -37,11 +37,11 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 		ReplSetName:    "repl1",
 		ParentSlaveID:  1,
 		ReplicaSetID:   1,
-		DesiredStateID: model.NullIntValue(1),
+		DesiredStateID: 1,
 	}
 	des1 := model.MongodState{
 		ID:                     1,
-		ParentMongodID:         model.NullIntValue(1),
+		ParentMongodID:         1,
 		IsShardingConfigServer: false,
 		ExecutionState:         model.MongodExecutionStateRunning,
 	}
