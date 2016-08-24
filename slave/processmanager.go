@@ -9,6 +9,7 @@ import (
 )
 
 type ProcessManager struct {
+	killChan         chan msp.PortNumber
 	command          string
 	dataDir          string
 	runningProcesses map[msp.PortNumber]*exec.Cmd
@@ -16,14 +17,23 @@ type ProcessManager struct {
 
 func NewProcessManager(command string, dataDir string) *ProcessManager {
 	return &ProcessManager{
+		killChan:         make(chan msp.PortNumber),
 		command:          command,
 		dataDir:          dataDir,
 		runningProcesses: make(map[msp.PortNumber]*exec.Cmd),
 	}
 }
 
-func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
+func (p *ProcessManager) Run() {
+	go func() {
+		for {
+			port := <-p.killChan
+			delete(p.runningProcesses, port)
+		}
+	}()
+}
 
+func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetName)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
@@ -35,10 +45,15 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 	sh := fmt.Sprintf("/usr/bin/env %s --dbpath '%s/%s/%s' --port %d --replSet '%s'", p.command, p.dataDir, DataDBDir, escName, m.Port, escName)
 	cmd := exec.Command("/bin/sh", "-c", sh)
 	err := cmd.Start()
-
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		cmd.Process.Wait()
+		p.killChan <- m.Port
+	}()
+
 	p.runningProcesses[m.Port] = cmd
 	return nil
 }
