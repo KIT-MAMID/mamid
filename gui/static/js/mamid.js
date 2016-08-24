@@ -447,8 +447,9 @@ mamidApp.controller('replicasetByIdController',
         $scope.updateReplicaSet = function () {
             angular.copy($scope.edit_replicaset, $scope.replicaset);
             if ($scope.is_create_view) {
-                $scope.replicaset.$create();
-                $location.path("/replicasets");
+                $scope.replicaset.$create(function () {
+                    $location.path("/replicasets");
+                });
             } else {
                 $scope.replicaset.$save();
             }
