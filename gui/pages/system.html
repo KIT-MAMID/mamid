@@ -11,7 +11,6 @@
         <p>Import a configuration as sql-dump.</p>
         <form class="upload">
             <input class="form-inline" name="file" id="file"
-                   onChange="fileCheck()"
                    ng-model="file" type="file">
             <button type="submit" id="submit" disabled class="form-inline btn btn-primary disabled"><span
                     class="glyphicon glyphicon-import"
@@ -20,12 +19,22 @@
         </form>
     </div>
 </div>
-<script>
-    function fileCheck() {
-        alert($('#file').value());
-        if ($('#file').value() != null) {
-            $('#submit').removeClass('disabled');
-            $('#submit').aremoveAttribute('disabled');
-        }
-    }
-</script>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Shared Secret</h3>
+    </div>
+    <div class="panel-body">
+        <p>The shared secret for the Mongods in the cluster.</p>
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="input-group">
+                    <input type="text" class="form-control">
+                    <span class="input-group-btn">
+        <button class="btn btn-primary" type="button">Save</button>
+      </span>
+                </div><!-- /input-group -->
+            </div>
+        </div>
+    </div>
+</div>
