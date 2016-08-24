@@ -142,10 +142,10 @@ func (m mongodMembers) Swap(i, j int) {
 
 func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp.Error {
 	sess, err := c.connect(m.Port)
-	defer sess.Close()
 	if err != nil {
 		return err
 	}
+	defer sess.Close()
 
 	current, err, state := c.fetchConfiguration(sess, m.Port)
 	if err != nil {
