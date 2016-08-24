@@ -332,7 +332,7 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 }
 
 func compareStates(mongod model.Mongod) (m model.MongodMatchStatus) {
-	//TODO Finish this
+	//TODO Finish this: replica set member sets, keyfile contents
 	m.Mismatch =
 		mongod.DesiredState.ExecutionState != mongod.ObservedState.ExecutionState ||
 			mongod.DesiredState.IsShardingConfigServer != mongod.ObservedState.IsShardingConfigServer
