@@ -52,6 +52,8 @@ func (m *MasterAPI) Setup() {
 
 	m.Router.Methods("GET").Path("/system/secret").Name("SecretGet").HandlerFunc(m.SecretGet)
 	m.Router.Methods("POST").Path("/system/secret").Name("SecretUpdate").HandlerFunc(m.SecretUpdate)
+	m.Router.Methods("GET").Path("/system/runningconfig").Name("DumpDB").HandlerFunc(m.DumpDB)
+	m.Router.Methods("POST").Path("/system/runningconfig").Name("RestoreDB").HandlerFunc(m.RestoreDB)
 }
 
 func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) (err error) {
