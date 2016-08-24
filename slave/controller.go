@@ -62,63 +62,62 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 }
 
 func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
-	var mutex *sync.Mutex = nil
 
 	c.busyTableLock.Lock()
 	// acquire a lock if possible [otherwise there is no process and we need to respawn immediately]
-	if _, exists := c.busyTable[m.Port]; exists {
-		mutex = c.busyTable[m.Port]
-		c.busyTableLock.Unlock()
-		mutex.Lock()
-		c.busyTableLock.Lock()
-	} else if m.State == msp.MongodStateDestroyed {
-		// if not existing, we have to do nothing
-		c.busyTableLock.Unlock()
-		return nil
-	}
-
-	// check if still existing after locking [else possible race condition: process might have been in destruction phase while we were waiting for the lock],
-	// else we need to respawn
 	if _, exists := c.busyTable[m.Port]; !exists {
 		c.busyTable[m.Port] = &sync.Mutex{}
-		c.busyTable[m.Port].Lock()
-		if mutex != nil {
-			mutex.Unlock() // prevent deadlock, there might be multiple goroutines waiting on the same mutex
-		}
-		mutex = c.busyTable[m.Port]
-		c.busyTableLock.Unlock()
-		err := c.procManager.SpawnProcess(m)
-
-		if err != nil {
-			log.Errorf("controller: error spawning process: %s", err)
-			return &msp.Error{
-				Identifier:      msp.SlaveSpawnError,
-				Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
-				LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
-			}
-		}
 	}
+	mutex := c.busyTable[m.Port]
+	mutex.Lock()
+	defer mutex.Unlock()
+	c.busyTableLock.Unlock()
 
-	if m.State == msp.MongodStateDestroyed {
-		go func() {
-			time.Sleep(c.mongodHardShutdownTimeout)
-			if killProcessError := c.procManager.KillProcess(m.Port); killProcessError != nil {
-				log.Error(killProcessError)
+	if m.State == msp.MongodStateRunning {
+
+		// check if still existing after locking [else possible race condition: process might have been in destruction phase while we were waiting for the lock],
+		// else we need to respawn
+		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+
+			err := c.procManager.SpawnProcess(m)
+
+			if err != nil {
+				log.Errorf("controller: error spawning process: %s", err)
+				return &msp.Error{
+					Identifier:      msp.SlaveSpawnError,
+					Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
+					LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
+				}
 			}
-			// do wait until the old instance is destroyed. Having a half destroyed unlocked instance flying around should be dangerous
-			delete(c.busyTable, m.Port)
-			mutex.Unlock()
-		}()
-		c.configurator.ApplyMongodConfiguration(m) // ignore error of destruction
+		}
+
+		applyErr := c.configurator.ApplyMongodConfiguration(m)
+		if applyErr != nil {
+			log.Errorf("controller: error applying Mongod configuration: %s", applyErr)
+		}
+		return applyErr
+
+	} else if m.State == msp.MongodStateDestroyed || m.State == msp.MongodStateNotRunning {
+		c.stopMongod(m)
+		//TODO Delete files if destroy
 		return nil
-	}
-
-	applyErr := c.configurator.ApplyMongodConfiguration(m)
-	if applyErr != nil {
-		log.Errorf("controller: error applying Mongod configuration: %s", applyErr)
 	}
 
 	// release lock preventing simultaneous configuration
-	mutex.Unlock()
-	return applyErr
+	return &msp.Error{
+		Identifier:  msp.BadStateDescription,
+		Description: fmt.Sprintf("Unknown desired state"),
+	}
+}
+
+func (c *Controller) stopMongod(m msp.Mongod) {
+	applyErr := c.configurator.ApplyMongodConfiguration(m) // ignore error of destruction, will be killed
+	if applyErr != nil {
+		log.WithField("error", applyErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
+	}
+
+	killErr := c.procManager.KillProcess(m.Port) //TODO This should actually just be a sanity check and remove from running processes
+	if killErr != nil {
+		log.WithField("error", killErr).Error("could not soft shutdown mongod on port %d", m.Port)
+	}
 }

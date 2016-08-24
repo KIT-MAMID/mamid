@@ -155,10 +155,11 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	sort.Sort(mongodMembers(current.ReplicaSetMembers))
 	sort.Sort(mongodMembers(m.ReplicaSetMembers))
 
-	if m.State == msp.MongodStateDestroyed {
+	if m.State == msp.MongodStateDestroyed || m.State == msp.MongodStateNotRunning {
 		var result interface{}
-		sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
-		return nil // shutdown never errors ... We'll just try to force kill the process after another timeout
+		err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}, {"force", true}}, result)
+		log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
+		return nil
 	}
 
 	if m.State == msp.MongodStateRunning {
