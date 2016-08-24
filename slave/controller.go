@@ -118,6 +118,6 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 
 	killErr := c.procManager.KillProcess(m.Port) //TODO This should actually just be a sanity check and remove from running processes
 	if killErr != nil {
-		log.WithField("error", killErr).Error("could not soft shutdown mongod on port %d", m.Port)
+		log.WithField("error", killErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
 	}
 }
