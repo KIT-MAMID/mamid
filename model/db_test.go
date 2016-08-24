@@ -431,3 +431,48 @@ func TestCascadeSlaves(t *testing.T) {
 	assert.True(t, tx3.First(&Problem{}, p.ID).RecordNotFound())
 	tx3.Rollback()
 }
+
+// Test case demonstrating how to do overwrites
+func TestObservationErrorOverwriteBehavior(t *testing.T) {
+
+	// Assume a situation where Slave already has an ObservationError
+	db, _, _ := InitializeTestDB()
+	tx := db.Begin()
+
+	o1 := MSPError{
+		Identifier: "id1",
+	}
+
+	assert.NoError(t, tx.Create(&o1).Error)
+
+	s := Slave{
+		Hostname:             "s1",
+		Port:                 1,
+		MongodPortRangeBegin: 1,
+		MongodPortRangeEnd:   2,
+		ObservationErrorID:   NullIntValue(o1.ID),
+	}
+
+	assert.NoError(t, tx.Create(&s).Error)
+
+	var countBeforeUpdate int64
+	assert.NoError(t, tx.Model(&MSPError{}).Count(&countBeforeUpdate).Error)
+	assert.EqualValues(t, 1, countBeforeUpdate)
+
+	// Now we attempt to observe Slave again and want to update the value pointed to by slave
+	// We could create, update, delete
+	// Or we could use the following hack to just UPDATE all values of the existing observation,
+	//    saving us an annoying DELETE
+	o2 := MSPError{
+		Identifier: "id2",
+	}
+	o2.ID = o1.ID
+	tx.Save(&o2)
+	// That was it
+
+	var countAfterUpdate int64
+	assert.NoError(t, tx.Model(&MSPError{}).Count(&countAfterUpdate).Error)
+
+	assert.EqualValues(t, 1, countAfterUpdate, "updates should remove the row previously referenced in the overwritten column")
+
+}
