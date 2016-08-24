@@ -32,7 +32,7 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	ports := c.procManager.RunningProcesses()
-	mongods := make([]msp.Mongod, len(ports))
+	mongods := make([]msp.Mongod, 0, len(ports))
 	mongodChannel := make(chan msp.Mongod, len(ports))
 	for _, port := range ports {
 		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber) {
@@ -50,10 +50,12 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 		}(mongodChannel, port)
 	}
 
-	for m := range mongodChannel {
-		mongods = append(mongods, m)
-		if len(mongods) == len(ports) {
-			break
+	if len(mongods) != len(ports) {
+		for m := range mongodChannel {
+			mongods = append(mongods, m)
+			if len(mongods) == len(ports) {
+				break
+			}
 		}
 	}
 	return mongods, nil
