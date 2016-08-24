@@ -60,6 +60,9 @@ type Slave struct {
 
 	// Foreign keys
 	RiskGroupID sql.NullInt64 `sql:"type:integer NULL REFERENCES risk_groups(id) DEFERRABLE INITIALLY DEFERRED"`
+
+	ObservationError   *MSPError     // error in observation that is not tied to a specific Mongod
+	ObservationErrorID sql.NullInt64 `sql:"type:integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"` // TODO not cleaned up on slave deletion right now
 }
 
 type PortNumber uint16

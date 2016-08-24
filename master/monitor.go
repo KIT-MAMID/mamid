@@ -94,6 +94,8 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 	// Notify about reachablility
 	comErr := msp.Error{}
 	if mspError != nil {
+		//TODO Handle other slave errors => check identifiers != CommunicationError
+		monitorLog.Errorf("monitor: error observing slave: %#v", mspError)
 		comErr = *mspError
 	}
 	m.BusWriteChannel <- model.ConnectionStatus{
@@ -101,21 +103,22 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 		Unreachable:        mspError != nil && mspError.Identifier == msp.CommunicationError,
 		CommunicationError: comErr,
 	}
-	// TODO do we need to write this to the DB (currently there is no field for this in model.Slave)
-
-	if mspError != nil {
-		//TODO Handle other slave errors => check identifiers != CommunicationError
-		//monitorLog.Error("monitor: error observing slave: %#v", mspError)
-		return
-	}
 
 	tx := m.DB.Begin()
 
-	if err := m.updateObservedStateInDB(tx, slave, observedMongods); err != nil {
+	if err := m.updateObservedStateInDB(tx, slave, mspError, observedMongods); err != nil {
 		monitorLog.WithError(err).Error()
 		tx.Rollback()
 		return
 	}
+
+	// Return early if there were observation errors.
+	if mspError != nil {
+		tx.Commit()
+		return
+	}
+
+	// NOTE: from now on, we assume observedMongods to be valid.
 
 	if err := m.handleUnobservedMongodsOfSlave(tx, slave, observedMongods); err != nil {
 		monitorLog.WithError(err).Error()
@@ -136,7 +139,53 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 // Update database Mongod.ObservedState with newly observedMongods
 // Errors returned by this method should be handled by aborting the transaction tx
-func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (criticalError error) {
+func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveObservationError *msp.Error, observedMongods []msp.Mongod) (criticalError error) {
+
+	if slaveObservationError != nil { // update observation error field
+
+		monitorLog.Debugf("monitor: persisting observation error for slave `%s:%d` in database", slave.Hostname, slave.Port)
+
+		var updateError error
+		modelObservationErr := mspErrorToModelMSPError(slaveObservationError)
+		if slave.ObservationErrorID.Valid {
+			// Replace existing entry
+			monitorLog.Debugf("monitor: replacing existing observation error for slave `%s:%d` in database", slave.Hostname, slave.Port)
+			modelObservationErr.ID = slave.ObservationErrorID.Int64
+			updateError = tx.Save(&modelObservationErr).Error
+		} else {
+			monitorLog.Debugf("monitor: creating observation error for slave `%s:%d` in database", slave.Hostname, slave.Port)
+			updateError = tx.Create(&modelObservationErr).Error
+			if updateError == nil {
+				updateError = tx.Model(&slave).Update("ObservationErrorID", modelObservationErr.ID).Error
+			}
+		}
+
+		if updateError != nil {
+			return fmt.Errorf("monitor: database error when updating slave `%s:%d` ObservationErrorID field: %s", slave.Hostname, slave.Port, updateError)
+		}
+
+		// return early as there should not be observedMongods in case of slaveObservationError
+		return nil
+
+	} else if slave.ObservationErrorID.Valid { // clear observation error field
+
+		monitorLog.Debugf("monitor: clearing observation error for slave `%s:%d` in database", slave.Hostname, slave.Port)
+
+		res := tx.Exec(`DELETE FROM msp_errors WHERE id=?`, slave.ObservationErrorID.Int64)
+		switch {
+		case res.Error != nil:
+			return fmt.Errorf("monitor: database error when clearing observation error for slave `%s:%d`: %s", slave.Hostname, slave.Port, res.Error)
+		case res.RowsAffected == 0:
+			return fmt.Errorf("monitor: clearing observation error for slave `%s:%d` affected 0 rows", slave.Hostname, slave.Port)
+		case res.RowsAffected == 1:
+			monitorLog.Debugf("monitor: cleared observation error for slave `%s:%d`", slave.Hostname, slave.Port)
+		case res.RowsAffected > 1:
+			monitorLog.Warnf("monitor: clearing observation error for slave `%s:%d` affected %d != 1 rows", slave.Hostname, slave.Port, res.RowsAffected)
+		}
+
+	}
+
+	// NOTE: we assume observedMonogds to be valid from this point on (caught by early return in case of observation error)
 
 	for _, observedMongod := range observedMongods {
 
