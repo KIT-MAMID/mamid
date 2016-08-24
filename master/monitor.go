@@ -271,9 +271,9 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 		} else {
 			busMessage = compareStates(modelMongod)
 		}
-		monitorLog.Debugf("monitor: sending bus message for slave `%s`: %#v", slave.Hostname, busMessage)
+		monitorLog.Debugf("monitor: sending bus message for slave `%s`", slave.Hostname, busMessage)
 		m.BusWriteChannel <- busMessage
-		monitorLog.Debugf("monitor: sent bus message for slave `%s`: %#v", slave.Hostname, busMessage)
+		monitorLog.Debugf("monitor: sent bus message for slave `%s`", slave.Hostname, busMessage)
 
 	}
 
