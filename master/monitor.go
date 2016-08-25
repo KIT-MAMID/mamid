@@ -271,12 +271,16 @@ outer:
 			}
 		}
 
-		monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
-		//Else remove observed state
-		deleteErr := tx.Delete(&model.MongodState{}, "id = ?", modelMongod.ObservedStateID).Error
-		if deleteErr != nil {
-			monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
-			return deleteErr
+		if modelMongod.ObservedStateID.Valid {
+
+			monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
+			//Else remove observed state
+			deleteErr := tx.Delete(&model.MongodState{ID: modelMongod.ObservedStateID.Int64}).Error
+			if deleteErr != nil {
+				monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
+				return deleteErr
+			}
+
 		}
 	}
 
