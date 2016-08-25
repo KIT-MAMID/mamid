@@ -282,7 +282,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				panic(res.Error)
 			}
 
-			caLog.Debug("found slave `%s` as host for new mongod for replica set `%s`", leastBusySuitableSlave.Hostname, replicaSet.Name)
+			caLog.Debugf("found slave `%s` as host for new mongod for replica set `%s`", leastBusySuitableSlave.Hostname, replicaSet.Name)
 
 			m, err := c.spawnMongodOnSlave(tx, &leastBusySuitableSlave, &replicaSet.ReplicaSet)
 			if err != nil {

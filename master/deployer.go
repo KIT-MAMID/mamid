@@ -39,6 +39,7 @@ func (d *Deployer) handleMatchStatus(m MongodMatchStatus) {
 
 func (d *Deployer) pushMongodState(mongod Mongod) {
 
+	deployerLog.Debugf("fetch Mongod state representation: `%d` on slave `%d`", mongod.ID, mongod.ParentSlaveID)
 	// Readonly tx
 	tx := d.DB.Begin()
 
@@ -48,11 +49,16 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 	}
 	// Readonly tx
 	tx.Rollback()
+	deployerLog.Debugf("finish fetching Mongod state representation: `%d` on slave `%d`", mongod.ID, mongod.ParentSlaveID)
+
+	deployerLog.Debugf("establishing Mongod state on `%s`", hostPort)
 
 	mspError := d.MSPClient.EstablishMongodState(hostPort, mspMongod)
 	if mspError != nil {
-		deployerLog.Printf("deployer: MSP error establishing mongod state for Mongod `(%v(id=%d),%d,)` in Replica Set `%s`: %s",
-			mongod.ParentSlave, mongod.ParentSlaveID, mongod.Port, mongod.ReplSetName, mspError)
+		deployerLog.Errorf("MSP error establishing mongod state on `%s` for Mongod `(%v(id=%d),%d,)` in Replica Set `%s`: %s",
+			hostPort, mongod.ParentSlave, mongod.ParentSlaveID, mongod.Port, mongod.ReplSetName, mspError)
+	} else {
+		deployerLog.Debugf("finished establishing Mongod state on %s", hostPort)
 	}
 
 }
