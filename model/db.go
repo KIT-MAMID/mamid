@@ -6,6 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mattn/go-sqlite3"
 	"math/rand"
 	"os"
 	"strings"
@@ -361,5 +362,13 @@ func PtrToNullInt(value *int64) sql.NullInt64 {
 		return NullIntValue(*value)
 	} else {
 		return NullInt()
+	}
+}
+
+func IsUniqueConstraintError(err error) bool {
+	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		return true
+	} else {
+		return false
 	}
 }

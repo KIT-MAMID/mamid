@@ -122,14 +122,12 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 	err = tx.Create(&modelSlave).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsUniqueConstraintError(err) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		tx.Rollback()
 		return
-	}
-
-	if err != nil {
+	} else if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		tx.Rollback()
@@ -230,13 +228,16 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	err = tx.Save(&updatedModelSlave).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok {
-		if driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, driverErr.Error())
-			tx.Rollback()
-			return
-		}
+	if model.IsUniqueConstraintError(err) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		tx.Rollback()
+		return
+	} else if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		tx.Rollback()
+		return
 	}
 
 	// Trigger cluster allocator
