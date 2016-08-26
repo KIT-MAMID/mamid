@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
-	"github.com/mattn/go-sqlite3"
 	"net/http"
 	"strconv"
 )
@@ -182,10 +181,10 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 	err = tx.Save(&save).Error
 
 	// Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -391,10 +390,10 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 	err = tx.Save(&updatedSlave).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 	}
 
 	tx.Commit()
@@ -476,10 +475,10 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 	tx.Model(&modelSlave).Update("RiskGroupID", model.NullInt())
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
