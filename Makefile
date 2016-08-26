@@ -47,10 +47,13 @@ build/master_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,master/ msp/ model/) model/
 model/bindata.go: $(wildcard model/sql/*.sql) $(GO_BINDATA)
 	$(GO_BINDATA) -pkg model -o model/bindata.go model/sql
 
+.PHONY: clean_bindata_generated
+clean_bindata_generated:
+	rm -f model/bindata.go
+
 .PHONY:clean_master
-clean_master:
+clean_master: clean_bindata_generated
 	cd master/ && $(GO) clean
-	rm model/bindata.go
 	rm -rf build/master*
 
 ########################################################################################################################
@@ -98,11 +101,11 @@ clean_cover:
 
 
 .PHONY: check-format
-check-format:
+check-format: clean_bindata_generated
 	@! $(GOFMT) -d $(pkg_dirs) | $(GREP) '^'
 
 .PHONY: format
-format:
+format: clean_bindata_generated
 	@ $(GOFMT) -w $(pkg_dirs)
 
 .PHONY: vet
