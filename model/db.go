@@ -36,8 +36,7 @@ var modelLog = logrus.WithField("module", "model")
 
 	Enums: 	EnumType.EnumItem => const EnumTypeEnumItem
 
-		Structs using such 'enums' should declare appropriate constraints in the corresponding FieldTag,
-		using go-sqlite3 syntax
+		Structs using such 'enums' should declare appropriate constraints in the corresponding FieldTag
 
 		Example:
 
