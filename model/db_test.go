@@ -375,7 +375,7 @@ func TestCascade(t *testing.T) {
 
 	tx0 := db.Begin()
 	assert.NoError(t, tx0.Exec("CREATE TABLE foo(id int primary key);").Error)
-	assert.NoError(t, tx0.Exec("CREATE TABLE bar3(for int null references foo(id) on delete cascade deferrable initially deferred);").Error)
+	assert.NoError(t, tx0.Exec("CREATE TABLE bar3(foreignKey int null references foo(id) on delete cascade deferrable initially deferred);").Error)
 	assert.NoError(t, tx0.Commit().Error)
 
 	tx1 := db.Begin()
