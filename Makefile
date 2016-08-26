@@ -79,7 +79,7 @@ clean_slave:
 ########################################################################################################################
 
 .PHONY: test
-test:
+test: model/bindata.go
 	@$(GO) test -short $(pkgs)
 
 .PHONY: test-verbose
