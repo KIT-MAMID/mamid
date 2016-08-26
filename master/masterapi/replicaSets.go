@@ -6,7 +6,6 @@ import (
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
-	"github.com/mattn/go-sqlite3"
 	"net/http"
 	"strconv"
 )
@@ -116,10 +115,10 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 	err = tx.Create(&modelReplSet).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	} else if err != nil {
 		tx.Rollback()
@@ -208,10 +207,10 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 	err = tx.Save(replSet).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
