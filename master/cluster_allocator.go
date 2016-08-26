@@ -123,26 +123,36 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	defer replicaSets.Close()
+
+	type excessMongodsRow struct {
+		replicaSetID                             uint
+		deletable_persistent, deletable_volatile int
+	}
+
+	excessMongodsRows := make([]excessMongodsRow, 0)
 
 	for replicaSets.Next() {
 
-		var (
-			replicaSetID                             uint
-			deletable_persistent, deletable_volatile int
-		)
-		err := replicaSets.Scan(&replicaSetID, &deletable_persistent, &deletable_volatile)
+		var row excessMongodsRow
+		err := replicaSets.Scan(&row.replicaSetID, &row.deletable_persistent, &row.deletable_volatile)
 		if err != nil {
 			panic(err)
 		}
+
+		excessMongodsRows = append(excessMongodsRows, row)
+
+	}
+	replicaSets.Close()
+
+	for _, r := range excessMongodsRows {
 
 		for _, p := range []persistence{Persistent, Volatile} {
 
 			var deletable_count int
 			if p.PersistentStorage() {
-				deletable_count = deletable_persistent
+				deletable_count = r.deletable_persistent
 			} else {
-				deletable_count = deletable_volatile
+				deletable_count = r.deletable_volatile
 			}
 
 			// Assert that deletable_count >= 0
@@ -151,7 +161,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				continue
 			}
 
-			caLog.Infof("removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", replicaSetID, deletable_count, p)
+			caLog.Infof("removing excess mongods for replica set `%#v`: up to `%d` `%s` mongods", r.replicaSetID, deletable_count, p)
 
 			var deletableMongds []*Mongod
 
@@ -165,13 +175,13 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					AND s.persistent_storage = ?
 					AND s.configured_state != ?
 				ORDER BY (CASE WHEN s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
-				LIMIT ?`, replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, deletable_count,
+				LIMIT ?`, r.replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, deletable_count,
 			).Find(&deletableMongds).Error
 			if err != nil {
 				panic(err)
 			}
 
-			caLog.Infof("setting %d mongods for replica set `%#v` to desired state `destroyed`", len(deletableMongds), replicaSetID)
+			caLog.Infof("setting %d mongods for replica set `%#v` to desired state `destroyed`", len(deletableMongds), r.replicaSetID)
 
 			for _, m := range deletableMongds {
 				caLog.Debugf("setting desired mongod_state of mongod `%#v` to `destroyed`", m)
