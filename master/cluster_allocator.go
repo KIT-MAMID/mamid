@@ -307,7 +307,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
 				AS configured_volatile_members
 		    	FROM replica_sets r
-		`, true, false, unsatisfiable_replica_set_ids).Rows()
+		`, true, false).Rows()
 		if err != nil {
 			panic(err)
 		}
