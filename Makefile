@@ -5,6 +5,7 @@ GREP 			?= $(shell which grep)
 GOOS 			?= $(shell uname | tr A-Z a-z)
 TESTBED_SLAVE_COUNT 	?= 3
 SUDO 			?= $(shell if [ "$(GOOS)" != "darwin" ]; then which sudo; fi)
+GO_BINDATA		?= $(GOPATH)/bin/go-bindata
 
 ########################################################################################################################
 
@@ -33,12 +34,23 @@ build: build/master_$(BUILD_SUFFIX) build/slave_$(BUILD_SUFFIX) build/notifier_$
 
 ########################################################################################################################
 
-build/master_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,master/ msp/ model/)
+$(GO_BINDATA):
+	@echo [ ERROR ] $(GO_BINDATA) needs to be installed
+	@echo [ ERROR ] Use: \"go get -u github.com/jteeuwen/go-bindata/...\"
+	@false
+
+########################################################################################################################
+
+build/master_$(BUILD_SUFFIX): $(call GOFILES_IN_DIRS,master/ msp/ model/) model/bindata.go
 	cd master/cmd && $(GO) build -o ../../build/master_$(BUILD_SUFFIX)
+
+model/bindata.go: $(wildcard model/sql/*.sql) $(GO_BINDATA)
+	$(GO_BINDATA) -pkg model -o model/bindata.go model/sql
 
 .PHONY:clean_master
 clean_master:
 	cd master/ && $(GO) clean
+	rm model/bindata.go
 	rm -rf build/master*
 
 ########################################################################################################################
@@ -158,7 +170,9 @@ TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
 testbed_up: testbed_down testbed_net docker/testbed_images.depend
 
-	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/gui:/mamid/gui mamid/master
+	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.3" --name=mamid-postgres -e POSTGRES_PASSWORD=postgres -d postgres
+	sleep 5 ## prevent race, yes, this is ugly
+	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/gui:/mamid/gui mamid/master /mamid/master -db.dsn "host=10.101.202.3 user=postgres password=postgres sslmode=disable dbname=postgres"
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
@@ -170,6 +184,7 @@ testbed_down:
 	-$(SUDO) docker rm -f builder
 	-$(SUDO) docker rm -f master
 	-$(SUDO) docker rm -f notifier
+	-$(SUDO) docker rm -f mamid-postgres
 
 	-for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
 		$(SUDO) docker rm -f slave$$i; \

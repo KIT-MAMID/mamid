@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"io/ioutil"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"math/rand"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -190,24 +191,9 @@ type Problem struct {
 }
 
 type DB struct {
-	gormDB *gorm.DB
-}
-
-func initializeDB(dsn string) (*DB, error) {
-
-	gormDB, err := gorm.Open("sqlite3", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	db := &DB{
-		gormDB: gormDB,
-	}
-
-	gormDB.SetLogger(modelLog)
-
-	return db, nil
-
+	gormDB           *gorm.DB
+	dbName           sql.NullString
+	dsnWithoutDBName sql.NullString
 }
 
 func (db *DB) Begin() *gorm.DB {
@@ -215,148 +201,142 @@ func (db *DB) Begin() *gorm.DB {
 	return tx
 }
 
-func InitializeFileFromFile(path string) (db *DB, err error) {
+func (db *DB) CloseAndDrop() {
 
-	db, err = initializeDB(path)
+	if !(db.dbName.Valid && db.dsnWithoutDBName.Valid) {
+		modelLog.Fatalf("model.DB object not initialized for dropping database")
+	}
+
+	if err := db.gormDB.Close(); err != nil {
+		modelLog.Fatalf("could not close connection with database open: %s", err)
+	}
+
+	const driver = "postgres"
+	c, err := sql.Open(driver, db.dsnWithoutDBName.String)
+	if err != nil {
+		modelLog.Fatalf("cannot connect to test database: %s", err)
+	}
+	defer c.Close()
+
+	res, err := c.Exec("DROP DATABASE ?", db.dbName.String)
+	if err != nil {
+		modelLog.Fatalf("could not drop database `%s`: %s", db.dbName.String, err)
+	} else {
+		modelLog.Infof("dropped database `%s`: %s", db.dbName.String, res)
+	}
+
+}
+
+// Idempotently migrate the database schema.
+// Currenlty, only creation of the schema is supported.
+func (dbWrapper *DB) migrate() (err error) {
+
+	db := dbWrapper.gormDB
+
+	// if mamid_metadata table exists, the database must have been populated
+	// we don't support migrations yet, hence throw an error and exit
+	res := db.Raw(`
+	SELECT EXISTS (
+		SELECT 1
+		FROM   information_schema.tables 
+		WHERE  table_schema = 'public'
+		AND    table_name = 'mamid_metadata'
+	)
+	`)
+
+	if res.Error != nil {
+		return fmt.Errorf("the database has already been populated, migrations are not supported: %s", res.Error)
+	}
+
+	// run the populating query
+
+	ddlStatements, err := Asset("model/sql/mamid_postgresql.sql")
+	if err != nil {
+		return fmt.Errorf("sql DDL data not found: %s", err)
+	}
+
+	err = db.Exec(string(ddlStatements), []interface{}{}).Error
+	if err != nil {
+		return fmt.Errorf("error running DDL statements: %s", err)
+	}
+
+	return nil
+
+}
+
+func InitializeDB(driver, dsn string) (*DB, error) {
+
+	gormDB, err := gorm.Open(driver, dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	migrateDB(db)
+	gormDB.SetLogger(modelLog)
 
-	return db, nil
+	db := &DB{gormDB: gormDB}
+
+	if err := db.migrate(); err != nil {
+		return nil, fmt.Errorf("could not migrate database: %s", err)
+	}
+
+	return db, err
 
 }
 
-func createTestDBFile() (path string) {
-	file, err := ioutil.TempFile(os.TempDir(), "mamid-")
+func InitializeTestDB() (db *DB, dsn string, err error) {
+
+	const driver = "postgres"
+	dsnWithoutDBName := os.Getenv("MAMID_TESTDB_DSN")
+	if dsnWithoutDBName == "" {
+		modelLog.Panic("MAMID_TESTDB_DSN environment variable is not set")
+	}
+	if strings.Contains(dsnWithoutDBName, "dbname") {
+		modelLog.Warnf("MAMID_TESTDB_DSN environment variable contains `dbname` which is set by the test database setup routine")
+	}
+
+	c, err := sql.Open(driver, dsnWithoutDBName)
 	if err != nil {
-		modelLog.Fatalf("could not create test database file: %s", err)
-	} else {
-		modelLog.Debugf("created test database: %s", file.Name())
+		modelLog.Fatalf("cannot connect to test database: %s", err)
 	}
-	return file.Name()
-}
+	defer c.Close()
 
-func InitializeTestDB() (db *DB, path string, err error) {
-
-	path = createTestDBFile()
-	db, err = initializeDB(path)
+	dbName := randomDBName("mamid_testing_", 20)
+	_, err = c.Exec("CREATE DATABASE " + dbName)
 	if err != nil {
-		return nil, "", err
+		modelLog.Fatalf("cannot create test database `%s`: %s", dbName, err)
 	}
+	c.Close()
 
-	migrateDB(db)
-
-	return db, path, nil
-
-}
-
-func InitializeTestDBWithSQL(sqlFilePath string) (db *DB, path string, err error) {
-
-	path = createTestDBFile()
-	db, err = initializeDB(path)
+	dsn = fmt.Sprintf("%s dbname=%s", dsnWithoutDBName, dbName)
+	gormDB, err := gorm.Open(driver, dsn)
 	if err != nil {
-		return nil, "", err
+		modelLog.Fatalf("cannot open just created test database `%s`: %s", dsn, err)
 	}
 
-	tx := db.Begin()
-	if sqlFilePath != "" {
-		statements, err := ioutil.ReadFile(sqlFilePath)
-		if err != nil {
-			return nil, "", err
-		}
+	gormDB.SetLogger(modelLog)
 
-		tx.Exec(string(statements), []interface{}{})
-
+	db = &DB{
+		gormDB:           gormDB,
+		dbName:           sql.NullString{String: dbName, Valid: true},
+		dsnWithoutDBName: sql.NullString{String: dsnWithoutDBName, Valid: true},
 	}
-	tx.Commit()
 
-	migrateDB(db)
+	if err := db.migrate(); err != nil {
+		return nil, dsn, fmt.Errorf("could not migrate database: %s", err)
+	}
 
-	return db, path, nil
+	return db, dsn, nil
 
 }
 
-func migrateDB(db *DB) {
-	tx := db.Begin()
-	tx.AutoMigrate(&Slave{}, &ReplicaSet{}, &RiskGroup{}, &Mongod{}, &MongodState{}, &ReplicaSetMember{}, &Problem{}, &MSPError{})
-	if err := createSlaveUtilizationView(tx); err != nil {
-		panic(err)
+func randomDBName(prefix string, strlen int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
 	}
-	if err := createReplicaSetEffectiveMembersView(tx); err != nil {
-		panic(err)
-	}
-	if err := createReplicaSetConfiguredMembersView(tx); err != nil {
-		panic(err)
-	}
-	tx.Commit()
-}
-
-func createReplicaSetEffectiveMembersView(tx *gorm.DB) error {
-	return tx.Exec(`
-		DROP VIEW IF EXISTS replica_set_effective_members;
-		CREATE VIEW replica_set_effective_members AS
-		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
-		FROM replica_sets r
-		JOIN mongods m ON m.replica_set_id = r.id
-		JOIN slaves s ON s.id = m.parent_slave_id
-		JOIN mongod_states observed ON observed.id = m.observed_state_id
-		JOIN mongod_states desired ON desired.id = m.desired_state_id
-		WHERE
-		observed.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `
-		AND
-		desired.execution_state = ` + fmt.Sprintf("%d", MongodExecutionStateRunning) + `;`).Error
-}
-
-func createSlaveUtilizationView(tx *gorm.DB) error {
-	return tx.Exec(`
-		DROP VIEW IF EXISTS slave_utilization;
-		CREATE VIEW slave_utilization AS
-		SELECT
-			*,
-			CASE WHEN max_mongods = 0 THEN 1 ELSE current_mongods*1.0/max_mongods END AS utilization,
-			(max_mongods - current_mongods) AS free_mongods
-		FROM (
-			SELECT
-				s.*,
-				s.mongod_port_range_end - s.mongod_port_range_begin AS max_mongods,
-				COUNT(DISTINCT m.id) as current_mongods
-			FROM slaves s
-			LEFT OUTER JOIN mongods m ON m.parent_slave_id = s.id
-			GROUP BY s.id
-		);`).Error
-}
-
-func createReplicaSetConfiguredMembersView(tx *gorm.DB) error {
-	return tx.Exec(`
-		DROP VIEW IF EXISTS replica_set_configured_members;
-		CREATE VIEW replica_set_configured_members AS
-		SELECT r.id as replica_set_id, m.id as mongod_id, s.persistent_storage
-		FROM replica_sets r
-		JOIN mongods m ON m.replica_set_id = r.id
-		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
-		JOIN slaves s ON m.parent_slave_id = s.id
-		WHERE
-			s.configured_state != ` + fmt.Sprintf("%d", SlaveStateDisabled) + `
-			AND
-			desired_state.execution_state NOT IN (` +
-		fmt.Sprintf("%d", MongodExecutionStateNotRunning) +
-		`, ` + fmt.Sprintf("%d", MongodExecutionStateDestroyed) +
-		`);`).Error
-}
-
-func RollbackOnTransactionError(tx *gorm.DB, rollbackError *error) {
-	switch e := recover(); e {
-	case e == gorm.ErrInvalidTransaction:
-		modelLog.Infof("ClusterAllocator: rolling back transaction after error: %v", e)
-		*rollbackError = tx.Rollback().Error
-		if *rollbackError != nil {
-			modelLog.WithError(*rollbackError).Errorf("ClusterAllocator: failed rolling back transaction")
-		}
-	default:
-		panic(e)
-	}
+	return prefix + string(result)
 }
 
 func NullIntValue(value int64) sql.NullInt64 {

@@ -33,19 +33,24 @@ func main() {
 	var (
 		logLevel             LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
 		dbPath, listenString string
+		dbDriver, dbDSN      string
 		monitorInterval      time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
 	flag.StringVar(&dbPath, "db.path", "", "path to the SQLite file where MAMID data is stored")
+	flag.StringVar(&dbDriver, "db.driver", "postgres", "the database driver to use. See https://golang.org/pkg/database/sql/#Open")
+	flag.StringVar(&dbDSN, "db.dsn", "", "the data source name to use. for PostgreSQL, checkout https://godoc.org/github.com/lib/pq")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
 	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
 		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
-
 	flag.Parse()
 
-	if dbPath == "" {
-		masterLog.Fatal("-db.path cannot be empty")
+	if dbDriver != "postgres" {
+		masterLog.Fatal("-db.driver: only 'postgres' is supported")
+	}
+	if dbDSN == "" {
+		masterLog.Fatal("-db.dsn cannot be empty")
 	}
 
 	// Start application
@@ -57,7 +62,7 @@ func main() {
 	bus := master.NewBus()
 	go bus.Run()
 
-	db, err := model.InitializeFileFromFile(dbPath)
+	db, err := model.InitializeDB(dbDriver, dbDSN)
 	dieOnError(err)
 
 	clusterAllocatorBusWriteChannel := bus.GetNewWriteChannel()
