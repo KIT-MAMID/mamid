@@ -369,6 +369,7 @@ func mspErrorToModelMSPError(mspError *msp.Error) model.MSPError {
 
 func (m *Monitor) observeReplicaSets() {
 	tx := m.DB.Begin()
+	defer tx.Rollback()
 
 	// Get replica sets and the count of their actually configured members from the database
 	replicaSetsWithMemberCounts, err := tx.Raw(`SELECT
@@ -383,7 +384,6 @@ func (m *Monitor) observeReplicaSets() {
 					AS actual_volatile_members
 				FROM replica_sets r
 				`, true, false, true, false).Rows()
-	tx.Rollback()
 	if err != nil {
 		monitorLog.WithError(err).Error("Error getting configured and actual member counts of replica sets")
 		return
