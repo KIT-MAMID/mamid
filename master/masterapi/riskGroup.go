@@ -101,10 +101,10 @@ func (m *MasterAPI) RiskGroupPut(w http.ResponseWriter, r *http.Request) {
 	err = tx.Create(&modelRiskGroup).Error
 
 	//Check db specific errors
-	if driverErr, ok := err.(sqlite3.Error); ok && driverErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if model.IsIntegrityConstraintViolation(err) {
 		tx.Rollback()
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, driverErr.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	} else if err != nil {
 		tx.Rollback()

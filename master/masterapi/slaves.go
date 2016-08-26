@@ -6,7 +6,6 @@ import (
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
-	"github.com/mattn/go-sqlite3"
 	"net/http"
 	"strconv"
 )
@@ -122,7 +121,7 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 	err = tx.Create(&modelSlave).Error
 
 	//Check db specific errors
-	if model.IsUniqueConstraintError(err) {
+	if model.IsIntegrityConstraintViolation(err) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		tx.Rollback()
@@ -228,7 +227,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	err = tx.Save(&updatedModelSlave).Error
 
 	//Check db specific errors
-	if model.IsUniqueConstraintError(err) {
+	if model.IsIntegrityConstraintViolation(err) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		tx.Rollback()
