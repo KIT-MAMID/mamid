@@ -1,15 +1,15 @@
 START TRANSACTION;
 
 CREATE TABLE "risk_groups" (
-	"id" SERIAL PRIMARY KEY,
-	"name" varchar(255)
+	"id" BIGSERIAL PRIMARY KEY,
+	"name" varchar(255) UNIQUE
 );
 
 -- CREATE UNIQUE INDEX uix_risk_groups_name ON "risk_groups"("name");
 
 CREATE TABLE "replica_sets" (
-	"id" SERIAL PRIMARY KEY,
-	"name" varchar(255),
+	"id" BIGSERIAL PRIMARY KEY,
+	"name" varchar(255) UNIQUE,
 	"persistent_member_count" integer,
 	"volatile_member_count" integer,
 	"configure_as_sharding_config_server" bool
@@ -18,15 +18,15 @@ CREATE TABLE "replica_sets" (
 -- CREATE UNIQUE INDEX uix_replica_sets_name ON "replica_sets"("name");
 
 CREATE TABLE "msp_errors" (
-	"id" SERIAL PRIMARY KEY,
+	"id" BIGSERIAL PRIMARY KEY,
 	"identifier" varchar(255),
 	"description" varchar(255),
 	"long_description" varchar(255)
 );
 
 CREATE TABLE slaves (
-	"id" SERIAL PRIMARY KEY,
-	"hostname" varchar(255),
+	"id" BIGSERIAL PRIMARY KEY,
+	"hostname" varchar(255) UNIQUE,
 	"port" integer,
 	"mongod_port_range_begin" integer,
 	"mongod_port_range_end" integer,
@@ -39,14 +39,14 @@ CREATE TABLE slaves (
 -- CREATE UNIQUE INDEX uix_slaves_hostname ON "slaves"("hostname")
 
 CREATE TABLE "mongod_states" (
-	"id" SERIAL PRIMARY KEY,
+	"id" BIGSERIAL PRIMARY KEY,
 	"parent_mongod_id" integer NOT NULL, -- foreign key constraint added below
 	"is_sharding_config_server" bool,
 	"execution_state" integer
 );
 
 CREATE TABLE "mongods" (
-	"id" SERIAL PRIMARY KEY,
+	"id" BIGSERIAL PRIMARY KEY,
 	"port" integer,
 	"repl_set_name" varchar(255),
 	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
@@ -60,14 +60,14 @@ CREATE TABLE "mongods" (
 ALTER TABLE mongod_states ADD CONSTRAINT constr_parent_mongod FOREIGN KEY (parent_mongod_id) REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
 
 CREATE TABLE "replica_set_members" ( -- TODO is this even used?
-	"id" SERIAL PRIMARY KEY,
+	"id" BIGSERIAL PRIMARY KEY,
 	"hostname" varchar(255),
 	"port" integer,
 	"mongod_state_id" integer REFERENCES mongod_states(id) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE "problems" (
-	"id" SERIAL PRIMARY KEY,
+	"id" BIGSERIAL PRIMARY KEY,
 	"description" varchar(255),
 	"long_description" varchar(255),
 	"problem_type" integer,
