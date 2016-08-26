@@ -9,7 +9,6 @@ import (
 	"github.com/mattn/go-sqlite3"
 	"math/rand"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -192,9 +191,9 @@ type Problem struct {
 }
 
 type DB struct {
-	gormDB           *gorm.DB
-	dbName           sql.NullString
-	dsnWithoutDBName sql.NullString
+	gormDB  *gorm.DB
+	dbName  sql.NullString
+	connDSN sql.NullString
 }
 
 func (db *DB) Begin() *gorm.DB {
@@ -204,7 +203,7 @@ func (db *DB) Begin() *gorm.DB {
 
 func (db *DB) CloseAndDrop() {
 
-	if !(db.dbName.Valid && db.dsnWithoutDBName.Valid) {
+	if !(db.dbName.Valid && db.connDSN.Valid) {
 		modelLog.Fatalf("model.DB object not initialized for dropping database")
 	}
 
@@ -213,7 +212,7 @@ func (db *DB) CloseAndDrop() {
 	}
 
 	const driver = "postgres"
-	c, err := sql.Open(driver, db.dsnWithoutDBName.String)
+	c, err := sql.Open(driver, db.connDSN.String)
 	if err != nil {
 		modelLog.Fatalf("cannot connect to test database: %s", err)
 	}
@@ -287,15 +286,12 @@ func InitializeDB(driver, dsn string) (*DB, error) {
 func InitializeTestDB() (db *DB, dsn string, err error) {
 
 	const driver = "postgres"
-	dsnWithoutDBName := os.Getenv("MAMID_TESTDB_DSN")
-	if dsnWithoutDBName == "" {
+	connDSN := os.Getenv("MAMID_TESTDB_DSN")
+	if connDSN == "" {
 		modelLog.Panic("MAMID_TESTDB_DSN environment variable is not set")
 	}
-	if strings.Contains(dsnWithoutDBName, "dbname") {
-		modelLog.Warnf("MAMID_TESTDB_DSN environment variable contains `dbname` which is set by the test database setup routine")
-	}
 
-	c, err := sql.Open(driver, dsnWithoutDBName)
+	c, err := sql.Open(driver, connDSN)
 	if err != nil {
 		modelLog.Fatalf("cannot connect to test database: %s", err)
 	}
@@ -308,7 +304,8 @@ func InitializeTestDB() (db *DB, dsn string, err error) {
 	}
 	c.Close()
 
-	dsn = fmt.Sprintf("%s dbname=%s", dsnWithoutDBName, dbName)
+	// NOTE: in the current implementation of pq (postgres driver), the last key-value pair wins over previous ones with the same key
+	dsn = fmt.Sprintf("%s dbname=%s", connDSN, dbName)
 	gormDB, err := gorm.Open(driver, dsn)
 	if err != nil {
 		modelLog.Fatalf("cannot open just created test database `%s`: %s", dsn, err)
@@ -317,9 +314,9 @@ func InitializeTestDB() (db *DB, dsn string, err error) {
 	gormDB.SetLogger(modelLog)
 
 	db = &DB{
-		gormDB:           gormDB,
-		dbName:           sql.NullString{String: dbName, Valid: true},
-		dsnWithoutDBName: sql.NullString{String: dsnWithoutDBName, Valid: true},
+		gormDB:  gormDB,
+		dbName:  sql.NullString{String: dbName, Valid: true},
+		connDSN: sql.NullString{String: connDSN, Valid: true},
 	}
 
 	if err := db.migrate(); err != nil {
