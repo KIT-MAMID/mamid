@@ -16,7 +16,6 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 	tx := db.Begin()
 
 	dbSlave := model.Slave{
-		ID:                   1,
 		Hostname:             "host1",
 		Port:                 1,
 		MongodPortRangeBegin: 2,
@@ -27,26 +26,23 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 	}
 	assert.NoError(t, tx.Create(&dbSlave).Error)
 	dbReplSet := model.ReplicaSet{
-		ID:   1,
 		Name: "foo",
 	}
 	assert.NoError(t, tx.Create(&dbReplSet).Error)
 	m1 := model.Mongod{
-		ID:             1,
-		Port:           2000,
-		ReplSetName:    "repl1",
-		ParentSlaveID:  1,
-		ReplicaSetID:   1,
-		DesiredStateID: 1,
+		Port:          2000,
+		ReplSetName:   "repl1",
+		ParentSlaveID: dbSlave.ID,
+		ReplicaSetID:  dbReplSet.ID,
 	}
+	assert.NoError(t, tx.Create(&m1).Error)
 	des1 := model.MongodState{
-		ID:                     1,
-		ParentMongodID:         1,
+		ParentMongodID:         m1.ID,
 		IsShardingConfigServer: false,
 		ExecutionState:         model.MongodExecutionStateRunning,
 	}
-	assert.NoError(t, tx.Create(&m1).Error)
 	assert.NoError(t, tx.Create(&des1).Error)
+	assert.NoError(t, tx.Model(&m1).Update("DesiredStateID", des1.ID).Error)
 
 	tx.Commit()
 	return
@@ -84,7 +80,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 	var slave model.Slave
 	{
 		tx := db.Begin()
-		tx.First(&slave, 1)
+		assert.NoError(t, tx.First(&slave).Error)
 		tx.Rollback()
 	}
 
@@ -103,7 +99,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 	var mongod model.Mongod
 	{
 		tx := db.Begin()
-		tx.First(&mongod, 1)
+		assert.NoError(t, tx.First(&mongod).Error)
 		assert.Nil(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error, "after observation, the observed state should be != nil")
 		tx.Rollback()
 	}
@@ -123,7 +119,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 	//-----------------
 	{
 		tx := db.Begin()
-		tx.First(&slave, 1)
+		assert.NoError(t, tx.First(&slave).Error)
 		tx.Rollback()
 	}
 
@@ -140,7 +136,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	{
 		tx := db.Begin()
-		tx.First(&mongod, 1)
+		assert.NoError(t, tx.First(&mongod).Error)
 
 		//Mongod should have an observation error
 		tx.Model(&mongod).Related(&mongod.ObservationError, "ObservationError")
@@ -166,7 +162,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	{
 		tx := db.Begin()
-		tx.First(&slave, 1)
+		assert.NoError(t, tx.First(&slave).Error)
 		tx.Rollback()
 	}
 
@@ -174,7 +170,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	{
 		tx := db.Begin()
-		tx.First(&mongod, 1)
+		assert.NoError(t, tx.First(&mongod).Error)
 
 		//Mongod should not have observed state anymore
 		assert.True(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").RecordNotFound())
@@ -198,7 +194,7 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	{
 		tx := db.Begin()
-		tx.First(&slave, 1)
+		assert.NoError(t, tx.First(&slave).Error)
 		tx.Rollback()
 	}
 
