@@ -302,7 +302,7 @@ func (m *MasterAPI) RiskGroupGetSlaves(w http.ResponseWriter, r *http.Request) {
 	if id.Valid { // gorm/gosql does not query for IS NULL automatically
 		err = tx.Where("risk_group_id = ?", id).Find(&slaves).Error
 	} else {
-		err = tx.Where("risk_group_id IS NULL", id).Find(&slaves).Error
+		err = tx.Where("risk_group_id IS NULL").Find(&slaves).Error
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
