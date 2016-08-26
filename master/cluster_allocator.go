@@ -155,9 +155,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				deletable_count = r.deletable_volatile
 			}
 
-			// Assert that deletable_count >= 0
+			// Assert that deletable_count > 0
 			// SQLite will not LIMIT if deletable_count is negative!
-			if deletable_count < 0 {
+			if deletable_count <= 0 {
 				continue
 			}
 
