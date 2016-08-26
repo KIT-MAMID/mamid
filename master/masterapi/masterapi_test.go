@@ -23,25 +23,21 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	tx := db.Begin()
 
 	dbRiskGroup := model.RiskGroup{
-		ID:   1,
 		Name: "risk1",
 	}
 	assert.NoError(t, tx.Create(&dbRiskGroup).Error)
 
 	dbRiskGroup2 := model.RiskGroup{
-		ID:   2,
 		Name: "risk2",
 	}
 	assert.NoError(t, tx.Create(&dbRiskGroup2).Error)
 
 	dbRiskGroup3 := model.RiskGroup{
-		ID:   3,
 		Name: "risk3",
 	}
 	assert.NoError(t, tx.Create(&dbRiskGroup3).Error)
 
 	dbSlave := model.Slave{
-		ID:                   1,
 		Hostname:             "host1",
 		Port:                 1,
 		MongodPortRangeBegin: 2,
@@ -49,12 +45,11 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		PersistentStorage:    true,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateActive,
-		RiskGroupID:          model.NullIntValue(2),
+		RiskGroupID:          model.NullIntValue(dbRiskGroup2.ID),
 	}
 	assert.NoError(t, tx.Create(&dbSlave).Error)
 
 	dbReplicaset := model.ReplicaSet{
-		ID:   1,
 		Name: "repl1",
 		PersistentMemberCount:           1,
 		VolatileMemberCount:             2,
@@ -63,22 +58,20 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	assert.NoError(t, tx.Create(&dbReplicaset).Error)
 
 	m1 := model.Mongod{
-		ID:             1,
-		Port:           5001,
-		ReplSetName:    "repl1",
-		ReplicaSetID:   1,
-		ParentSlaveID:  1,
-		DesiredStateID: 1,
+		Port:          5001,
+		ReplSetName:   "repl1",
+		ReplicaSetID:  dbReplicaset.ID,
+		ParentSlaveID: dbSlave.ID,
+		//		DesiredStateID: 1,
 	}
 	assert.NoError(t, tx.Create(&m1).Error)
 	ds1 := model.MongodState{
-		ID:             1,
 		ParentMongodID: m1.ID,
 	}
 	assert.NoError(t, tx.Create(&ds1).Error)
+	assert.NoError(t, tx.Model(&m1).Update("DesiredStateID", ds1.ID).Error)
 
 	dbSlave2 := model.Slave{
-		ID:                   2,
 		Hostname:             "host2",
 		Port:                 1,
 		MongodPortRangeBegin: 100,
@@ -86,12 +79,11 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 		PersistentStorage:    false,
 		Mongods:              []*model.Mongod{},
 		ConfiguredState:      model.SlaveStateDisabled,
-		RiskGroupID:          model.NullIntValue(1),
+		RiskGroupID:          model.NullIntValue(dbRiskGroup.ID),
 	}
 	assert.NoError(t, tx.Create(&dbSlave2).Error)
 
 	dbSlave3 := model.Slave{
-		ID:                   3,
 		Hostname:             "host3",
 		Port:                 1,
 		MongodPortRangeBegin: 100,
@@ -107,18 +99,16 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	assert.NoError(t, err)
 
 	dbProblem := model.Problem{
-		ID:            1,
 		Description:   "foo",
 		FirstOccurred: time.Date(2000, time.January, 1, 0, 0, 0, 0, utc),
-		SlaveID:       model.NullIntValue(1),
+		SlaveID:       model.NullIntValue(dbSlave.ID),
 	}
 	assert.NoError(t, tx.Create(&dbProblem).Error)
 
 	dbProblem2 := model.Problem{
-		ID:            2,
 		Description:   "bar",
 		FirstOccurred: time.Date(2010, time.January, 1, 0, 0, 0, 0, utc),
-		ReplicaSetID:  model.NullIntValue(1),
+		ReplicaSetID:  model.NullIntValue(dbReplicaset.ID),
 	}
 	assert.NoError(t, tx.Create(&dbProblem2).Error)
 	tx.Commit()
