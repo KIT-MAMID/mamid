@@ -192,6 +192,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	modelSlaveRes := tx.First(&modelSlave, id)
 	if modelSlaveRes.RecordNotFound() {
 		w.WriteHeader(http.StatusNotFound)
+		tx.Rollback()
 		return
 	} else if err = modelSlaveRes.Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -204,6 +205,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
+		tx.Rollback()
 		return
 	}
 
