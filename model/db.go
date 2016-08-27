@@ -217,7 +217,7 @@ func (db *DB) CloseAndDrop() {
 	}
 	defer c.Close()
 
-	res, err := c.Exec("DROP DATABASE ?", db.dbName.String)
+	res, err := c.Exec("DROP DATABASE " + db.dbName.String)
 	if err != nil {
 		modelLog.Fatalf("could not drop database `%s`: %s", db.dbName.String, err)
 	} else {
