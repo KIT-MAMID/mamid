@@ -27,6 +27,7 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 	var err error
 
 	db, err := createDB(t)
+	defer db.CloseAndDrop()
 	assert.Nil(t, err)
 
 	d := Deployer{
@@ -81,6 +82,7 @@ func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
 	var err error
 
 	db, err := createDB(t)
+	defer db.CloseAndDrop()
 	assert.Nil(t, err)
 
 	tx := db.Begin()

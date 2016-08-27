@@ -53,7 +53,8 @@ func fixtureEmptyProblem() *Problem {
 ////////////////////////////////////////////////////////////////////////////////
 
 func TestCanInitializeDB(t *testing.T) {
-	_, _, err := InitializeTestDB()
+	db, _, err := InitializeTestDB()
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 }
 
@@ -64,6 +65,7 @@ func TestCanInitializeDB(t *testing.T) {
 func TestRelationshipMongodParentSlave(t *testing.T) {
 
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -110,6 +112,7 @@ func TestRelationshipMongodParentSlave(t *testing.T) {
 func TestRiskGroupSlaveRelationship(t *testing.T) {
 
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -139,6 +142,7 @@ func TestRiskGroupSlaveRelationship(t *testing.T) {
 func TestReplicaSetMongodRelationship(t *testing.T) {
 
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -168,6 +172,7 @@ func TestReplicaSetMongodRelationship(t *testing.T) {
 func TestMongodMongodStateRelationship(t *testing.T) {
 
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -212,6 +217,7 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 // Test MongodState - ReplicaSetMember relationship
 func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -239,6 +245,7 @@ func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
 func TestDeleteBehavior(t *testing.T) {
 
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -273,6 +280,7 @@ func TestDeleteBehavior(t *testing.T) {
 
 func TestGormFirstBehavior(t *testing.T) {
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -282,6 +290,7 @@ func TestGormFirstBehavior(t *testing.T) {
 
 func TestGormFindBehavior(t *testing.T) {
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 	defer tx.Rollback()
 
@@ -296,6 +305,7 @@ func TestGormFindBehavior(t *testing.T) {
 
 func TestCascade(t *testing.T) {
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 
 	tx0 := db.Begin()
 	assert.NoError(t, tx0.Exec("CREATE TABLE foo(id int primary key);").Error)
@@ -324,6 +334,7 @@ func TestCascade(t *testing.T) {
 
 func TestCascadeSlaves(t *testing.T) {
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 
 	r := fixtureEmptyRiskGroup()
@@ -370,6 +381,7 @@ func TestObservationErrorOverwriteBehavior(t *testing.T) {
 
 	// Assume a situation where Slave already has an ObservationError
 	db, _, _ := InitializeTestDB()
+	defer db.CloseAndDrop()
 	tx := db.Begin()
 
 	o1 := MSPError{
@@ -407,5 +419,7 @@ func TestObservationErrorOverwriteBehavior(t *testing.T) {
 	assert.NoError(t, tx.Model(&MSPError{}).Count(&countAfterUpdate).Error)
 
 	assert.EqualValues(t, 1, countAfterUpdate, "updates should remove the row previously referenced in the overwritten column")
+
+	tx.Commit()
 
 }

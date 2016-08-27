@@ -60,6 +60,7 @@ func (m FakeMSPClient) RequestStatus(Target msp.HostPort) ([]msp.Mongod, *msp.Er
 
 func TestMonitor_observeSlave(t *testing.T) {
 	db, err := createDB(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	wg := new(sync.WaitGroup)

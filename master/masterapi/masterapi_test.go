@@ -128,7 +128,8 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 }
 
 func TestMasterAPI_SlaveIndex(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -152,7 +153,8 @@ func TestMasterAPI_SlaveIndex(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveById(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -177,6 +179,7 @@ func TestMasterAPI_SlaveById(t *testing.T) {
 
 func TestMasterAPI_SlavePut(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test correct put
@@ -217,7 +220,8 @@ func TestMasterAPI_SlavePut(t *testing.T) {
 }
 
 func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test invalid put (slave with same hostname exists)
@@ -233,6 +237,7 @@ func TestMasterAPI_SlavePut_existing_hostname(t *testing.T) {
 
 func TestMasterAPI_SlavePut_additionalUnknownField(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
@@ -254,6 +259,7 @@ func TestMasterAPI_SlavePut_additionalUnknownField(t *testing.T) {
 
 func TestMasterAPI_SlavePut_missingField(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	//Test invalid put (non existing field)
 	resp := httptest.NewRecorder()
@@ -276,6 +282,7 @@ func TestMasterAPI_SlavePut_missingField(t *testing.T) {
 
 func TestMasterAPI_SlaveUpdate(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test valid update
@@ -305,6 +312,7 @@ func TestMasterAPI_SlaveUpdate(t *testing.T) {
 
 func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test invalid update (slave is in active state)
@@ -333,7 +341,8 @@ func TestMasterAPI_SlaveUpdate_invalid(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate_invalid_ports(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test valid update
@@ -351,6 +360,7 @@ func TestMasterAPI_SlaveUpdate_invalid_ports(t *testing.T) {
 
 func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test valid state change
@@ -375,6 +385,7 @@ func TestMasterAPI_SlaveUpdate_change_desired_state(t *testing.T) {
 
 func TestMasterAPI_SlaveUpdate_change_desired_state_disabled(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test valid state change
@@ -398,7 +409,8 @@ func TestMasterAPI_SlaveUpdate_change_desired_state_disabled(t *testing.T) {
 }
 
 func TestMasterAPI_SlaveUpdate_existingHostname(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test invalid update (hostname already exists)
@@ -414,6 +426,7 @@ func TestMasterAPI_SlaveUpdate_existingHostname(t *testing.T) {
 
 func TestMasterAPI_SlaveDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test valid delete
@@ -437,6 +450,7 @@ func TestMasterAPI_SlaveDelete(t *testing.T) {
 
 func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test invalid delete (active slave)
@@ -460,7 +474,8 @@ func TestMasterAPI_SlaveDelete_invalid(t *testing.T) {
 
 // Test correct get of replica sets
 func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -481,7 +496,8 @@ func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetById(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -507,7 +523,8 @@ func TestMasterAPI_ReplicaSetById(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetById_not_existing(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -523,6 +540,7 @@ func TestMasterAPI_ReplicaSetById_not_existing(t *testing.T) {
 
 func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test correct put
@@ -563,6 +581,7 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 
 func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -590,6 +609,7 @@ func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 
 func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -616,7 +636,8 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -631,7 +652,8 @@ func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetUpdate_oddMemberCounts(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	testRequest := func(persistent, volatile, expectedResponseCode int, msg ...interface{}) {
@@ -656,6 +678,7 @@ func TestMasterAPI_ReplicaSetUpdate_oddMemberCounts(t *testing.T) {
 
 func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -674,7 +697,8 @@ func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetDelete_not_existing(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -687,7 +711,8 @@ func TestMasterAPI_ReplicaSetDelete_not_existing(t *testing.T) {
 }
 
 func TestMasterAPI_ReplicaSetGetSlaves(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -709,7 +734,8 @@ func TestMasterAPI_ReplicaSetGetSlaves(t *testing.T) {
 }
 
 func TestMasterAPI_ProblemIndex(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -727,7 +753,8 @@ func TestMasterAPI_ProblemIndex(t *testing.T) {
 }
 
 func TestMasterAPI_ProblemById(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -746,7 +773,8 @@ func TestMasterAPI_ProblemById(t *testing.T) {
 }
 
 func TestMasterAPI_ProblemBySlave(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -766,7 +794,8 @@ func TestMasterAPI_ProblemBySlave(t *testing.T) {
 }
 
 func TestMasterAPI_ProblemByReplicaSet(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -786,7 +815,8 @@ func TestMasterAPI_ProblemByReplicaSet(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupIndex(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -806,7 +836,8 @@ func TestMasterAPI_RiskGroupIndex(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupById(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -827,7 +858,8 @@ func TestMasterAPI_RiskGroupById(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupById_zero(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -842,6 +874,7 @@ func TestMasterAPI_RiskGroupById_zero(t *testing.T) {
 
 func TestMasterAPI_RiskGroupPut(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	//Test correct put
@@ -877,7 +910,8 @@ func TestMasterAPI_RiskGroupPut(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupPut_existing_name(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -892,6 +926,7 @@ func TestMasterAPI_RiskGroupPut_existing_name(t *testing.T) {
 
 func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -915,6 +950,7 @@ func TestMasterAPI_RiskGroupUpdate(t *testing.T) {
 
 func TestMasterAPI_RiskGroupDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -937,6 +973,7 @@ func TestMasterAPI_RiskGroupDelete(t *testing.T) {
 
 func TestMasterAPI_RiskGroupDelete_has_slaves(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -958,7 +995,8 @@ func TestMasterAPI_RiskGroupDelete_has_slaves(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupDelete_not_existing(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -972,6 +1010,7 @@ func TestMasterAPI_RiskGroupDelete_not_existing(t *testing.T) {
 
 func TestMasterAPI_RiskGroupAssignSlave(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -994,7 +1033,8 @@ func TestMasterAPI_RiskGroupAssignSlave(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupAssignSlave_active(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1009,6 +1049,7 @@ func TestMasterAPI_RiskGroupAssignSlave_active(t *testing.T) {
 
 func TestMasterAPI_RiskGroupRemoveSlave(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1031,7 +1072,8 @@ func TestMasterAPI_RiskGroupRemoveSlave(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupRemoveSlave_active(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1045,7 +1087,8 @@ func TestMasterAPI_RiskGroupRemoveSlave_active(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupRemoveSlave_not_in_risk_group(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1059,7 +1102,8 @@ func TestMasterAPI_RiskGroupRemoveSlave_not_in_risk_group(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupGetSlaves(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1080,7 +1124,8 @@ func TestMasterAPI_RiskGroupGetSlaves(t *testing.T) {
 }
 
 func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	// Test correct get
@@ -1101,7 +1146,8 @@ func TestMasterAPI_RiskGroupGetUnassignedSlaves(t *testing.T) {
 }
 
 func TestMasterAPI_MongodsBySlave(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
@@ -1121,7 +1167,8 @@ func TestMasterAPI_MongodsBySlave(t *testing.T) {
 }
 
 func TestMasterAPI_MongodsByReplicaSet(t *testing.T) {
-	_, mainRouter, err := createDBAndMasterAPI(t)
+	db, mainRouter, err := createDBAndMasterAPI(t)
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
