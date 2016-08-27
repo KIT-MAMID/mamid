@@ -9,13 +9,24 @@
   * contains `GO15VENDOREXPERIMENT="1"` (dependencies are tracked using [vendoring](https://golang.org/cmd/go/#hdr-Vendor_Directories))
 * Assert `$GOPATH` environment variable is set to your GOPATH
 
-```
-# Setup the $GOPATH environment variable
-# Checkout this repository to $GOPATH/src/github.com/KIT-MAMID/mamid
-cd $GOPATH/src/github.com/KIT-MAMID/mamid
-git submodule update --fetch
-make
-```
+  ```
+  # Setup the $GOPATH environment variable
+  # Checkout this repository to $GOPATH/src/github.com/KIT-MAMID/mamid
+  cd $GOPATH/src/github.com/KIT-MAMID/mamid
+  git submodule update --fetch
+  make
+  ```
+
+* Running tests requires a PostgreSQL instance with permission to `CREATE DATABASE` and `DESTROY DATABASE`
+  * Running the test instance in a docker container different than the one used for `make testbed_*` builds is recommended
+
+    ```
+    docker run --name mamid-postgres-tests -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+    # You should now be able to connect to the container using the password above
+    psql postgres
+    # You can run tests by setting the appropriate DSN environment variable
+    MAMID_TESTDB_DSN="host=localhost sslmode=disable dbname=postgres" make test-verbose
+    ```
 
 # Development Workflow
 
