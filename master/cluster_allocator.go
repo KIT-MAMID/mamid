@@ -279,7 +279,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 						FROM mongods m
 						WHERE m.replica_set_id = ?
 					)
-			      	      ORDER BY s.utilization ASC
+			      	      ORDER BY
+				      	(CASE WHEN s.observation_error_id IS NULL THEN 0 ELSE 1 END) ASC, -- prioritize slaves without observation error
+					s.utilization ASC
 			      	      LIMIT 1`, p.PersistentStorage(), SlaveStateActive, replicaSet.ID, replicaSet.ID,
 			).Scan(&leastBusySuitableSlave)
 
