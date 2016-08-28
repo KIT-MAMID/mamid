@@ -21,7 +21,7 @@ func (p *ProblemManager) Run() {
 		switch message.(type) {
 		case model.ConnectionStatus:
 			connStatus := message.(model.ConnectionStatus)
-			if connStatus.Unreachable {
+			if connStatus.Unreachable && connStatus.Slave.ConfiguredState == model.SlaveStateActive {
 				var problem model.Problem
 				tx.Where(&model.Problem{
 					ProblemType: model.ProblemTypeConnection,

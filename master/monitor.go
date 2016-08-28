@@ -41,27 +41,25 @@ func (m *Monitor) Run() {
 				wg := sync.WaitGroup{}
 
 				type observation struct {
-					result []msp.Mongod
-					err    *msp.Error
-					slave  model.Slave
+					result   []msp.Mongod
+					err      *msp.Error
+					theSlave model.Slave
 				}
 				observationChan := make(chan observation)
 
 				//Observe active slaves
 				for _, slave := range slaves {
-					if slave.ConfiguredState == model.SlaveStateActive {
-						wg.Add(1)
-						go func(s model.Slave) {
-							//Request mongod states from slave
-							observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{s.Hostname, msp.PortNumber(s.Port)})
-							observationChan <- observation{
-								result: observedMongods,
-								err:    mspError,
-								slave:  s,
-							}
-							wg.Done()
-						}(slave)
-					}
+					wg.Add(1)
+					go func(s model.Slave) {
+						//Request mongod states from slave
+						observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{s.Hostname, msp.PortNumber(s.Port)})
+						observationChan <- observation{
+							result:   observedMongods,
+							err:      mspError,
+							theSlave: s, //Do not call this slave or vet will fail
+						}
+						wg.Done()
+					}(slave)
 				}
 
 				//Wait for all slaves to be observed and close channel to make consumer loop break
@@ -73,7 +71,7 @@ func (m *Monitor) Run() {
 				//Consumer loop that saves result to database
 				//We do this so that all transactions happen after eachother == prevent concurrent database access
 				for observationRes := range observationChan {
-					m.handleObservation(observationRes.result, observationRes.err, observationRes.slave)
+					m.handleObservation(observationRes.result, observationRes.err, observationRes.theSlave)
 				}
 
 				//Check degradation of replica sets
