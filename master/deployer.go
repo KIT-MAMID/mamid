@@ -25,7 +25,7 @@ func (d *Deployer) Run() {
 		msg := <-d.BusReadChannel
 		switch msg.(type) {
 		case MongodMatchStatus:
-			d.handleMatchStatus(msg.(MongodMatchStatus))
+			go d.handleMatchStatus(msg.(MongodMatchStatus))
 		}
 	}
 }
