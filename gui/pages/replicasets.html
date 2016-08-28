@@ -6,7 +6,7 @@
     </div>
     <div class="list-group">
         <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
-           ng-if="replicaset.problems.length > 0">
+           ng-if="problemsByReplicaSet[replicaset.id].length > 0">
             <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
             <code>{{ replicaset.name }}</code> - <b>Problems</b>
             <ul>
@@ -23,7 +23,7 @@
     </div>
     <div class="list-group">
         <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
-           ng-if="replicaset.problems.length == 0">
+           ng-if="!problemsByReplicaSet[replicaset.id]">
             <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
             <code>{{ replicaset.name }}</code>
         </a>

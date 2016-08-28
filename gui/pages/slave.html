@@ -3,14 +3,14 @@
                                          ng-if="slave.risk_group_id != null">{{slave.riskgroup.name}}</span></a></small>
 </h1>
 <h1 class="page-header" ng-if="is_create_view">New Slave</h1>
-<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems" ng-if="!is_create_view">
+<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problemsBySlave[slave.id]" ng-if="!is_create_view">
     <h4>{{problem.description}}
         <small>Known since {{formatDate(problem.first_occurred)}}</small>
     </h4>
     <p>{{problem.long_description}}</p>
 </div>
 
-<div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view && problems.length == 0">
+<div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view && !problemsBySlave[slave.id]">
     <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
         {{ slave.hostname }} is in
         <b>{{ slave.configured_state }}</b>

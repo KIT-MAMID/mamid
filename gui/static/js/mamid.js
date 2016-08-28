@@ -153,7 +153,6 @@ mamidApp.factory('SlaveService', function ($resource) {
     return $resource('/api/slaves/:slave', {slave: "@id"}, {
         create: {method: 'put'},
         queryByReplicaSet: {method: 'get', url: '/api/replicasets/:replicaset/slaves/', isArray: true},
-        getProblems: {method: 'get', url: '/api/slaves/:slave/problems', isArray: true},
         getMongods: {method: 'get', url: '/api/slaves/:slave/mongods', isArray: true}
     });
 });
@@ -165,7 +164,6 @@ mamidApp.factory('ProblemService', function ($resource) {
 mamidApp.factory('ReplicaSetService', function ($resource) {
     return $resource('/api/replicasets/:replicaset', {replicaset: "@id"}, {
         create: {method: 'put'},
-        getProblems: {method: 'get', url: '/api/replicasets/:replicaset/problems', isArray: true},
         getMongods: {method: 'get', url: '/api/replicasets/:replicaset/mongods', isArray: true}
     });
 });
@@ -189,18 +187,43 @@ mamidApp.factory('RiskGroupService', function ($resource) {
     });
 });
 
-mamidApp.controller('mainController', function ($scope, $location, filterFilter, SlaveService, ProblemService) {
-    $scope.problems = ProblemService.query();
-    $scope.$location = $location;
-    SlaveService.query(function (slaves) {
-
-        $scope.slaves = slaves;
-        for (var i = 0; i < $scope.slaves.length; i++) {
-            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id}, function (problems) {
-                $scope.genChart();
-            });
-        }
+mamidApp.controller('mainController', function ($scope, $location, $timeout, filterFilter, SlaveService, ProblemService) {
+    $scope.problemsBySlave = {};
+    $scope.problemsByReplicaSet = {};
+    $scope.slaves = SlaveService.query(function (slaves) {
+        $scope.genChart();
     });
+    if (!problemPolling) {
+        (function tick() {
+            problemPolling = true;
+            ProblemService.query(function (problems) {
+                    $scope.problems = problems;
+                    $scope.problemsBySlave = {};
+                    $scope.problemsByReplicaSet = {};
+                    for (var i = 0; i < $scope.problems.length; i++) {
+                        if ($scope.problems[i].replica_set_id != null) {
+                            if (!($scope.problems[i].replica_set_id + "" in $scope.problemsByReplicaSet)) {
+                                $scope.problemsByReplicaSet[$scope.problems[i].replica_set_id + ""] = [];
+                            }
+                            $scope.problemsByReplicaSet[$scope.problems[i].replica_set_id + ""].push($scope.problems[i]);
+                        }
+                        if ($scope.problems[i].slave_id != null) {
+                            if (!($scope.problems[i].slave_id + "" in $scope.problemsBySlave)) {
+                                $scope.problemsBySlave[$scope.problems[i].slave_id + ""] = [];
+                            }
+                            $scope.problemsBySlave[$scope.problems[i].slave_id + ""].push($scope.problems[i]);
+                        }
+                    }
+                    $scope.slaves.$promise.then(function () {
+                        $scope.genChart();
+                    });
+                    $timeout(tick, 1000 * 5);
+                }
+            );
+        })();
+    }
+    $scope.$location = $location;
+
     $scope.genChart = function () {
         c3.generate({
             bindto: '#slaves',
@@ -227,7 +250,7 @@ mamidApp.controller('mainController', function ($scope, $location, filterFilter,
     $scope.getStateCount = function (state) {
         var s = []
         for (var i = 0; i < $scope.slaves.length; i++) {
-            if ($scope.slaves[i].problems.length == 0) {
+            if (($scope.slaves[i].id + "" in $scope.problemsByReplicaSet) && $scope.problemsByReplicaSet[$scope.slaves[i].id + ""].length == 0) {
                 s.push($scope.slaves[i]);
             }
         }
@@ -237,7 +260,7 @@ mamidApp.controller('mainController', function ($scope, $location, filterFilter,
     $scope.getProblemCount = function () {
         var count = 0;
         for (var i = 0; i < $scope.slaves.length; i++) {
-            if ($scope.slaves[i].problems.length > 0) {
+            if ($scope.slaves[i].id + "" in $scope.problemsBySlave && $scope.problemsBySlave[$scope.slaves[i].id + ""].length > 0) {
                 count++;
             }
         }
@@ -249,23 +272,11 @@ mamidApp.controller('mainController', function ($scope, $location, filterFilter,
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
     SlaveService.query(function (slaves) {
         $scope.slaves = slaves;
-        for (var i = 0; i < $scope.slaves.length; i++) {
-            $scope.slaves[i].problems = SlaveService.getProblems({slave: $scope.slaves[i].id});
-        }
     });
 
 });
 var problemPolling = false;
 mamidApp.controller('problemIndexController', function ($scope, $http, $timeout, ProblemService) {
-    if (!problemPolling) {
-        (function tick() {
-            ProblemService.query(function (problems) {
-                $scope.problems = problems;
-                $timeout(tick, 1000 * 5);
-                problemPolling = true;
-            });
-        })();
-    }
     $scope.formatDate = function (date) {
         return String(new Date(Date.parse(date)));
     }
@@ -328,16 +339,15 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         $scope.edit_slave = angular.copy($scope.slave);
     } else {
         $scope.slave = SlaveService.get({slave: slaveId});
-        $scope.problems = SlaveService.getProblems({slave: slaveId});
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.slave.$promise.then(function () {
             $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             $scope.mongods = SlaveService.getMongods({slave: $scope.slave.id});
             $scope.mongods.$promise.then(function () {
-               for(var i=0;i<$scope.mongods.length;i++){
-                   $scope.mongods[i].replicaset = ReplicaSetService.get({replicaset:$scope.mongods[i].replica_set_id});
-               }
+                for (var i = 0; i < $scope.mongods.length; i++) {
+                    $scope.mongods[i].replicaset = ReplicaSetService.get({replicaset: $scope.mongods[i].replica_set_id});
+                }
             });
             $scope.edit_slave = angular.copy($scope.slave);
         });
@@ -345,13 +355,13 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
     $scope.updateSlave = function () {
         if ($scope.is_create_view) {
-            if(!$scope.edit_slave.slave_port) {
+            if (!$scope.edit_slave.slave_port) {
                 $scope.edit_slave.slave_port = 8081;
             }
-            if(!$scope.edit_slave.mongod_port_range_begin) {
+            if (!$scope.edit_slave.mongod_port_range_begin) {
                 $scope.edit_slave.mongod_port_range_begin = 18080;
             }
-            if(!$scope.edit_slave.mongod_port_range_end) {
+            if (!$scope.edit_slave.mongod_port_range_end) {
                 $scope.edit_slave.mongod_port_range_end = 18081;
             }
             angular.copy($scope.edit_slave, $scope.slave);
@@ -390,11 +400,14 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
     };
 
     $scope.calcMongodCount = function () {
+        if (!$scope.edit_slave) {
+            return '?';
+        }
         var begin = $scope.edit_slave.mongod_port_range_begin;
         var end = $scope.edit_slave.mongod_port_range_end;
-        if(begin + "" === 'undefined' || begin === null)
+        if (begin + "" === 'undefined' || begin === null)
             begin = 18080;
-        if(end + "" === 'undefined' || end == null)
+        if (end + "" === 'undefined' || end == null)
             end = 18081;
         return end - begin;
     };
@@ -407,9 +420,6 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
     ReplicaSetService.query(function (replicasets) {
         $scope.replicasets = replicasets;
-        for (var i = 0; i < $scope.replicasets.length; i++) {
-            $scope.replicasets[i].problems = ReplicaSetService.getProblems({replicaset: $scope.replicasets[i].id});
-        }
     });
 });
 
@@ -440,7 +450,6 @@ mamidApp.controller('replicasetByIdController',
                     });
                 });
             });
-            $scope.problems = ReplicaSetService.getProblems({replicaset: replicasetId});
 
         }
 
