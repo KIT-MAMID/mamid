@@ -202,12 +202,39 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 			ReplSetName:   observedMongod.ReplicaSetName,
 		})
 
-		if dbMongodRes.RecordNotFound() {
-			return fmt.Errorf("monitor: internal inconsistency: did not find corresponding database Mongod to observed Mongod `%s`: %s",
-				mongodTuple(slave, observedMongod), dbMongodRes.Error)
-		} else if dbMongodRes.Error != nil {
+		if dbMongodRes.Error != nil && !dbMongodRes.RecordNotFound() {
+			// Early exit
 			return fmt.Errorf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
 				mongodTuple(slave, observedMongod), dbMongodRes.Error)
+
+		} else if dbMongodRes.RecordNotFound() {
+
+			// The slave is running a Mongod which is not in the database
+			// => model this in the database
+			// => then continue as if the Mongod had always been in the database
+
+			dbMongod = model.Mongod{
+				ParentSlaveID: slave.ID,
+				Port:          model.PortNumber(observedMongod.Port),
+				ReplSetName:   observedMongod.ReplicaSetName,
+				ReplicaSetID:  sql.NullInt64{Valid: false},
+			}
+			if err := tx.Create(&dbMongod).Error; err != nil {
+				return fmt.Errorf("monitor: could not create database representation for unknown observed Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), err)
+			}
+			desiredState := model.MongodState{
+				ExecutionState: model.MongodExecutionStateDestroyed,
+			}
+			if err := tx.Create(&desiredState).Error; err != nil {
+				return fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), err)
+			}
+			if err := tx.Model(&dbMongod).Update("DesiredStateID", desiredState.ID); err != nil {
+				return fmt.Errorf("monitor: could not update DesiredStateID column for unknown observed Mongod `%s`: %s",
+					mongodTuple(slave, observedMongod), err)
+			}
+
 		}
 
 		//Get desired state if it exists
