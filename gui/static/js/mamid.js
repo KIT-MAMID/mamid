@@ -215,7 +215,9 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
                         }
                     }
                     $scope.slaves.$promise.then(function () {
-                        $scope.genChart();
+                        if ($location.path() == "/") {
+                            $scope.genChart();
+                        }
                     });
                     $timeout(tick, 1000 * 5);
                 }
@@ -250,7 +252,7 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
     $scope.getStateCount = function (state) {
         var s = []
         for (var i = 0; i < $scope.slaves.length; i++) {
-            if (($scope.slaves[i].id + "" in $scope.problemsByReplicaSet) && $scope.problemsByReplicaSet[$scope.slaves[i].id + ""].length == 0) {
+            if (!$scope.problemsByReplicaSet[$scope.slaves[i].id + ""]) {
                 s.push($scope.slaves[i]);
             }
         }
@@ -266,7 +268,7 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
         }
         return count;
     }
-
+    $scope.genChart();
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
@@ -342,7 +344,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.slave.$promise.then(function () {
-            if($scope.slave.risk_group_id != null) {
+            if ($scope.slave.risk_group_id != null) {
                 $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             }
             $scope.mongods = SlaveService.getMongods({slave: $scope.slave.id});
