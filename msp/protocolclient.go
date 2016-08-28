@@ -16,7 +16,7 @@ type MSPClient interface {
 }
 
 type MSPClientImpl struct {
-	httpClient http.Client
+	HttpClient http.Client
 }
 
 func communicationErrorFromError(err error) *Error {
@@ -28,7 +28,7 @@ func communicationErrorFromError(err error) *Error {
 }
 
 func (c MSPClientImpl) RequestStatus(Target HostPort) ([]Mongod, *Error) {
-	resp, err := c.httpClient.Get(fmt.Sprintf("http://%s:%d/msp/status", Target.Hostname, Target.Port))
+	resp, err := c.HttpClient.Get(fmt.Sprintf("http://%s:%d/msp/status", Target.Hostname, Target.Port))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			var result []Mongod
@@ -79,7 +79,7 @@ func (c MSPClientImpl) EstablishMongodState(target HostPort, m Mongod) *Error {
 		panic(err)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.HttpClient.Do(req)
 
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
