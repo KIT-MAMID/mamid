@@ -79,8 +79,6 @@ func (m *Monitor) Run() {
 				//Check degradation of replica sets
 				m.observeReplicaSets()
 
-				m.observeOrphanedMongods()
-
 			case <-quit:
 				ticker.Stop()
 				return
@@ -333,20 +331,24 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 
 	for _, modelMongod := range modelMongods {
 
+		var busMessage interface{}
+
+		monitorLog.Debugf("fetching desired & observed state for Mongod: %d on %d", modelMongod.ID, modelMongod.ParentSlaveID)
+
 		if err := tx.Model(modelMongod).Related(&modelMongod.DesiredState, "DesiredState").Error; err != nil {
+			// This should really not happen, a Mongod must have a DesiredState
 			return fmt.Errorf("monitor: error fetching DesiredState for mongod `%v`: %s", modelMongod, err)
 		}
 
 		observedStateRes := tx.Model(modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
 		if !observedStateRes.RecordNotFound() && observedStateRes.Error != nil {
+			// Observed state is optional
 			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%v`: %s", modelMongod, observedStateRes.Error)
 		}
 
-		var busMessage interface{}
 		if observedStateRes.RecordNotFound() {
-			// This happens when
-			// 	a new Mongod with no observations is found
-			// 	a Mongod with desired state = destroyed is still in the database
+			// If we have no observations, it is a mismatch (since we can't know what the actual state is)
+			// Example: a new Mongod that has never been observed. Will be deployed by the Deployer when informed about Mismatch
 			busMessage = model.MongodMatchStatus{
 				Mismatch: true,
 				Mongod:   modelMongod,
@@ -354,6 +356,7 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 		} else {
 			busMessage = compareStates(modelMongod)
 		}
+
 		monitorLog.Debugf("monitor: sending bus message for slave `%s`", slave.Hostname, busMessage)
 		m.BusWriteChannel <- busMessage
 		monitorLog.Debugf("monitor: sent bus message for slave `%s`", slave.Hostname, busMessage)
@@ -446,28 +449,5 @@ func (m *Monitor) observeReplicaSets() {
 	}
 
 	replicaSetsWithMemberCounts.Close()
-
-}
-
-// Check on orphaned Mongods, i.e. Mongods without parent replica set (parent replica set was deleted)
-func (m *Monitor) observeOrphanedMongods() {
-
-	tx := m.DB.Begin()
-	defer tx.Rollback()
-
-	// Send notifications about orphaned Mongods, i.e. not belonging to a Replica Set
-	orphanedMongods := make([]model.Mongod, 0, 0)
-	if err := tx.Find(&orphanedMongods, &model.Mongod{ReplicaSetID: sql.NullInt64{Valid: false}}).Error; err != nil {
-		monitorLog.WithError(err).Error("error finding orphaned Mongods")
-		return
-	}
-	for _, mongod := range orphanedMongods {
-		monitorLog.Debugf("sending MongodMatchStatus for orphaned Mongod: %d on %d", mongod.ID, mongod.ParentSlaveID)
-		m.BusWriteChannel <- model.MongodMatchStatus{
-			Mismatch: true,
-			Mongod:   mongod,
-		}
-
-	}
 
 }
