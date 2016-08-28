@@ -116,7 +116,7 @@ type Mongod struct {
 	ParentSlaveID int64 `sql:"type:integer REFERENCES slaves(id) DEFERRABLE INITIALLY DEFERRED"`
 
 	ReplicaSet   *ReplicaSet
-	ReplicaSetID int64 `sql:"type:integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
+	ReplicaSetID sql.NullInt64 `sql:"type:integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED"`
 
 	DesiredState   MongodState
 	DesiredStateID int64 `sql:"type:integer NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"` // NOTE: we cascade on delete because Monogd cannot be without DesiredState

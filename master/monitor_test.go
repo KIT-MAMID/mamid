@@ -33,7 +33,7 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 		Port:          2000,
 		ReplSetName:   "repl1",
 		ParentSlaveID: dbSlave.ID,
-		ReplicaSetID:  dbReplSet.ID,
+		ReplicaSetID:  model.NullIntValue(dbReplSet.ID),
 	}
 	assert.NoError(t, tx.Create(&m1).Error)
 	des1 := model.MongodState{

@@ -450,7 +450,7 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 		Port:          unusedPort,
 		ReplSetName:   r.Name,
 		ParentSlaveID: s.ID,
-		ReplicaSetID:  r.ID,
+		ReplicaSetID:  NullIntValue(r.ID),
 	}
 	if err := tx.Create(&m).Error; err != nil {
 		panic(err)

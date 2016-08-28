@@ -352,7 +352,7 @@ func TestCascadeSlaves(t *testing.T) {
 
 	m := fixtureEmptyMongod()
 	m.ParentSlaveID = s.ID
-	m.ReplicaSetID = rs.ID
+	m.ReplicaSetID = NullIntValue(rs.ID)
 	m.DesiredStateID = ds.ID
 	assert.NoError(t, tx.Create(m).Error)
 	assert.NoError(t, tx.Model(&ds).Update("ParentMongodID", m.ID).Error)

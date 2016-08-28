@@ -7,6 +7,6 @@ func ProjectModelMongodToMongod(m *model.Mongod) *Mongod {
 		ID:            m.ID,
 		Port:          uint(m.Port),
 		ParentSlaveID: m.ParentSlaveID,
-		ReplicaSetID:  m.ReplicaSetID,
+		ReplicaSetID:  m.ReplicaSetID.Int64,
 	}
 }

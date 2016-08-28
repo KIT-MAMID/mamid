@@ -60,7 +60,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	m1 := model.Mongod{
 		Port:          5001,
 		ReplSetName:   "repl1",
-		ReplicaSetID:  dbReplicaset.ID,
+		ReplicaSetID:  model.NullIntValue(dbReplicaset.ID),
 		ParentSlaveID: dbSlave.ID,
 		//		DesiredStateID: 1,
 	}
