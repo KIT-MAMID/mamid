@@ -25,7 +25,7 @@ func TestApiClientSuccess(t *testing.T) {
 	server := createAPIMock(200, "")
 	defer server.Close()
 	var client APIClient
-	problems, err := client.Receive(server.Listener.Addr().String())
+	problems, err := client.Receive(server.URL)
 	assert.NoError(t, err)
 	assert.Equal(t, len(problems), 2)
 	for i := 0; i < len(problems); i++ {
@@ -37,7 +37,7 @@ func TestApiClientFail(t *testing.T) {
 	server := createAPIMock(500, "")
 	defer server.Close()
 	var client APIClient
-	problems, err := client.Receive(server.Listener.Addr().String())
+	problems, err := client.Receive(server.URL)
 	assert.Error(t, err)
 	assert.Equal(t, problems, []Problem(nil))
 }
@@ -46,7 +46,7 @@ func TestApiClientServerFail(t *testing.T) {
 	server := createAPIMock(500, "")
 	server.Close()
 	var client APIClient
-	problems, err := client.Receive(server.Listener.Addr().String())
+	problems, err := client.Receive(server.URL)
 	assert.Error(t, err)
 	assert.Equal(t, problems, []Problem(nil))
 }
@@ -54,7 +54,7 @@ func TestApiClientServerFail(t *testing.T) {
 func TestApiClientServerJSONFail(t *testing.T) {
 	server := createAPIMock(200, "[,dsahjkj],")
 	var client APIClient
-	problems, err := client.Receive(server.Listener.Addr().String())
+	problems, err := client.Receive(server.URL)
 	assert.Error(t, err)
 	assert.Equal(t, problems, []Problem(nil))
 }

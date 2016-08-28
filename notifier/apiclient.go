@@ -11,7 +11,7 @@ type APIClient struct {
 }
 
 func (apiclient *APIClient) Receive(host string) (problems []Problem, err error) {
-	resp, err := apiclient.httpClient.Get(fmt.Sprintf("http://%s/api/problems", host))
+	resp, err := apiclient.httpClient.Get(fmt.Sprintf("%s/api/problems", host))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			err = json.NewDecoder(resp.Body).Decode(&problems)

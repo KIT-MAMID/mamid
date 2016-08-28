@@ -1,5 +1,6 @@
 [notifier]
-api_host=localhost:8080
+# The URL that you call in your browser, when you access the web interface
+api_host=http://localhost:8080
 contacts=contacts.ini
 [smtp]
 relay_host=
