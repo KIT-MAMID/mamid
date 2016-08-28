@@ -1,6 +1,7 @@
 package master
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
@@ -77,6 +78,8 @@ func (m *Monitor) Run() {
 
 				//Check degradation of replica sets
 				m.observeReplicaSets()
+
+				m.observeOrphanedMongods()
 
 			case <-quit:
 				ticker.Stop()
@@ -388,6 +391,7 @@ func (m *Monitor) observeReplicaSets() {
 		monitorLog.WithError(err).Error("Error getting configured and actual member counts of replica sets")
 		return
 	}
+	defer replicaSetsWithMemberCounts.Close()
 
 	for replicaSetsWithMemberCounts.Next() {
 		var replicaSet model.ReplicaSet
@@ -413,4 +417,30 @@ func (m *Monitor) observeReplicaSets() {
 			ActualVolatileCount:       memberCounts.ActualVolatileMembers,
 		}
 	}
+
+	replicaSetsWithMemberCounts.Close()
+
+}
+
+// Check on orphaned Mongods, i.e. Mongods without parent replica set (parent replica set was deleted)
+func (m *Monitor) observeOrphanedMongods() {
+
+	tx := m.DB.Begin()
+	defer tx.Rollback()
+
+	// Send notifications about orphaned Mongods, i.e. not belonging to a Replica Set
+	orphanedMongods := make([]model.Mongod, 0, 0)
+	if err := tx.Find(&orphanedMongods, &model.Mongod{ReplicaSetID: sql.NullInt64{Valid: false}}).Error; err != nil {
+		monitorLog.WithError(err).Error("error finding orphaned Mongods")
+		return
+	}
+	for _, mongod := range orphanedMongods {
+		monitorLog.Debugf("sending MongodMatchStatus for orphaned Mongod: %d on %d", mongod.ID, mongod.ParentSlaveID)
+		m.BusWriteChannel <- model.MongodMatchStatus{
+			Mismatch: true,
+			Mongod:   mongod,
+		}
+
+	}
+
 }
