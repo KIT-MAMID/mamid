@@ -5,7 +5,6 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
 	"os/exec"
-	"strings"
 )
 
 type ProcessManager struct {
@@ -41,9 +40,7 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 		}
 	}
 
-	escName := strings.Replace(m.ReplicaSetName, "'", "'\\''", -1)
-	sh := fmt.Sprintf("/usr/bin/env %s --dbpath '%s/%s/%s' --port %d --replSet '%s'", p.command, p.dataDir, DataDBDir, escName, m.Port, escName)
-	cmd := exec.Command("/bin/sh", "-c", sh)
+	cmd := exec.Command(p.command, "--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetName)
 	err := cmd.Start()
 	if err != nil {
 		return err
