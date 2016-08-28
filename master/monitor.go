@@ -335,28 +335,10 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 
 		var busMessage interface{}
 
-		monitorLog.Debugf("fetching desired & observed state for Mongod: %d on %d", modelMongod.ID, modelMongod.ParentSlaveID)
-
-		if err := tx.Model(modelMongod).Related(&modelMongod.DesiredState, "DesiredState").Error; err != nil {
-			// This should really not happen, a Mongod must have a DesiredState
-			return fmt.Errorf("monitor: error fetching DesiredState for mongod `%v`: %s", modelMongod, err)
-		}
-
-		observedStateRes := tx.Model(modelMongod).Related(&modelMongod.ObservedState, "ObservedState")
-		if !observedStateRes.RecordNotFound() && observedStateRes.Error != nil {
-			// Observed state is optional
-			return fmt.Errorf("monitor: error fetching ObservedState for mongod `%v`: %s", modelMongod, observedStateRes.Error)
-		}
-
-		if observedStateRes.RecordNotFound() {
-			// If we have no observations, it is a mismatch (since we can't know what the actual state is)
-			// Example: a new Mongod that has never been observed. Will be deployed by the Deployer when informed about Mismatch
-			busMessage = model.MongodMatchStatus{
-				Mismatch: true,
-				Mongod:   modelMongod,
-			}
-		} else {
-			busMessage = compareStates(modelMongod)
+		busMessage, err = m.compareStates(tx, modelMongod)
+		if err != nil {
+			monitorLog.Errorf("error comparing Mongod `%d on %s` Desired and Observed state: %s", modelMongod.ID, slave.Hostname, err)
+			continue
 		}
 
 		monitorLog.Debugf("monitor: sending bus message for slave `%s`", slave.Hostname, busMessage)
@@ -370,13 +352,84 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 	return nil
 }
 
-func compareStates(mongod model.Mongod) (m model.MongodMatchStatus) {
-	//TODO Finish this: replica set member sets, keyfile contents
-	m.Mismatch =
-		mongod.DesiredState.ExecutionState != mongod.ObservedState.ExecutionState ||
-			mongod.DesiredState.IsShardingConfigServer != mongod.ObservedState.IsShardingConfigServer
-	m.Mongod = mongod
-	return
+func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod) (s model.MongodMatchStatus, err error) {
+
+	if !mongod.ObservedStateID.Valid {
+		// If we have no observations, it is a mismatch (since we can't know what the actual state is)
+		// Example: a new Mongod that has never been observed. Will be deployed by the Deployer when informed about Mismatch
+		return model.MongodMatchStatus{
+			Mismatch: true,
+			Mongod:   mongod,
+		}, nil
+	}
+
+	if err = tx.Model(mongod).Related(&mongod.DesiredState, "DesiredState").Error; err != nil {
+		return s, fmt.Errorf("error fetching DesiredState for mongod `%v`: %s", mongod, err)
+	}
+
+	observedStateRes := tx.Model(mongod).Related(&mongod.ObservedState, "ObservedState")
+	if observedStateRes.Error != nil {
+		return s, fmt.Errorf("error fetching ObservedState for mongod `%v`: %s", mongod, observedStateRes.Error)
+	}
+
+	equivalent, err := m.mongodStatesEquivalent(tx, mongod.DesiredState, mongod.ObservedState)
+	if err != nil {
+		return s, fmt.Errorf("error comparing Mongod states: %s", err)
+	}
+
+	return model.MongodMatchStatus{
+		Mismatch: !equivalent,
+		Mongod:   mongod,
+	}, nil
+
+}
+
+func (m *Monitor) mongodStatesEquivalent(tx *gorm.DB, a, b model.MongodState) (e bool, err error) {
+
+	e = a.ExecutionState == b.ExecutionState
+	e = e && a.IsShardingConfigServer == b.IsShardingConfigServer
+
+	// Compare []ReplicaSetMembers are equal
+	// Since Go's `sort` package is a pain and Go has no sets
+	// use SQL (we need to fetch the ReplicaSetMembers anyway
+	getSortedMembers := func(tx *gorm.DB, s model.MongodState, out *[]model.ReplicaSetMember) (err error) {
+		return tx.Order("hostname").Order("port").Find(out, model.ReplicaSetMember{MongodStateID: s.ID}).Error
+	}
+	var (
+		aMembers = make([]model.ReplicaSetMember, 0, 0)
+		bMembers = make([]model.ReplicaSetMember, 0, 0)
+	)
+	if err = getSortedMembers(tx, a, &aMembers); err != nil {
+		return false, err
+	}
+	if err = getSortedMembers(tx, b, &bMembers); err != nil {
+		return false, err
+	}
+
+	e = e && compareSortedReplicaSetMembers(aMembers, bMembers)
+
+	return e, nil
+
+}
+
+func compareSortedReplicaSetMembers(a, b []model.ReplicaSetMember) (equal bool) {
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, _ := range a {
+		if !ReplicaSetMembersEquivalent(a[i], b[i]) {
+			return false
+		}
+	}
+
+	return true
+
+}
+
+func ReplicaSetMembersEquivalent(a, b model.ReplicaSetMember) bool {
+	return a.Hostname == b.Hostname && a.Port == b.Port
 }
 
 func mspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutionState {

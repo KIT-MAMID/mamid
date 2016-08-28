@@ -209,3 +209,123 @@ func TestMonitor_observeSlave(t *testing.T) {
 	bus.Kill()
 	wg.Wait()
 }
+
+func TestMonitor_compareStates(t *testing.T) {
+
+	db, err := createDB(t)
+	assert.NoError(t, err)
+	defer db.CloseAndDrop()
+
+	monitor := Monitor{
+		DB: db,
+	}
+
+	// Test without observed state
+	tx := db.Begin()
+
+	var dbMongod model.Mongod
+	assert.NoError(t, tx.First(&dbMongod).Error)
+
+	msg, err := monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, true, msg.Mismatch, "Mongods without ObservedState should always result in mismatch")
+
+	tx.Rollback()
+	tx = db.Begin()
+
+	// Test with equal observed state
+	// => duplicate DesiredState
+	assert.NoError(t, tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "DesiredState").Error)
+	dbMongod.ObservedState.ID = 0
+	assert.NoError(t, tx.Create(&dbMongod.ObservedState).Error)
+	assert.NoError(t, tx.Model(&dbMongod).Update("ObservedStateID", dbMongod.ObservedState.ID).Error)
+
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, false, msg.Mismatch, "Mongods with equal Observed & Desired states should not result in a mismatch")
+
+	// Save this state, we check single unequal attributes from here on
+	tx.Commit()
+	tx = db.Begin()
+
+	// Test with unequal execution state
+	assert.NoError(t, tx.Model(&dbMongod.ObservedState).Update("ExecutionState", model.MongodExecutionStateNotRunning).Error)
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, true, msg.Mismatch, "unequal ExecutionState should result in a mismatch")
+
+	tx.Rollback()
+	tx = db.Begin()
+
+	// Test with unequal IsShardingConfigServer field
+	assert.NoError(t, tx.Model(&dbMongod.ObservedState).Update("IsShardingConfigServer", !dbMongod.DesiredState.IsShardingConfigServer).Error)
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, true, msg.Mismatch, "unequal IsShardingConfigServer should result in a mismatch")
+
+	tx.Rollback()
+	tx = db.Begin()
+
+	var slave model.Slave
+	assert.NoError(t, tx.First(&slave).Error)
+
+	desiredMember1 := model.ReplicaSetMember{
+		MongodStateID: dbMongod.DesiredStateID,
+		Hostname:      slave.Hostname,
+		Port:          dbMongod.Port,
+	}
+	assert.NoError(t, tx.Create(&desiredMember1).Error)
+	assert.True(t, dbMongod.ObservedStateID.Valid)
+	observedMember1 := model.ReplicaSetMember{
+		MongodStateID: dbMongod.ObservedStateID.Int64,
+		Hostname:      desiredMember1.Hostname,
+		Port:          desiredMember1.Port,
+	}
+	assert.NoError(t, tx.Create(&observedMember1).Error)
+
+	// Test with equal ReplicaSetMembers
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, false, msg.Mismatch, "equal ReplicaSetMembers should not result in a mismatch")
+
+	// Keep them equal
+	tx.Commit()
+	tx = db.Begin()
+
+	// Test with same number of members but different values
+	assert.NoError(t, tx.Model(&observedMember1).Update("Port", observedMember1.Port+1).Error)
+	assert.NoError(t, tx.Model(&observedMember1).Update("Hostname", "someunknownhost").Error)
+
+	var desiredMemberRefetched model.ReplicaSetMember
+	assert.NoError(t, tx.Model(&dbMongod).Related(&desiredMemberRefetched, "DesiredState").Error)
+	assert.EqualValues(t, slave.Hostname, desiredMemberRefetched.Hostname)
+	assert.EqualValues(t, "someunknownhost", observedMember1.Hostname)
+
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, true, msg.Mismatch, "unequal ReplicaSetMembers should result in a mismatch")
+
+	tx.Rollback()
+	tx = db.Begin()
+
+	// Test with different number of members but same values
+	observedMember2 := observedMember1
+	observedMember2.Hostname = "anotherhost"
+	assert.False(t, observedMember2.Hostname == observedMember1.Hostname, "error in test logic")
+	observedMember2.ID = 0
+	assert.NoError(t, tx.Create(&observedMember2).Error)
+
+	msg, err = monitor.compareStates(tx, dbMongod)
+	assert.NoError(t, err)
+	assert.EqualValues(t, true, msg.Mismatch, "different sets of ReplicaSetMembers should result in a mismatch")
+
+	tx.Rollback()
+
+}
+
+func TestMonitor_ReplicaSetMembersEquivalent(t *testing.T) {
+	assert.True(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host1", Port: 100}))
+	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host1", Port: 200}))
+	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host2", Port: 100}))
+	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host2", Port: 200}))
+}
