@@ -24,22 +24,24 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 	}
 	content += "Detailed Description: " + problem.LongDescription + "\r\n"
 	subject := "Subject: [MAMID] Problem: " + problem.Description
-	msg := []byte("From: " + n.Relay.MailFrom + "\r\n" +
+	msg := "From: " + n.Relay.MailFrom + "\r\n" +
 		subject + "\r\n" +
-		content)
+		content
 	return n.sendMailToContacts(msg)
 }
 
-func (n *EmailNotifier) sendMailToContacts(msg []byte) error {
-	var to []string
+func (n *EmailNotifier) sendMailToContacts(msg string) error {
 	for i := 0; i < len(n.Contacts); i++ {
-		to = append(to, n.Contacts[i].Address)
+		err := smtp.SendMail(
+			n.Relay.Hostname,
+			nil,
+			n.Relay.MailFrom,
+			[]string{n.Contacts[i].Address},
+			[]byte("To: "+n.Contacts[i].Address+"\r\n"+msg))
+		if err != nil {
+			return err
+		}
 	}
-	err := smtp.SendMail(
-		n.Relay.Hostname,
-		nil,
-		n.Relay.MailFrom,
-		to,
-		msg)
-	return err
+
+	return nil
 }
