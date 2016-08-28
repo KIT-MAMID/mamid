@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/smtp"
 )
@@ -23,9 +24,10 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 		content += fmt.Sprintf("Slave id: %d \r\n", *problem.Slave)
 	}
 	content += "Detailed Description: " + problem.LongDescription + "\r\n"
-	subject := "Subject: [MAMID] Problem: " + problem.Description
-	msg := "From: " + n.Relay.MailFrom + "\r\n" +
-		subject + "\r\n" +
+	subject := "[MAMID] Problem: " + problem.Description
+	subject = "Subject: =?utf-8?B?" + base64.StdEncoding.EncodeToString([]byte(subject)) + "?="
+	msg := "From: " + n.Relay.MailFrom + "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-transfer-encoding: binary\r\n" +
+		subject + "\r\n\r\n" +
 		content
 	return n.sendMailToContacts(msg)
 }
