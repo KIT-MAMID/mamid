@@ -34,6 +34,12 @@ func TestMain(m *testing.M) {
 		}
 	}
 
+	//If the killing does not work this test would run forever otherwise
+	go func() {
+		time.Sleep(5 * time.Second)
+		os.Exit(1)
+	}()
+
 	ret := m.Run()
 
 	os.RemoveAll(dataDir)
@@ -113,11 +119,13 @@ func TestProcessManager_KillProcess(t *testing.T) {
 	assert.Contains(t, procs, msp.PortNumber(10))
 
 	p.KillProcess(10)
+	cmd1.Process.Wait() //Less racy tests
 
+	time.Sleep(10 * time.Millisecond) // give goroutines a chance to cleanup
 	procs = p.RunningProcesses()
 	assert.Equal(t, []msp.PortNumber{11}, procs)
 
-	time.Sleep(2 * time.Millisecond) // give goroutines a chance to cleanup
+	time.Sleep(10 * time.Millisecond) // give goroutines a chance to cleanup
 	if err = cmd1.Process.Signal(syscall.Signal(0)); err == nil {
 		t.Error("Process 10 still alive after killing")
 	}
@@ -126,7 +134,8 @@ func TestProcessManager_KillProcess(t *testing.T) {
 	}
 
 	cmd2.Process.Kill()
-	time.Sleep(2 * time.Millisecond) // give goroutines a chance to cleanup
+	cmd2.Process.Wait()               //Less racy tests
+	time.Sleep(10 * time.Millisecond) // give goroutines a chance to cleanup
 
 	procs = p.RunningProcesses()
 	assert.Empty(t, procs)
@@ -166,7 +175,10 @@ func TestProcessManager_KillProcesses(t *testing.T) {
 	cmd2 := p.GetProcess(11)
 
 	p.KillProcesses()
-	time.Sleep(2 * time.Millisecond) // give goroutines a chance to cleanup
+	cmd1.Process.Wait() //Less racy tests
+	cmd2.Process.Wait() //Less racy tests
+
+	time.Sleep(10 * time.Millisecond) // give goroutines a chance to cleanup
 
 	procs := p.RunningProcesses()
 	assert.Empty(t, procs)
