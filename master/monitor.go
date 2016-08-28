@@ -301,8 +301,10 @@ outer:
 
 		if modelMongod.ObservedStateID.Valid {
 
+			// We didn't find the expected modelMongod on the slave
+			// => delete the observed state to indicate this to other components
+
 			monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
-			//Else remove observed state
 			deleteErr := tx.Delete(&model.MongodState{ID: modelMongod.ObservedStateID.Int64}).Error
 			if deleteErr != nil {
 				monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
