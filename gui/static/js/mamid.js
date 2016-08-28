@@ -342,7 +342,9 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.slave.$promise.then(function () {
-            $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
+            if($scope.slave.risk_group_id != null) {
+                $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
+            }
             $scope.mongods = SlaveService.getMongods({slave: $scope.slave.id});
             $scope.mongods.$promise.then(function () {
                 for (var i = 0; i < $scope.mongods.length; i++) {
