@@ -53,7 +53,7 @@ func (m *Monitor) Run() {
 						wg.Add(1)
 						go func(s model.Slave) {
 							//Request mongod states from slave
-							observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)})
+							observedMongods, mspError := m.MSPClient.RequestStatus(msp.HostPort{s.Hostname, msp.PortNumber(s.Port)})
 							observationChan <- observation{
 								result: observedMongods,
 								err:    mspError,
