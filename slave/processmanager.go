@@ -5,6 +5,7 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
 	"os/exec"
+	"time"
 )
 
 type ProcessManager struct {
@@ -65,8 +66,25 @@ func (p *ProcessManager) RunningProcesses() []msp.PortNumber {
 
 func (p *ProcessManager) KillProcess(port msp.PortNumber) error {
 	if cmd, exists := p.runningProcesses[port]; exists {
-		delete(p.runningProcesses, port)
 		return cmd.Process.Kill()
+	}
+	return nil
+}
+
+func (p *ProcessManager) KillAfterTimeout(port msp.PortNumber, timeout time.Duration) error {
+	if cmd, exists := p.runningProcesses[port]; exists {
+		done := make(chan struct{})
+		go func() {
+			cmd.Process.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			return nil
+		case <-time.After(timeout):
+			return cmd.Process.Kill()
+		}
 	}
 	return nil
 }
