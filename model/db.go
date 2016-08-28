@@ -14,6 +14,8 @@ import (
 
 var modelLog = logrus.WithField("module", "model")
 
+const SCHEMA_VERSION string = "0.0.1"
+
 /*
 	The structs defined in this file are stored in a database using the `gorm` package.
 
@@ -189,6 +191,10 @@ type Problem struct {
 	MongodID sql.NullInt64 `sql:"type:integer NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 }
 
+type MamidMetadata struct {
+	Key, Value string
+}
+
 type DB struct {
 	gormDB  *gorm.DB
 	dbName  sql.NullString
@@ -232,35 +238,66 @@ func (dbWrapper *DB) migrate() (err error) {
 
 	db := dbWrapper.gormDB
 
-	// if mamid_metadata table exists, the database must have been populated
-	// we don't support migrations yet, hence throw an error and exit
-	res := db.Raw(`
-	SELECT EXISTS (
-		SELECT 1
-		FROM   information_schema.tables 
-		WHERE  table_schema = 'public'
-		AND    table_name = 'mamid_metadata'
-	)
-	`)
+	if !db.HasTable(&MamidMetadata{}) {
 
-	if res.Error != nil {
-		return fmt.Errorf("the database has already been populated, migrations are not supported: %s", res.Error)
-	}
+		// run the populating query
 
-	// run the populating query
+		ddlStatements, err := Asset("model/sql/mamid_postgresql.sql")
+		if err != nil {
+			return fmt.Errorf("sql DDL data not found: %s", err)
+		}
 
-	ddlStatements, err := Asset("model/sql/mamid_postgresql.sql")
-	if err != nil {
-		return fmt.Errorf("sql DDL data not found: %s", err)
-	}
+		err = db.Exec(string(ddlStatements), []interface{}{}).Error
+		if err != nil {
+			return fmt.Errorf("error running DDL statements: %s", err)
+		}
 
-	err = db.Exec(string(ddlStatements), []interface{}{}).Error
-	if err != nil {
-		return fmt.Errorf("error running DDL statements: %s", err)
+		// persist schema version
+		if err = dbWrapper.setMetadata("schema_version", SCHEMA_VERSION); err != nil {
+			return fmt.Errorf("error setting schema version: %s", err)
+		}
+
+	} else {
+
+		version, err := dbWrapper.schemaVersion()
+		if err != nil {
+			return fmt.Errorf("error determining schema version: %s", err)
+		}
+
+		if version != SCHEMA_VERSION {
+			return fmt.Errorf("the database has already been populated, migrations are not supported")
+		}
+
 	}
 
 	return nil
+}
 
+func (dbWrapper *DB) schemaVersion() (version string, err error) {
+	return dbWrapper.metadata("schema_version")
+}
+
+// Return metadata or an empty `value` if the entry does not exist
+func (dbWrapper *DB) metadata(key string) (value string, err error) {
+	metadata := MamidMetadata{}
+	if res := dbWrapper.gormDB.Find(&metadata, MamidMetadata{Key: key}); res.Error != nil {
+		if res.RecordNotFound() {
+			return "", nil
+		} else {
+			return "", err
+		}
+	} else {
+		return metadata.Value, nil
+	}
+}
+
+func (dbWrapper *DB) setMetadata(key, value string) (err error) {
+	metadata := MamidMetadata{
+		Key:   key,
+		Value: value,
+	}
+	err = dbWrapper.gormDB.Save(&metadata).Error
+	return
 }
 
 func InitializeDB(driver, dsn string) (*DB, error) {
