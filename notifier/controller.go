@@ -40,6 +40,7 @@ func main() {
 	}
 	email.Contacts = emailContacts
 	email.Relay = relay
+	email.MamidHost = apiHost
 	lastProblems = make(map[uint]Problem)
 	notifiers = append(notifiers, &email)
 	c := make(chan os.Signal, 1)

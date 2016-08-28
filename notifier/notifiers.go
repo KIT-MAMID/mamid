@@ -11,8 +11,9 @@ type Notifier interface {
 }
 
 type EmailNotifier struct {
-	Contacts []*EmailContact
-	Relay    SMTPRelay
+	Contacts  []*EmailContact
+	Relay     SMTPRelay
+	MamidHost string
 }
 
 func (n *EmailNotifier) SendProblem(problem Problem) error {
@@ -29,6 +30,12 @@ func (n *EmailNotifier) SendProblem(problem Problem) error {
 	msg := "From: " + n.Relay.MailFrom + "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-transfer-encoding: binary\r\n" +
 		subject + "\r\n\r\n" +
 		content
+	if problem.ReplicaSet != nil {
+		msg += fmt.Sprintf("\r\nInspect affected Replica Set: %s/#/replicasets/%d \r\n", n.MamidHost, *problem.ReplicaSet)
+	}
+	if problem.Slave != nil {
+		msg += fmt.Sprintf("\r\nInspect affected Slave: %s/#/slaves/%d \r\n", n.MamidHost, *problem.Slave)
+	}
 	return n.sendMailToContacts(msg)
 }
 
