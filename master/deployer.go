@@ -98,7 +98,7 @@ func (d *Deployer) findInitiatorForReplicaSet(tx *gorm.DB, r ReplicaSet) (s Slav
 		FROM mongods m
 		JOIN replica_sets r ON m.replica_set_id = r.id
 		WHERE
-			r.initialized = false
+			r.initiated = false
 			AND
 			m.replica_set_id = ?
 		LIMIT 1
