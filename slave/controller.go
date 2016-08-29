@@ -123,8 +123,15 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 }
 
 func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {
-	return &msp.Error{
-		Identifier:  msp.NotImplementedError,
-		Description: fmt.Sprintf("rs initiate is not implemented"),
+	c.busyTableLock.Lock()
+	// acquire a lock if possible [otherwise there is no process and we need to respawn immediately]
+	if _, exists := c.busyTable[m.Port]; !exists {
+		c.busyTable[m.Port] = &sync.Mutex{}
 	}
+	mutex := c.busyTable[m.Port]
+	mutex.Lock()
+	defer mutex.Unlock()
+	c.busyTableLock.Unlock()
+
+	return c.configurator.InitiateReplicaSet(m)
 }

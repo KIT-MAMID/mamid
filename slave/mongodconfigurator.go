@@ -5,7 +5,7 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"sort"
+	//"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +24,7 @@ type replSetState int
 type MongodConfigurator interface {
 	MongodConfiguration(p msp.PortNumber) (msp.Mongod, *msp.Error)
 	ApplyMongodConfiguration(m msp.Mongod) *msp.Error
+	InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error
 }
 
 type ConcreteMongodConfigurator struct {
@@ -69,7 +70,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 			Port:                    port,
 			StatusError:             nil,
 			LastEstablishStateError: nil,
-			State: msp.MongodStateNotRunning,
+			State: msp.MongodStateUninitialized,
 		}, nil, replSetStartup
 	}
 
@@ -141,6 +142,14 @@ func (m mongodMembers) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 
+func replicaSetMembersToBson(replicaSetMembers []msp.ReplicaSetMember) []bson.M {
+	members := make([]bson.M, len(replicaSetMembers))
+	for k, member := range replicaSetMembers {
+		members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)}
+	}
+	return members
+}
+
 func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp.Error {
 	sess, err := c.connect(m.Port)
 	if err != nil {
@@ -148,13 +157,13 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 	defer sess.Close()
 
-	current, err, state := c.fetchConfiguration(sess, m.Port)
-	if err != nil {
-		return err
-	}
-
-	sort.Sort(mongodMembers(current.ReplicaSetConfig.ReplicaSetMembers))
-	sort.Sort(mongodMembers(m.ReplicaSetConfig.ReplicaSetMembers))
+	//current, err, state := c.fetchConfiguration(sess, m.Port) TODO What is this for?
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//sort.Sort(mongodMembers(current.ReplicaSetConfig.ReplicaSetMembers))
+	//sort.Sort(mongodMembers(m.ReplicaSetConfig.ReplicaSetMembers))
 
 	if m.State == msp.MongodStateDestroyed || m.State == msp.MongodStateNotRunning {
 		var result interface{}
@@ -164,25 +173,10 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 
 	if m.State == msp.MongodStateRunning {
-		if state == replSetStartup {
-			var result interface{}
-			err := sess.Run("replSetInitiate", &result)
-			if err != nil {
-				return &msp.Error{
-					Identifier:      msp.SlaveReplicaSetInitError,
-					Description:     fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-					LongDescription: fmt.Sprintf("Command replSetInitiate failed with\n%s", err.Error()),
-				}
-			}
-		}
-
-		members := make([]bson.M, len(m.ReplicaSetConfig.ReplicaSetMembers))
-		for k, member := range m.ReplicaSetConfig.ReplicaSetMembers {
-			members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)}
-		}
+		members := replicaSetMembersToBson(m.ReplicaSetConfig.ReplicaSetMembers)
 
 		var result interface{}
-		cmd := bson.D{{"replSetReconfig", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members}}, {"force", true}}
+		cmd := bson.D{{"replSetReconfig", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members}}}
 		err := sess.Run(cmd, &result)
 		if err != nil {
 			return &msp.Error{
@@ -200,4 +194,34 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		Description:     "Protocol error",
 		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %s received", m.State),
 	}
+}
+
+func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error {
+	sess, mspErr := c.connect(m.Port)
+	if mspErr != nil {
+		return mspErr
+	}
+	defer sess.Close()
+
+	members := make([]bson.M, len(m.ReplicaSetConfig.ReplicaSetMembers))
+	for k, member := range m.ReplicaSetConfig.ReplicaSetMembers {
+		members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)}
+	}
+
+	var result interface{}
+	cmd := bson.D{{"replSetInitiate", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members}}, {"force", true}}
+	err := sess.Run(cmd, &result)
+	if err != nil {
+		if queryErr, valid := err.(*mgo.QueryError); valid {
+			if queryErr.Code == 23 {
+				return nil //Replica set is already initialized. Return no error for idempotence.
+			}
+		}
+		return &msp.Error{
+			Identifier:      msp.SlaveReplicaSetInitError,
+			Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
+			LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
+		}
+	}
+	return nil
 }

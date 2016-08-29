@@ -129,7 +129,7 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 	tx.Rollback()
 	deployerLog.Debugf("finish fetching Mongod state representation: `%d` on slave `%d`", mongod.ID, mongod.ParentSlaveID)
 
-	deployerLog.Debugf("establishing Mongod state on `%s`", hostPort)
+	deployerLog.Debugf("establishing Mongod state on `%s` (%#v)", hostPort, mspMongod)
 
 	mspError := d.MSPClient.EstablishMongodState(hostPort, mspMongod)
 	if mspError != nil {
@@ -241,7 +241,7 @@ func mspDesiredReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64)
 
 	for rows.Next() {
 		member := msp.ReplicaSetMember{}
-		err = rows.Scan(member.HostPort.Hostname, member.HostPort.Port)
+		err = rows.Scan(&member.HostPort.Hostname, &member.HostPort.Port)
 		if err != nil {
 			return
 		}
