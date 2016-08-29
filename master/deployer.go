@@ -91,8 +91,14 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	if err != nil {
 		return
 	}
-	if replicaSetMembers, err = mspDesiredReplicaSetMembersForMongod(tx, mongod); err != nil {
-		return
+
+	// TODO use DesiredState once this is set
+	if !mongod.ReplicaSetID.Valid {
+		replicaSetMembers = make([]msp.ReplicaSetMember, 0, 0)
+	} else {
+		if replicaSetMembers, err = mspDesiredReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64); err != nil {
+			return
+		}
 	}
 
 	// Construct msp representation
@@ -131,7 +137,7 @@ func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, 
 
 // Return the list of msp.HostPort a Mongod should have as members
 // Includes the mongod passed as parameter m
-func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMembers []msp.ReplicaSetMember, err error) {
+func mspDesiredReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64) (replicaSetMembers []msp.ReplicaSetMember, err error) {
 
 	rows, err := tx.Raw(`SELECT s.hostname, m.port
 		FROM mongods m
@@ -140,11 +146,11 @@ func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMemb
 		JOIN slaves s ON m.parent_slave_id = s.id
 		WHERE r.id = ?
 		      AND desired_state.execution_state = ?
-		`, m.ReplicaSetID, MongodExecutionStateRunning,
+		`, replicaSetID, MongodExecutionStateRunning,
 	).Rows()
 
 	if err != nil {
-		return []msp.ReplicaSetMember{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%v`: %s", m, err)
+		return []msp.ReplicaSetMember{}, fmt.Errorf("could not fetch replica set members for ReplicaSet.ID `%v`: %s", replicaSetID, err)
 	}
 
 	for rows.Next() {
