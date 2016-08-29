@@ -42,7 +42,7 @@ func (d *Deployer) handleMatchStatus(m MongodMatchStatus) {
 
 func (d *Deployer) handleReplicaSetInitiationStatus(s ReplicaSetInitiationStatus) {
 
-	if !s.Initiated {
+	if s.Initiated {
 		return
 	}
 
