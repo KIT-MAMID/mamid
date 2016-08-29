@@ -90,6 +90,7 @@ type ReplicaSet struct {
 	PersistentMemberCount           uint
 	VolatileMemberCount             uint
 	ConfigureAsShardingConfigServer bool
+	Initiated                       bool
 	Mongods                         []*Mongod
 
 	Problems []*Problem
