@@ -328,9 +328,32 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
         });
     }
 });
-
-mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, SlaveService, RiskGroupService, ReplicaSetService) {
+var slaveMongoPoll = false;
+mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, $timeout, SlaveService, RiskGroupService, ReplicaSetService) {
     var slaveId = $routeParams['slaveId'];
+    slaveMongoPoll = true;
+    var pollMongo = function () {
+        if (!slaveMongoPoll) {
+            return;
+        }
+        SlaveService.getMongods({slave: $scope.slave.id}, function (mongods) {
+            SlaveService.get({slave: $scope.slave.id}, function (slave) {
+               $scope.slave.$promise.then(function () {
+                   $scope.slave.configured_state_transitioning = slave.configured_state_transitioning;
+               });
+            });
+            for (var i = 0; i < mongods.length; i++) {
+                (function (i, mongods) {
+                    ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
+                        $scope.mongods = mongods;
+                        $scope.mongods[i].replicaset = repli;
+                        slaveMongoPoll = $timeout(pollMongo, 2000);
+                    });
+                })(i, mongods);
+            }
+        });
+    };
+
     $scope.is_create_view = slaveId === "new";
     if ($scope.is_create_view) {
         $scope.slave = new SlaveService();
@@ -347,15 +370,15 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             if ($scope.slave.risk_group_id != null) {
                 $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             }
-            $scope.mongods = SlaveService.getMongods({slave: $scope.slave.id});
-            $scope.mongods.$promise.then(function () {
-                for (var i = 0; i < $scope.mongods.length; i++) {
-                    $scope.mongods[i].replicaset = ReplicaSetService.get({replicaset: $scope.mongods[i].replica_set_id});
-                }
-            });
+            pollMongo();
+            slaveMongoPoll = $timeout(pollMongo, 2000);
             $scope.edit_slave = angular.copy($scope.slave);
         });
     }
+
+    $scope.$on('$destroy', function () {
+        slaveMongoPoll = false;
+    });
 
     $scope.updateSlave = function () {
         if ($scope.is_create_view) {
@@ -416,6 +439,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             end = 18081;
         return end - begin;
     };
+
     $(function () {
         $('[data-toggle="tooltip"]').tooltip();
     });
