@@ -42,6 +42,60 @@ func (d *Deployer) handleMatchStatus(m MongodMatchStatus) {
 
 func (d *Deployer) handleReplicaSetInitiationStatus(s ReplicaSetInitiationStatus) {
 
+	if !s.Initialized {
+		return
+	}
+
+	tx := d.DB.Begin()
+
+	slave, initiator, err := d.findInitiatorForReplicaSet(tx, s.ReplicaSet)
+	if err != nil {
+		deployerLog.WithError(err).Errorf("could not find initiator for replica set `%s`", s.ReplicaSet.Name)
+		return
+	}
+
+	msg := msp.RsInitiateMessage{
+		Port: msp.PortNumber(initiator.Port),
+	}
+
+	msg.ReplicaSetConfig, err = d.replicaSetConfig(tx, s.ReplicaSet)
+	if err != nil {
+		deployerLog.WithError(err).Errorf("could not generate replica set config `%s`", s.ReplicaSet.Name)
+		return
+	}
+
+	deployerLog.Debugf("initializing Replica Set `%s` from `%s` using message: %#v", s.ReplicaSet.Name, slave.Hostname, msg)
+
+	mspErr := d.MSPClient.InitiateReplicaSet(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)}, msg)
+	if mspErr != nil {
+		deployerLog.Errorf("error initializing Replica Set `%s` from `%s`: %s", s.ReplicaSet.Name, slave.Hostname, mspErr)
+	}
+
+}
+
+// Find a Mongod of ReplicaSet r for `initiiating` the ReplicaSet
+func (d *Deployer) findInitiatorForReplicaSet(tx *gorm.DB, r ReplicaSet) (s Slave, m Mongod, err error) {
+
+	err = tx.Raw(`
+		SELECT m.*
+		FROM mongods m
+		JOIN replica_sets r ON m.replica_set_id = r.id
+		WHERE
+			r.initialized = false
+			AND
+			m.replica_set_id = ?
+		LIMIT 1
+			`, r.ID).Scan(&m).Error
+	if err != nil {
+		return
+	}
+
+	if err = tx.Model(&m).Related(&s, "ParentSlaveID").Error; err != nil {
+		return
+	}
+
+	return
+
 }
 
 func (d *Deployer) pushMongodState(mongod Mongod) {
@@ -133,6 +187,20 @@ func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, 
 	default:
 		return "", fmt.Errorf("deployer: unable to map `%v` from model.ExecutionState to msp.MongodState", s)
 	}
+}
+
+// Generate a ReplicaSetConfig used to describe the ReplicaSet r
+func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.ReplicaSetConfig, err error) {
+
+	config = msp.ReplicaSetConfig{
+		ReplicaSetName:       r.Name,
+		ReplicaSetMembers:    make([]msp.ReplicaSetMember, 0, 0),
+		ShardingConfigServer: r.ConfigureAsShardingConfigServer,
+	}
+
+	config.ReplicaSetMembers, err = mspDesiredReplicaSetMembersForReplicaSetID(tx, r.ID)
+
+	return
 }
 
 // Return the list of msp.HostPort a Mongod should have as members
