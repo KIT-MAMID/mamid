@@ -63,7 +63,7 @@ CREATE TABLE "replica_set_members" ( -- TODO is this even used?
 	"id" BIGSERIAL PRIMARY KEY,
 	"hostname" varchar(255),
 	"port" integer,
-	"mongod_state_id" integer REFERENCES mongod_states(id) DEFERRABLE INITIALLY DEFERRED
+	"mongod_state_id" integer REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE "problems" (
