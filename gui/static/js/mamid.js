@@ -342,15 +342,22 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                     $scope.slave.configured_state_transitioning = slave.configured_state_transitioning;
                 });
             });
-            for (var i = 0; i < mongods.length; i++) {
-                (function (i, mongods) {
-                    ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
-                        $scope.mongods = mongods;
-                        $scope.mongods[i].replicaset = repli;
-                        $timeout(pollMongo, 2000);
-                    });
-                })(i, mongods);
+            var finished = 0;
+            if(mongods.length == 0) {
+                $scope.mongods = mongods;
             }
+            for (var i = 0; i < mongods.length; i++) {
+                (function (i) {
+                    ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
+                        mongods[i].replicaset = repli;
+                        finished++;
+                        if(finished == mongods.length) {
+                            $scope.mongods = mongods;
+                        }
+                    });
+                })(i);
+            }
+            $timeout(pollMongo, 2000);
         });
     };
 

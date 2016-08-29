@@ -122,7 +122,7 @@
             </div>
         </div>
         <br/>
-        <div class="bs-callout bs-callout-maintenance clearfix" ng-if="edit_slave.configured_state_transitioning">
+        <div class="bs-callout bs-callout-maintenance clearfix" ng-if="slave.configured_state_transitioning">
             <img class="pull-left" width="50px" src="/static/img/gears.svg"/>
             <h4 style="padding-top: 15px; margin-left: 65px;">Slave is changing state.
                 <small ng-if="edit_slave.configured_state == 'disabled'"><br/>Migrating Mongods to other machines to
