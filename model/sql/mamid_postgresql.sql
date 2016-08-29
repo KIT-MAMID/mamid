@@ -12,8 +12,8 @@ CREATE TABLE "replica_sets" (
 	"name" varchar(255) UNIQUE,
 	"persistent_member_count" integer,
 	"volatile_member_count" integer,
-	"configure_as_sharding_config_server" bool
-	"initiated" boolean NOT NULL
+	"configure_as_sharding_config_server" bool,
+	"initiated" BOOLEAN NOT NULL
 );
 
 -- CREATE UNIQUE INDEX uix_replica_sets_name ON "replica_sets"("name");
