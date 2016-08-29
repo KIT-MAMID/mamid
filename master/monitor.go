@@ -499,6 +499,12 @@ func (m *Monitor) observeReplicaSets() {
 			ActualPersistentCount:     memberCounts.ActualPersistentMembers,
 			ActualVolatileCount:       memberCounts.ActualVolatileMembers,
 		}
+
+		m.BusWriteChannel <- model.ReplicaSetInitiationStatus{
+			Initiated:  replicaSet.Initiated,
+			ReplicaSet: replicaSet,
+		}
+
 	}
 
 	replicaSetsWithMemberCounts.Close()

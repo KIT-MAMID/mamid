@@ -26,7 +26,10 @@ func (d *Deployer) Run() {
 		switch msg.(type) {
 		case MongodMatchStatus:
 			go d.handleMatchStatus(msg.(MongodMatchStatus))
+		case ReplicaSetInitiationStatus:
+			go d.handleReplicaSetInitiationStatus(msg.(ReplicaSetInitiationStatus))
 		}
+
 	}
 }
 
@@ -35,6 +38,10 @@ func (d *Deployer) handleMatchStatus(m MongodMatchStatus) {
 		return
 	}
 	d.pushMongodState(m.Mongod)
+}
+
+func (d *Deployer) handleReplicaSetInitiationStatus(s ReplicaSetInitiationStatus) {
+
 }
 
 func (d *Deployer) pushMongodState(mongod Mongod) {

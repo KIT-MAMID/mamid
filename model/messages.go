@@ -31,3 +31,8 @@ type ObservedReplicaSetConstraintStatus struct {
 	ActualVolatileCount       uint
 	ActualPersistentCount     uint
 }
+
+type ReplicaSetInitiationStatus struct {
+	Initiated  bool
+	ReplicaSet ReplicaSet
+}
