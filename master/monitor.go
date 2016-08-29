@@ -86,7 +86,7 @@ func (m *Monitor) Run() {
 }
 
 func mongodTuple(s model.Slave, m msp.Mongod) string {
-	return fmt.Sprintf("(%s(id=%d),%d,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetName)
+	return fmt.Sprintf("(%s(id=%d),%d,%s)", s.Hostname, s.ID, m.Port, m.ReplicaSetConfig.ReplicaSetName)
 }
 
 func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.Error, slave model.Slave) {
@@ -195,7 +195,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 		dbMongodRes := tx.First(&dbMongod, &model.Mongod{
 			ParentSlaveID: slave.ID,
 			Port:          model.PortNumber(observedMongod.Port),
-			ReplSetName:   observedMongod.ReplicaSetName,
+			ReplSetName:   observedMongod.ReplicaSetConfig.ReplicaSetName,
 		})
 
 		if dbMongodRes.Error != nil && !dbMongodRes.RecordNotFound() {
@@ -212,7 +212,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 			dbMongod = model.Mongod{
 				ParentSlaveID: slave.ID,
 				Port:          model.PortNumber(observedMongod.Port),
-				ReplSetName:   observedMongod.ReplicaSetName,
+				ReplSetName:   observedMongod.ReplicaSetConfig.ReplicaSetName,
 				ReplicaSetID:  sql.NullInt64{Valid: false},
 			}
 			if err := tx.Create(&dbMongod).Error; err != nil {
@@ -253,7 +253,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 			//Put observations into model
 			dbMongod.ObservedState.ParentMongodID = dbMongod.ID // we could be creating the ObservedState of Mongod on first observation
 			dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
-			dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ShardingConfigServer
+			dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ReplicaSetConfig.ShardingConfigServer
 			dbMongod.ObservationError = model.MSPError{}
 		} else {
 			dbMongod.ObservationError = mspErrorToModelMSPError(observedMongod.StatusError)
@@ -292,7 +292,7 @@ outer:
 		//Check if slave reported this mongod
 		for _, observedMongod := range observedMongods {
 			if modelMongod.Port == model.PortNumber(observedMongod.Port) &&
-				modelMongod.ReplSetName == observedMongod.ReplicaSetName {
+				modelMongod.ReplSetName == observedMongod.ReplicaSetConfig.ReplicaSetName {
 				continue outer
 			}
 		}

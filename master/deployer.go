@@ -71,7 +71,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	var slave Slave
 	var desiredState MongodState
 	var mspMongodState msp.MongodState
-	var replicaSetMembers []msp.HostPort
+	var replicaSetMembers []msp.ReplicaSetMember
 
 	// Fetch master representation
 	if err = tx.Model(&mongod).Related(&slave, "ParentSlave").Error; err != nil {
@@ -94,11 +94,13 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 		Port:     msp.PortNumber(slave.Port),
 	}
 	mspMongod = msp.Mongod{
-		Port:                 msp.PortNumber(mongod.Port),
-		ReplicaSetName:       mongod.ReplSetName,
-		ReplicaSetMembers:    replicaSetMembers,
-		ShardingConfigServer: desiredState.IsShardingConfigServer,
-		State:                mspMongodState,
+		Port: msp.PortNumber(mongod.Port),
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName:       mongod.ReplSetName,
+			ReplicaSetMembers:    replicaSetMembers,
+			ShardingConfigServer: desiredState.IsShardingConfigServer,
+		},
+		State: mspMongodState,
 	}
 
 	return
@@ -122,7 +124,7 @@ func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, 
 
 // Return the list of msp.HostPort a Mongod should have as members
 // Includes the mongod passed as parameter m
-func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMembers []msp.HostPort, err error) {
+func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMembers []msp.ReplicaSetMember, err error) {
 
 	res := tx.Raw(`SELECT s.hostname, m.port
 		FROM mongods m
@@ -135,7 +137,7 @@ func mspDesiredReplicaSetMembersForMongod(tx *gorm.DB, m Mongod) (replicaSetMemb
 	).Find(&replicaSetMembers)
 
 	if res.Error != nil {
-		return []msp.HostPort{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%v`: %s", m, res.Error)
+		return []msp.ReplicaSetMember{}, fmt.Errorf("deployer: could not fetch replica set members for mongod `%v`: %s", m, res.Error)
 	}
 
 	return

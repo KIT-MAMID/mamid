@@ -20,14 +20,28 @@ type HostPort struct {
 	Port     PortNumber
 }
 
+type ReplicaSetConfig struct {
+	ReplicaSetName       string
+	ReplicaSetMembers    []ReplicaSetMember
+	ShardingConfigServer bool
+}
+
+type ReplicaSetMember struct {
+	HostPort HostPort
+	Priority uint
+}
+
 type Mongod struct {
 	Port                    PortNumber
-	ReplicaSetName          string
-	ReplicaSetMembers       []HostPort
-	ShardingConfigServer    bool
+	ReplicaSetConfig        ReplicaSetConfig
 	StatusError             *Error
 	LastEstablishStateError *Error
 	State                   MongodState
+}
+
+type RsInitiateMessage struct {
+	Port             PortNumber
+	ReplicaSetConfig ReplicaSetConfig
 }
 
 type Error struct {
@@ -63,3 +77,4 @@ const SlaveGetMongodStatusError string = "SLAVEGETSTATUSERR"
 const SlaveReplicaSetInitError string = "SLAVEREPLSETINIT"
 const SlaveReplicaSetConfigError string = "SLAVEREPLSETCONFIG"
 const SlaveMongodProtocolError string = "SLAVEMONGODPROTOERR"
+const NotImplementedError string = "NOTIMPLEMENTED"

@@ -12,11 +12,12 @@ import (
 type Consumer interface {
 	RequestStatus() ([]Mongod, *Error)
 	EstablishMongodState(m Mongod) *Error
+	RsInitiate(m RsInitiateMessage) *Error
 }
 
 type Listener struct {
 	listenString string
-	listener     Consumer
+	consumer     Consumer
 	router       *mux.Router
 	certFile     string
 	keyFile      string
@@ -25,7 +26,7 @@ type Listener struct {
 
 func NewServer(listener Consumer, listenString string, caFile string, certFile string, keyFile string) *Listener {
 	s := new(Listener)
-	s.listener = listener
+	s.consumer = listener
 	s.listenString = listenString
 	s.certFile = certFile
 	s.keyFile = keyFile
@@ -45,12 +46,13 @@ func NewServer(listener Consumer, listenString string, caFile string, certFile s
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
 	s.router.Methods("POST").Path("/msp/establishMongodState").Name("EstablishMongodState").HandlerFunc(s.handleMspEstablishMongodState)
+	s.router.Methods("POST").Path("/msp/rsInitiate").Name("RsInitiate").HandlerFunc(s.handleRsInitiate)
 
 	return s
 }
 
 func (s Listener) handleRequestStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := s.listener.RequestStatus()
+	status, err := s.consumer.RequestStatus()
 	if status != nil {
 		json.NewEncoder(w).Encode(status)
 	} else {
@@ -62,7 +64,17 @@ func (s Listener) handleRequestStatus(w http.ResponseWriter, r *http.Request) {
 func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.Request) {
 	var mongodState Mongod
 	json.NewDecoder(r.Body).Decode(&mongodState) //TODO Check decode error
-	err := s.listener.EstablishMongodState(mongodState)
+	err := s.consumer.EstablishMongodState(mongodState)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+	}
+}
+
+func (s Listener) handleRsInitiate(w http.ResponseWriter, r *http.Request) {
+	var rsInitiateMessage RsInitiateMessage
+	json.NewDecoder(r.Body).Decode(&rsInitiateMessage) //TODO Check decode error
+	err := s.consumer.RsInitiate(rsInitiateMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err)
