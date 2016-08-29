@@ -67,9 +67,6 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	if _, exists := running["setName"]; !exists {
 		return msp.Mongod{
 			Port:                    port,
-			ReplicaSetName:          "",
-			ReplicaSetMembers:       nil,
-			ShardingConfigServer:    false,
 			StatusError:             nil,
 			LastEstablishStateError: nil,
 			State: msp.MongodStateNotRunning,
@@ -85,11 +82,13 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		}, replSetUnknown
 	}
 
-	members := make([]msp.HostPort, len(status["members"].([]interface{})))
+	members := make([]msp.ReplicaSetMember, len(status["members"].([]interface{})))
 	for k, member := range status["members"].([]interface{}) {
 		pair := strings.Split(member.(bson.M)["name"].(string), ":")
 		remotePort, _ := strconv.Atoi(pair[1])
-		members[k] = msp.HostPort{pair[0], msp.PortNumber(remotePort)}
+		members[k] = msp.ReplicaSetMember{
+			HostPort: msp.HostPort{pair[0], msp.PortNumber(remotePort)},
+		}
 	}
 
 	var state msp.MongodState
@@ -100,10 +99,12 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	}
 
 	return msp.Mongod{
-		Port:                    port,
-		ReplicaSetName:          status["set"].(string),
-		ReplicaSetMembers:       members,
-		ShardingConfigServer:    false,
+		Port: port,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName:       status["set"].(string),
+			ReplicaSetMembers:    members,
+			ShardingConfigServer: false,
+		},
 		StatusError:             nil,
 		LastEstablishStateError: nil,
 		State: state,
@@ -121,20 +122,20 @@ func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (m
 	return mongod, err
 }
 
-type mongodMembers []msp.HostPort
+type mongodMembers []msp.ReplicaSetMember
 
 func (m mongodMembers) Len() int {
 	return len(m)
 }
 func (m mongodMembers) Less(i, j int) bool {
-	diff := m[i].Port - m[j].Port
+	diff := m[i].HostPort.Port - m[j].HostPort.Port
 	if diff < 0 {
 		return true
 	}
 	if diff > 0 {
 		return false
 	}
-	return m[i].Hostname < m[j].Hostname
+	return m[i].HostPort.Hostname < m[j].HostPort.Hostname
 }
 func (m mongodMembers) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
@@ -152,8 +153,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		return err
 	}
 
-	sort.Sort(mongodMembers(current.ReplicaSetMembers))
-	sort.Sort(mongodMembers(m.ReplicaSetMembers))
+	sort.Sort(mongodMembers(current.ReplicaSetConfig.ReplicaSetMembers))
+	sort.Sort(mongodMembers(m.ReplicaSetConfig.ReplicaSetMembers))
 
 	if m.State == msp.MongodStateDestroyed || m.State == msp.MongodStateNotRunning {
 		var result interface{}
@@ -169,24 +170,24 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			if err != nil {
 				return &msp.Error{
 					Identifier:      msp.SlaveReplicaSetInitError,
-					Description:     fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetName, m.Port),
+					Description:     fmt.Sprintf("Replica set %s could not be initiated on instance on port %d", m.ReplicaSetConfig.ReplicaSetName, m.Port),
 					LongDescription: fmt.Sprintf("Command replSetInitiate failed with\n%s", err.Error()),
 				}
 			}
 		}
 
-		members := make([]bson.M, len(m.ReplicaSetMembers))
-		for k, member := range m.ReplicaSetMembers {
-			members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.Hostname, member.Port)}
+		members := make([]bson.M, len(m.ReplicaSetConfig.ReplicaSetMembers))
+		for k, member := range m.ReplicaSetConfig.ReplicaSetMembers {
+			members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)}
 		}
 
 		var result interface{}
-		cmd := bson.D{{"replSetReconfig", bson.M{"_id": m.ReplicaSetName, "version": 1, "members": members}}, {"force", true}}
+		cmd := bson.D{{"replSetReconfig", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members}}, {"force", true}}
 		err := sess.Run(cmd, &result)
 		if err != nil {
 			return &msp.Error{
 				Identifier:      msp.SlaveReplicaSetConfigError,
-				Description:     fmt.Sprintf("Replica set %s could not be reconfigured with replicaset members on instance on port %d", m.ReplicaSetName, m.Port),
+				Description:     fmt.Sprintf("Replica set %s could not be reconfigured with replicaset members on instance on port %d", m.ReplicaSetConfig.ReplicaSetName, m.Port),
 				LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, err.Error()),
 			}
 		}

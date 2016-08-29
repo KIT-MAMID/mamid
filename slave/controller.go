@@ -86,7 +86,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 				return &msp.Error{
 					Identifier:      msp.SlaveSpawnError,
 					Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
-					LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetName, err),
+					LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetConfig.ReplicaSetName, err),
 				}
 			}
 		}
@@ -119,5 +119,12 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 	killErr := c.procManager.KillAfterTimeout(m.Port, 2*time.Second)
 	if killErr != nil {
 		log.WithField("error", killErr).Errorf("could not hard shutdown mongod on port %d", m.Port)
+	}
+}
+
+func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {
+	return &msp.Error{
+		Identifier:  msp.NotImplementedError,
+		Description: fmt.Sprintf("rs initiate is not implemented"),
 	}
 }

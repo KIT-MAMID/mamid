@@ -34,14 +34,14 @@ func (p *ProcessManager) Run() {
 }
 
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
-	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetName)
+	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetConfig.ReplicaSetName)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
 			panic(fmt.Sprintf("Could not create a readable and writable directory at %s", dbDir))
 		}
 	}
 
-	cmd := exec.Command(p.command, "--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetName)
+	cmd := exec.Command(p.command, "--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName)
 	err := cmd.Start()
 	if err != nil {
 		return err
