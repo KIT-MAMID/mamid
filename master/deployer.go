@@ -148,6 +148,7 @@ func mspDesiredReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64)
 		      AND desired_state.execution_state = ?
 		`, replicaSetID, MongodExecutionStateRunning,
 	).Rows()
+	defer rows.Close()
 
 	if err != nil {
 		return []msp.ReplicaSetMember{}, fmt.Errorf("could not fetch replica set members for ReplicaSet.ID `%v`: %s", replicaSetID, err)
@@ -155,7 +156,10 @@ func mspDesiredReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64)
 
 	for rows.Next() {
 		member := msp.ReplicaSetMember{}
-		rows.Scan(member.HostPort.Hostname, member.HostPort.Port)
+		err = rows.Scan(member.HostPort.Hostname, member.HostPort.Port)
+		if err != nil {
+			return
+		}
 		replicaSetMembers = append(replicaSetMembers, member)
 	}
 
