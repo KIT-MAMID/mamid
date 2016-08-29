@@ -338,16 +338,16 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         }
         SlaveService.getMongods({slave: $scope.slave.id}, function (mongods) {
             SlaveService.get({slave: $scope.slave.id}, function (slave) {
-               $scope.slave.$promise.then(function () {
-                   $scope.slave.configured_state_transitioning = slave.configured_state_transitioning;
-               });
+                $scope.slave.$promise.then(function () {
+                    $scope.slave.configured_state_transitioning = slave.configured_state_transitioning;
+                });
             });
             for (var i = 0; i < mongods.length; i++) {
                 (function (i, mongods) {
                     ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
                         $scope.mongods = mongods;
                         $scope.mongods[i].replicaset = repli;
-                        slaveMongoPoll = $timeout(pollMongo, 2000);
+                        $timeout(pollMongo, 2000);
                     });
                 })(i, mongods);
             }
@@ -371,7 +371,6 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $scope.slave.riskgroup = RiskGroupService.get({riskgroup: $scope.slave.risk_group_id});
             }
             pollMongo();
-            slaveMongoPoll = $timeout(pollMongo, 2000);
             $scope.edit_slave = angular.copy($scope.slave);
         });
     }
@@ -452,9 +451,32 @@ mamidApp.controller('replicasetIndexController', function ($scope, $http, Replic
     });
 });
 
+var replicaSetMongoPoll = false;
+
 mamidApp.controller('replicasetByIdController',
-    function ($scope, $http, $routeParams, $location, SlaveService, ReplicaSetService) {
+    function ($scope, $http, $routeParams, $location, $timeout, SlaveService, ReplicaSetService) {
         var replicasetId = $routeParams['replicasetId'];
+        replicaSetMongoPoll = true;
+        var mongoPoll = function () {
+            if (!replicaSetMongoPoll) {
+                return;
+            }
+            ReplicaSetService.getMongods({replicaset: replicasetId}, function (mongods) {
+                SlaveService.queryByReplicaSet({replicaset: replicasetId}, function (slaves) {
+                    for (var i = 0; i < mongods.length; i++) {
+                        for (var j = 0; j < slaves.length; j++) { // we want a dict here, but... meh...
+                            if (slaves[j].id == mongods[i].parent_slave_id) {
+                                mongods[i].slave = slaves[j]
+                            }
+                        }
+                    }
+                    $scope.replicaset.mongods = mongods;
+                    $timeout(mongoPoll, 2000);
+                });
+
+
+            });
+        };
         $scope.is_create_view = replicasetId === "new";
         if ($scope.is_create_view) {
             $scope.replicaset = new ReplicaSetService();
@@ -463,25 +485,17 @@ mamidApp.controller('replicasetByIdController',
             $scope.edit_replicaset = angular.copy($scope.replicaset);
         } else {
             $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
-            SlaveService.queryByReplicaSet({replicaset: replicasetId}, function (slaves) {
-                $scope.replicaset.slaves = slaves;
-                //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
-                $scope.replicaset.$promise.then(function () {
-                    $scope.replicaset.mongods = ReplicaSetService.getMongods({replicaset: replicasetId}, function () {
-                        for (var i = 0; i < $scope.replicaset.mongods.length; i++) {
-                            for (var j = 0; j < $scope.replicaset.slaves.length; j++) { // we want a dict here, but... meh...
-                                if ($scope.replicaset.slaves[j].id == $scope.replicaset.mongods[i].parent_slave_id) {
-                                    $scope.replicaset.mongods[i].slave = $scope.replicaset.slaves[j]
-                                }
-                            }
-                        }
-                        $scope.edit_replicaset = angular.copy($scope.replicaset);
-                    });
-                });
+
+            $scope.replicaset.$promise.then(function () {
+                $scope.edit_replicaset = angular.copy($scope.replicaset);
+                mongoPoll();
+
             });
 
         }
-
+        $scope.$on("$destroy", function () {
+            replicaSetMongoPoll = false;
+        });
         $scope.updateReplicaSet = function () {
             angular.copy($scope.edit_replicaset, $scope.replicaset);
             if ($scope.is_create_view) {
