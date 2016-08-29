@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"github.com/Sirupsen/logrus"
@@ -317,6 +318,42 @@ func InitializeDB(driver, dsn string) (*DB, error) {
 
 	return db, err
 
+}
+
+func InitializeTestDBFromFile(file string) (db *DB, dsn string, err error) {
+	db, dsn, err = InitializeTestDB()
+	if err != nil {
+		return
+	}
+	fd, err := os.Open(file)
+	if err != nil {
+		return
+	}
+	defer fd.Close()
+	scann := bufio.NewScanner(fd)
+	nativeDb, err := sql.Open("postgres", dsn)
+	defer nativeDb.Close()
+	if err != nil {
+		return
+	}
+	tx, err := nativeDb.Begin()
+	if err != nil {
+		return
+	}
+	_, err = nativeDb.Query("DELETE FROM mamid_metadata")
+	if err != nil {
+		return nil, "", err
+	}
+	line := 1
+	for scann.Scan() {
+		_, err := tx.Exec(scann.Text())
+		if err != nil {
+			return nil, "", err
+		}
+		line++
+	}
+	err = tx.Commit()
+	return
 }
 
 func InitializeTestDB() (db *DB, dsn string, err error) {
