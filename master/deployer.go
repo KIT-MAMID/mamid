@@ -46,30 +46,47 @@ func (d *Deployer) handleReplicaSetInitiationStatus(s ReplicaSetInitiationStatus
 		return
 	}
 
+	var msg msp.RsInitiateMessage
+	var mspErr *msp.Error
+
 	tx := d.DB.Begin()
 
 	slave, initiator, err := d.findInitiatorForReplicaSet(tx, s.ReplicaSet)
 	if err != nil {
 		deployerLog.WithError(err).Errorf("could not find initiator for replica set `%s`", s.ReplicaSet.Name)
-		return
+		goto rollbackAndReturn
 	}
 
-	msg := msp.RsInitiateMessage{
+	msg = msp.RsInitiateMessage{
 		Port: msp.PortNumber(initiator.Port),
 	}
 
 	msg.ReplicaSetConfig, err = d.replicaSetConfig(tx, s.ReplicaSet)
 	if err != nil {
 		deployerLog.WithError(err).Errorf("could not generate replica set config `%s`", s.ReplicaSet.Name)
-		return
+		goto rollbackAndReturn
 	}
 
 	deployerLog.Debugf("initializing Replica Set `%s` from `%s` using message: %#v", s.ReplicaSet.Name, slave.Hostname, msg)
 
-	mspErr := d.MSPClient.InitiateReplicaSet(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)}, msg)
+	mspErr = d.MSPClient.InitiateReplicaSet(msp.HostPort{slave.Hostname, msp.PortNumber(slave.Port)}, msg)
+
 	if mspErr != nil {
 		deployerLog.Errorf("error initializing Replica Set `%s` from `%s`: %s", s.ReplicaSet.Name, slave.Hostname, mspErr)
+	} else {
+
+		if err = tx.Model(&s.ReplicaSet).Update("Initiated", true).Error; err != nil {
+			deployerLog.Errorf("error initializing Replica Set `%s` from `%s`: %s", s.ReplicaSet.Name, slave.Hostname, mspErr)
+			goto rollbackAndReturn
+		}
+		tx.Commit()
 	}
+
+	return
+
+rollbackAndReturn:
+	tx.Rollback()
+	return
 
 }
 
