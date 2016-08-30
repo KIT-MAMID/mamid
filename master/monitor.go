@@ -105,13 +105,13 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 	tx := m.DB.Begin()
 
-	if err := m.updateObservedStateInDB(tx, slave, mspError, observedMongods); err != nil {
-		monitorLog.WithError(err).Error()
+	if err := m.updateSlaveObservationError(tx, slave, mspError); err != nil {
+		monitorLog.WithError(err).Error("error persisting slave observation error")
 		tx.Rollback()
 		return
 	}
 
-	// Return early if there were observation errors.
+	// Return early if there were observation errors, since Mongods' ObservedState cannot be updated
 	if mspError != nil {
 		if err := tx.Commit().Error; err != nil {
 			monitorLog.WithError(err).Error("could not commit monitor run")
@@ -119,12 +119,14 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 		return
 	}
 
-	// NOTE: from now on, we assume observedMongods to be valid.
+	// NOTE: we assume observedMonogds to be valid from this point on (caught by early return in case of slave observation error)
 
-	if err := m.handleUnobservedMongodsOfSlave(tx, slave, observedMongods); err != nil {
-		monitorLog.WithError(err).Error()
-		tx.Rollback()
-		return
+	if err := m.deleteMongodStatesNotObservedOnSlave(tx, slave, observedMongods); err != nil {
+		monitorLog.Errorf("error deleting MongodStates that are present in the database but not reported by slave `%s`: %s", slave.Hostname, err)
+	}
+
+	if err := m.updateOrCreateObservedMongodStates(tx, slave, observedMongods); err != nil {
+		monitorLog.Errorf("error updating or creating ObservedState of Mongods reported by slave `%s`: %s", slave.Hostname, err)
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -140,9 +142,7 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 }
 
-// Update database Mongod.ObservedState with newly observedMongods
-// Errors returned by this method should be handled by aborting the transaction tx
-func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveObservationError *msp.Error, observedMongods []msp.Mongod) (criticalError error) {
+func (m *Monitor) updateSlaveObservationError(tx *gorm.DB, slave model.Slave, slaveObservationError *msp.Error) (criticalError error) {
 
 	if slaveObservationError != nil { // update observation error field
 
@@ -188,7 +188,11 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 
 	}
 
-	// NOTE: we assume observedMonogds to be valid from this point on (caught by early return in case of observation error)
+	return nil
+
+}
+
+func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
 
 	for _, observedMongod := range observedMongods {
 
@@ -209,8 +213,9 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 
 		} else if dbMongodRes.RecordNotFound() {
 
-			// The slave is running a Mongod which is not in the database
-			// => model this in the database
+			// The slave is running a Mongod which is not in the database.
+			// This means MAMID does not expect it to be there.
+			// => model this situation in the database by settings desiredState = destroyed
 			// => then continue as if the Mongod had always been in the database
 
 			dbMongod = model.Mongod{
@@ -257,8 +262,9 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 			//TODO Finish this
 			//Put observations into model
 			dbMongod.ObservedState.ParentMongodID = dbMongod.ID // we could be creating the ObservedState of Mongod on first observation
-			dbMongod.ObservedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
-			dbMongod.ObservedState.IsShardingConfigServer = observedMongod.ReplicaSetConfig.ShardingConfigServer
+			if err := m.updateObservedState(tx, observedMongod, &dbMongod.ObservedState); err != nil {
+				return fmt.Errorf("error updating observed state of Mongod `%s`", mongodTuple(slave, observedMongod))
+			}
 			dbMongod.ObservationError = model.MSPError{}
 		} else {
 			dbMongod.ObservationError = mspErrorToModelMSPError(observedMongod.StatusError)
@@ -280,9 +286,18 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 
 }
 
+// Update the ObservedState of a Mongod, including ReplicaSetMembers
+func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, observedState *model.MongodState) (err error) {
+
+	observedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
+	observedState.IsShardingConfigServer = observedMongod.ReplicaSetConfig.ShardingConfigServer
+
+	return nil
+}
+
 // Remove observed state of mongods the slave does not report
 // Errors returned by this method should be handled by aborting the transaction tx
-func (m *Monitor) handleUnobservedMongodsOfSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
+func (m *Monitor) deleteMongodStatesNotObservedOnSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
 
 	monitorLog.Debugf("monitor: handling unobserved Mongods of slave `%s`", slave.Hostname)
 
