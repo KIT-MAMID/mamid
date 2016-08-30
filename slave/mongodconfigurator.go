@@ -206,6 +206,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 				}
 			} else {
 				//Wait for this slave to be removed by the primary
+				return nil
 			}
 		}
 
@@ -233,7 +234,6 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 				}
 			}
 			var config bson.M = getConfigRes["config"].(bson.M)
-
 
 			//Update config members list
 			//Only use ids not used before for new members
@@ -288,7 +288,6 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			config["version"] = config["version"].(int) + 1
 			config["configsvr"] = m.ReplicaSetConfig.ShardingConfigServer
 
-
 			var result interface{}
 			cmd := bson.D{{"replSetReconfig", config}}
 			err := sess.Run(cmd, &result)
@@ -307,7 +306,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	return &msp.Error{
 		Identifier:      msp.SlaveMongodProtocolError,
 		Description:     "Protocol error",
-		LongDescription: fmt.Sprintf("Invalid msp.Mongod.State value %s received", m.State),
+		LongDescription: fmt.Sprintf("Unexpected msp.Mongod.State value %s received", m.State),
 	}
 }
 
