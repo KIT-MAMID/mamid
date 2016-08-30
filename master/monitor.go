@@ -125,7 +125,8 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 		monitorLog.Errorf("error deleting MongodStates that are present in the database but not reported by slave `%s`: %s", slave.Hostname, err)
 	}
 
-	if err := m.updateOrCreateObservedMongodStates(tx, slave, observedMongods); err != nil {
+	modelToObservedMap, err := m.updateOrCreateObservedMongodStates(tx, slave, observedMongods)
+	if err != nil {
 		monitorLog.Errorf("error updating or creating ObservedState of Mongods reported by slave `%s`: %s", slave.Hostname, err)
 	}
 
@@ -192,7 +193,12 @@ func (m *Monitor) updateSlaveObservationError(tx *gorm.DB, slave model.Slave, sl
 
 }
 
-func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
+// Update the monitoring information about Mongods kept in the database
+// Returns:
+//	modelObservationMap 	map from model.Mongod.ID => observed msp.Mongod from observedMongods
+func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (modelToObservedMap map[int64]msp.Mongod, err error) {
+
+	modelToObservedMap = make(map[int64]msp.Mongod)
 
 	for _, observedMongod := range observedMongods {
 
@@ -208,7 +214,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 
 		if dbMongodRes.Error != nil && !dbMongodRes.RecordNotFound() {
 			// Early exit
-			return fmt.Errorf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
+			return modelToObservedMap, fmt.Errorf("monitor: database error when querying for Mongod corresponding to observed Mongod `%s`: %s",
 				mongodTuple(slave, observedMongod), dbMongodRes.Error)
 
 		} else if dbMongodRes.RecordNotFound() {
@@ -225,7 +231,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 				ReplicaSetID:  sql.NullInt64{Valid: false},
 			}
 			if err := tx.Create(&dbMongod).Error; err != nil {
-				return fmt.Errorf("monitor: could not create database representation for unknown observed Mongod `%s`: %s",
+				return modelToObservedMap, fmt.Errorf("monitor: could not create database representation for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
 			desiredState := model.MongodState{
@@ -233,27 +239,29 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 				ExecutionState: model.MongodExecutionStateDestroyed,
 			}
 			if err := tx.Create(&desiredState).Error; err != nil {
-				return fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
+				return modelToObservedMap, fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
 			if err := tx.Model(&dbMongod).Update("DesiredStateID", desiredState.ID).Error; err != nil {
-				return fmt.Errorf("monitor: could not update DesiredStateID column for unknown observed Mongod `%s`: %s",
+				return modelToObservedMap, fmt.Errorf("monitor: could not update DesiredStateID column for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
 
 		}
 
+		modelToObservedMap[dbMongod.ID] = observedMongod
+
 		//Get desired state if it exists
 		relatedResult := tx.Model(&dbMongod).Related(&dbMongod.DesiredState, "DesiredState")
 		if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-			return fmt.Errorf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
+			return modelToObservedMap, fmt.Errorf("monitor: internal inconsistency: could not get desired state for Mongod `%s`: %s",
 				mongodTuple(slave, observedMongod), relatedResult.Error.Error())
 		}
 
 		//Get observed state if it exists
 		relatedResult = tx.Model(&dbMongod).Related(&dbMongod.ObservedState, "ObservedState")
 		if !relatedResult.RecordNotFound() && relatedResult.Error != nil {
-			return fmt.Errorf("monitor: database error when querying for observed state of Mongod `%s`: %s",
+			return modelToObservedMap, fmt.Errorf("monitor: database error when querying for observed state of Mongod `%s`: %s",
 				mongodTuple(slave, observedMongod), relatedResult.Error)
 		}
 
@@ -263,7 +271,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 			//Put observations into model
 			dbMongod.ObservedState.ParentMongodID = dbMongod.ID // we could be creating the ObservedState of Mongod on first observation
 			if err := m.updateObservedState(tx, observedMongod, &dbMongod.ObservedState); err != nil {
-				return fmt.Errorf("error updating observed state of Mongod `%s`", mongodTuple(slave, observedMongod))
+				return modelToObservedMap, fmt.Errorf("error updating observed state of Mongod `%s`", mongodTuple(slave, observedMongod))
 			}
 			dbMongod.ObservationError = model.MSPError{}
 		} else {
@@ -274,7 +282,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 		//TODO Only update observed state and errors to prevent collisions with cluster allocator
 		saveErr := tx.Save(&dbMongod).Error
 		if saveErr != nil {
-			return fmt.Errorf("monitor: error persisting updated observed state for mongod `%s`: %s",
+			return modelToObservedMap, fmt.Errorf("monitor: error persisting updated observed state for mongod `%s`: %s",
 				mongodTuple(slave, observedMongod), saveErr.Error())
 		}
 
@@ -282,7 +290,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 
 	}
 
-	return nil
+	return modelToObservedMap, nil
 
 }
 
