@@ -56,6 +56,14 @@ CREATE TABLE "mongods" (
 	"replica_set_id" integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
 	"desired_state_id" integer NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
 	"observed_state_id" integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
+    -- +-------------------+-----------------------------+---------------------+
+    -- |                   | obs_state = NULL            | obs_state != NULL   |
+    -- +-------------------+-----------------------------+---------------------+
+    -- | obs_error = NULL  | Never attempted to observe  | Valid observation   |
+    -- +-------------------+-----------------------------+---------------------+
+    -- | obs_error != NULL | Never successfully observed | Invalid observation |
+    -- +-------------------+-----------------------------+---------------------+
+
 );
 
 ALTER TABLE mongod_states ADD CONSTRAINT constr_parent_mongod FOREIGN KEY (parent_mongod_id) REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
