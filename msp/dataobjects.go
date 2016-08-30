@@ -29,7 +29,7 @@ type ReplicaSetConfig struct {
 
 type ReplicaSetMember struct {
 	HostPort HostPort
-	Priority uint
+	Priority float64
 }
 
 type Mongod struct {
