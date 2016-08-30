@@ -87,7 +87,7 @@ test-verbose:
 	@$(GO) test -v $(pkgs)
 
 .PHONY: cover
-cover:
+cover: model/bindata.go
 	mkdir -p cover
 	for pkg in $(pkgs) ; do \
 		basename=`basename $${pkg}` ; \
