@@ -28,7 +28,7 @@ func communicationErrorFromError(err error) *Error {
 }
 
 func (c MSPClientImpl) RequestStatus(Target HostPort) ([]Mongod, *Error) {
-	resp, err := c.HttpClient.Get(fmt.Sprintf("http://%s:%d/msp/status", Target.Hostname, Target.Port))
+	resp, err := c.HttpClient.Get(fmt.Sprintf("https://%s:%d/msp/status", Target.Hostname, Target.Port))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			var result []Mongod

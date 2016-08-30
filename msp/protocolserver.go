@@ -15,12 +15,16 @@ type Listener struct {
 	listenString string
 	listener     Consumer
 	router       *mux.Router
+	certFile     string
+	keyFile      string
 }
 
-func NewServer(listener Consumer, listenString string) *Listener {
+func NewServer(listener Consumer, listenString string, certFile string, keyFile string) *Listener {
 	s := new(Listener)
 	s.listener = listener
 	s.listenString = listenString
+	s.certFile = certFile
+	s.keyFile = keyFile
 
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
@@ -50,5 +54,6 @@ func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.R
 }
 
 func (s Listener) Run() error {
-	return http.ListenAndServe(s.listenString, s.router)
+	return http.ListenAndServeTLS(s.listenString, s.certFile, s.keyFile,
+		s.router)
 }
