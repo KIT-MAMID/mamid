@@ -116,10 +116,10 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 		log.WithField("error", applyErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
 	}
 
-	killErr := c.procManager.KillAfterTimeout(m.Port, 2*time.Second)
-	if killErr != nil {
-		log.WithField("error", killErr).Errorf("could not hard shutdown mongod on port %d", m.Port)
-	}
+	//killErr := c.procManager.KillAfterTimeout(m.Port, 2*time.Second)
+	//if killErr != nil {
+	//	log.WithField("error", killErr).Errorf("could not hard shutdown mongod on port %d", m.Port)
+	//}
 }
 
 func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {
