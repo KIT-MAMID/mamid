@@ -3,6 +3,7 @@ package master
 import (
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
+	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"time"
@@ -518,4 +519,51 @@ func slaveUsage(s *Slave) (runningMongods, maxMongods uint) {
 func slaveBusyRate(s *Slave) float64 {
 	runningMongods, maxMongods := slaveUsage(s)
 	return float64(runningMongods) / float64(maxMongods)
+}
+
+const ( // between 0 and 1000
+	ReplicaSetMemberPriorityHigh float64 = 500
+	ReplicaSetMemberPriorityLow  float64 = 1
+	ReplicaSetMemberPriorityNone float64 = 0
+)
+
+// Return the list of msp.HostPort a model.ReplicaSet should have as members
+func DesiredMSPReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64) (replicaSetMembers []msp.ReplicaSetMember, err error) {
+
+	rows, err := tx.Raw(`
+		SELECT
+			s.hostname,
+			m.port,
+			CASE s.persistent_storage
+				WHEN false THEN ? -- prioritize volatile members
+				ELSE ?
+			END
+		FROM mongods m
+		JOIN replica_sets r ON m.replica_set_id = r.id
+		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
+		JOIN slaves s ON m.parent_slave_id = s.id
+		WHERE r.id = ?
+		      AND desired_state.execution_state = ?
+		`, ReplicaSetMemberPriorityHigh, ReplicaSetMemberPriorityLow, replicaSetID, MongodExecutionStateRunning,
+	).Rows()
+	defer rows.Close()
+
+	if err != nil {
+		return []msp.ReplicaSetMember{}, fmt.Errorf("could not fetch ReplicaSetMembers for ReplicaSet.ID `%v`: %s", replicaSetID, err)
+	}
+
+	for rows.Next() {
+
+		member := msp.ReplicaSetMember{}
+
+		err = rows.Scan(&member.HostPort.Hostname, &member.HostPort.Port, &member.Priority)
+		if err != nil {
+			return
+		}
+
+		replicaSetMembers = append(replicaSetMembers, member)
+	}
+
+	return
+
 }
