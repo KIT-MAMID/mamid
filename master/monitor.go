@@ -224,13 +224,14 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 					mongodTuple(slave, observedMongod), err)
 			}
 			desiredState := model.MongodState{
+				ParentMongodID: dbMongod.ID,
 				ExecutionState: model.MongodExecutionStateDestroyed,
 			}
 			if err := tx.Create(&desiredState).Error; err != nil {
 				return fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
-			if err := tx.Model(&dbMongod).Update("DesiredStateID", desiredState.ID); err != nil {
+			if err := tx.Model(&dbMongod).Update("DesiredStateID", desiredState.ID).Error; err != nil {
 				return fmt.Errorf("monitor: could not update DesiredStateID column for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
@@ -271,7 +272,7 @@ func (m *Monitor) updateObservedStateInDB(tx *gorm.DB, slave model.Slave, slaveO
 				mongodTuple(slave, observedMongod), saveErr.Error())
 		}
 
-		monitorLog.Debug("monitor: finished updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
+		monitorLog.Debugf("monitor: finished updating observed state for mongod `%s` in database`", mongodTuple(slave, observedMongod))
 
 	}
 
