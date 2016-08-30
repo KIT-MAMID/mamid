@@ -95,6 +95,17 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		}, replSetUnknown
 	}
 
+	configResult := bson.M{}
+	if err := sess.Run("replSetGetConfig", &configResult); err != nil {
+		log.Debugf("replSetGetConfig result %#v, err %#v", status, err)
+		return msp.Mongod{}, &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Getting replica set config information from mongod instance on port %d failed", port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", status),
+		}, replSetUnknown
+	}
+	config := configResult["config"].(bson.M)
+
 	mongod.ReplicaSetConfig.ReplicaSetName = status["set"].(string)
 
 	if status_state, valid := status["myState"]; valid {
@@ -119,16 +130,20 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	}
 
 	var members []msp.ReplicaSetMember
-	if status_members, valid := status["members"]; valid {
-		members = make([]msp.ReplicaSetMember, len(status_members.([]interface{})))
-		for k, member := range status_members.([]interface{}) {
-			pair := strings.Split(member.(bson.M)["name"].(string), ":")
+
+	if configMembers, valid := config["members"]; valid {
+		members = make([]msp.ReplicaSetMember, len(configMembers.([]interface{})))
+		for k, member := range configMembers.([]interface{}) {
+			pair := strings.Split(member.(bson.M)["host"].(string), ":")
 			remotePort, _ := strconv.Atoi(pair[1])
+			priority := member.(bson.M)["priority"].(float64)
 			members[k] = msp.ReplicaSetMember{
 				HostPort: msp.HostPort{pair[0], msp.PortNumber(remotePort)},
-				//TODO priority
+				Priority: priority,
 			}
 		}
+	} else {
+		log.Errorf("No members list in rs config")
 	}
 	mongod.ReplicaSetConfig.ReplicaSetMembers = members
 
