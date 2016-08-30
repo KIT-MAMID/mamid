@@ -208,9 +208,9 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	isMaster := isMasterRes["ismaster"] == true
 
 	if isMaster {
-		log.Debugf("Mongod on port `%d` is PRIMARY of its ReplicaSet")
+		log.Debugf("Mongod on port `%d` is PRIMARY of its ReplicaSet", m.Port)
 	} else {
-		log.Debugf("Mongod on port `%d` is NOT PRIMARY of its ReplicaSet")
+		log.Debugf("Mongod on port `%d` is NOT PRIMARY of its ReplicaSet", m.Port)
 	}
 
 	if m.State == msp.MongodStateDestroyed {
