@@ -180,6 +180,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	//sort.Sort(mongodMembers(current.ReplicaSetConfig.ReplicaSetMembers))
 	//sort.Sort(mongodMembers(m.ReplicaSetConfig.ReplicaSetMembers))
 
+	log.Debugf("Applying Mongod configuration: %#v", m)
 
 	isMasterRes := bson.M{}
 	if err := sess.Run("isMaster", &isMasterRes); err != nil {
@@ -190,6 +191,12 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		}
 	}
 	isMaster := isMasterRes["ismaster"] == true
+
+	if isMaster {
+		log.Debugf("Mongod on port `%d` is PRIMARY of its ReplicaSet")
+	} else {
+		log.Debugf("Mongod on port `%d` is NOT PRIMARY of its ReplicaSet")
+	}
 
 	if m.State == msp.MongodStateDestroyed {
 		var status bson.M
@@ -218,6 +225,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		} else {
 			if isMaster {
 				//Cant remove ourselves so somebody else has to become master and remove us
+				log.Debugf("Letting Mongod on port `%d` step down to have it be removed by the new PRIMARY", m.Port)
 				var stepDownRes interface{}
 				stepDownErr := sess.Run(bson.D{{"replSetStepDown", 120}}, stepDownRes)
 				log.WithError(stepDownErr).Errorf("could not step down mongod on port %d (mongodb returned error)", m.Port)
@@ -230,13 +238,15 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 				}
 				return nil
 			} else {
-				//Wait for this slave to be removed by the primary
+				//Wait for this Mongod to be removed by the primary
+				log.Debugf("Waiting for Mongod on port `%d` to be removed by the PRIMARY")
 				return nil
 			}
 		}
 
 	} else if m.State == msp.MongodStateNotRunning {
 		//Temporary maintenance - just shut down without removing from replica set
+		log.Debugf("shutting down Mongod: %f", m)
 		var result interface{}
 		err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
 		if err != nil {
@@ -269,6 +279,9 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			config["members"] = resultingMembers
 			config["version"] = config["version"].(int) + 1
 			config["configsvr"] = m.ReplicaSetConfig.ShardingConfigServer
+
+			log.Debugf("`replSetReconfig` ReplicaSet `%s` from its PRIMARY Mongod on port `%d`: %#v",
+				m.ReplicaSetConfig.ReplicaSetName, m.Port, config)
 
 			var result interface{}
 			cmd := bson.D{{"replSetReconfig", config}}
