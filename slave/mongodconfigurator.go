@@ -307,9 +307,9 @@ func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMemb
 
 	var resultingMembers []bson.M
 
-	for _, member := range desiredMembers {
+	for _, desiredMember := range desiredMembers {
 
-		hostPortString := fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)
+		hostPortString := fmt.Sprintf("%s:%d", desiredMember.HostPort.Hostname, desiredMember.HostPort.Port)
 
 		member, ok := reportedMembersByHostPortString[hostPortString]
 		if !ok {
@@ -336,7 +336,7 @@ func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMemb
 		}
 
 		member["host"] = hostPortString
-		//TODO priority
+		member["priority"] = desiredMember.Priority
 
 		resultingMembers = append(resultingMembers, member)
 
