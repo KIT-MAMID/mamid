@@ -50,7 +50,7 @@ CREATE TABLE "mongods" (
 	"id" BIGSERIAL PRIMARY KEY,
 	"port" integer,
 	"repl_set_name" varchar(255),
-	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
+	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED, -- error encountered when observing this specific Mongod
 	"last_establish_state_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
 	"parent_slave_id" integer REFERENCES slaves(id) DEFERRABLE INITIALLY DEFERRED,
 	"replica_set_id" integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
@@ -67,13 +67,6 @@ CREATE TABLE "mongods" (
 );
 
 ALTER TABLE mongod_states ADD CONSTRAINT constr_parent_mongod FOREIGN KEY (parent_mongod_id) REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
-
-CREATE TABLE "replica_set_members" ( -- TODO is this even used?
-	"id" BIGSERIAL PRIMARY KEY,
-	"hostname" varchar(255),
-	"port" integer,
-	"mongod_state_id" integer REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
-);
 
 CREATE TABLE "problems" (
 	"id" BIGSERIAL PRIMARY KEY,

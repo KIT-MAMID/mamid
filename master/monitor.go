@@ -137,7 +137,7 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 	// Read-only transaction
 	tx = m.DB.Begin()
 	defer tx.Rollback()
-	if err := m.sendMongodMismatchStatusToBus(tx, slave); err != nil {
+	if err := m.sendMongodMismatchStatusToBus(tx, slave, modelToObservedMap); err != nil {
 		monitorLog.WithError(err).Error()
 	}
 
@@ -348,7 +348,8 @@ outer:
 
 // Check every Mongod of the Slave for mismatches between DesiredState and ObservedState
 // and send an appropriate MongodMismatchStatus to the Bus
-func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) (err error) {
+// The desired/observed msp.ReplicaSetMembers are computed ad-hoc.
+func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave, modelToObservedMap map[int64]msp.Mongod) (err error) {
 
 	monitorLog.Debugf("monitor: preparing Mongod Mismatch Status messages for slave `%s`", slave.Hostname)
 
@@ -361,7 +362,7 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 
 		var busMessage interface{}
 
-		busMessage, err = m.compareStates(tx, modelMongod)
+		busMessage, err = m.compareStates(tx, modelMongod, modelToObservedMap[modelMongod.ID])
 		if err != nil {
 			monitorLog.Errorf("error comparing Mongod `%d on %s` Desired and Observed state: %s", modelMongod.ID, slave.Hostname, err)
 			continue
@@ -378,7 +379,7 @@ func (m *Monitor) sendMongodMismatchStatusToBus(tx *gorm.DB, slave model.Slave) 
 	return nil
 }
 
-func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod) (s model.MongodMatchStatus, err error) {
+func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod, observedMongod msp.Mongod) (s model.MongodMatchStatus, err error) {
 
 	if !mongod.ObservedStateID.Valid {
 		// If we have no observations, it is a mismatch (since we can't know what the actual state is)
@@ -398,64 +399,54 @@ func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod) (s model.Mongo
 		return s, fmt.Errorf("error fetching ObservedState for mongod `%v`: %s", mongod, observedStateRes.Error)
 	}
 
-	equivalent, err := m.mongodStatesEquivalent(tx, mongod.DesiredState, mongod.ObservedState)
-	if err != nil {
-		return s, fmt.Errorf("error comparing Mongod states: %s", err)
+	mongodStatesEquivalent := MongodStatesEquivalent(mongod.DesiredState, mongod.ObservedState)
+
+	var replicaSetMembersEquivalent = false
+	if mongod.ReplicaSetID.Valid {
+		desiredMembers, err := DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64)
+		if err != nil {
+			return s, fmt.Errorf("error computing ReplicaSetMembers: %s", err)
+		}
+		replicaSetMembersEquivalent = MSPReplicaSetMembersDeepEqualsIgnoringOrder(desiredMembers, observedMongod.ReplicaSetConfig.ReplicaSetMembers)
 	}
 
 	return model.MongodMatchStatus{
-		Mismatch: !equivalent,
+		Mismatch: mongodStatesEquivalent && replicaSetMembersEquivalent,
 		Mongod:   mongod,
 	}, nil
 
 }
 
-func (m *Monitor) mongodStatesEquivalent(tx *gorm.DB, a, b model.MongodState) (e bool, err error) {
-
+// check if MongodStates are equivalent with regards to monitored attributes
+func MongodStatesEquivalent(a, b model.MongodState) (e bool) {
 	e = a.ExecutionState == b.ExecutionState
 	e = e && a.IsShardingConfigServer == b.IsShardingConfigServer
-
-	// Compare []ReplicaSetMembers are equal
-	// Since Go's `sort` package is a pain and Go has no sets
-	// use SQL (we need to fetch the ReplicaSetMembers anyway
-	getSortedMembers := func(tx *gorm.DB, s model.MongodState, out *[]model.ReplicaSetMember) (err error) {
-		return tx.Order("hostname").Order("port").Find(out, model.ReplicaSetMember{MongodStateID: s.ID}).Error
-	}
-	var (
-		aMembers = make([]model.ReplicaSetMember, 0, 0)
-		bMembers = make([]model.ReplicaSetMember, 0, 0)
-	)
-	if err = getSortedMembers(tx, a, &aMembers); err != nil {
-		return false, err
-	}
-	if err = getSortedMembers(tx, b, &bMembers); err != nil {
-		return false, err
-	}
-
-	e = e && compareSortedReplicaSetMembers(aMembers, bMembers)
-
-	return e, nil
-
+	return e
 }
 
-func compareSortedReplicaSetMembers(a, b []model.ReplicaSetMember) (equal bool) {
+// Deep-equals of two _sets_ (=> lists without order) of msp.ReplicaSetMembers
+func MSPReplicaSetMembersDeepEqualsIgnoringOrder(a, b []msp.ReplicaSetMember) (equal bool) {
 
 	if len(a) != len(b) {
 		return false
 	}
 
-	for i, _ := range a {
-		if !ReplicaSetMembersEquivalent(a[i], b[i]) {
+	seen := make(map[msp.ReplicaSetMember]bool)
+	for _, m := range a {
+		seen[m] = true
+	}
+	for i, m := range b {
+		s, exists := seen[m]
+		if !exists || !s || !ReplicaSetMembersEquivalent(a[i], b[i]) {
 			return false
 		}
 	}
 
 	return true
-
 }
 
-func ReplicaSetMembersEquivalent(a, b model.ReplicaSetMember) bool {
-	return a.Hostname == b.Hostname && a.Port == b.Port
+func ReplicaSetMembersEquivalent(a, b msp.ReplicaSetMember) bool {
+	return a.HostPort == b.HostPort && a.Priority == b.Priority
 }
 
 func mspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutionState {

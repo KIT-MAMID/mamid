@@ -133,7 +133,6 @@ type MongodState struct {
 	ParentMongodID         int64 `sql:"type:integer NOT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
 	IsShardingConfigServer bool
 	ExecutionState         MongodExecutionState
-	ReplicaSetMembers      []ReplicaSetMember
 }
 
 type MongodExecutionState uint
@@ -146,17 +145,6 @@ const (
 	MongodExecutionStateRecovering // invalid for a desired MongodState
 	MongodExecutionStateRunning
 )
-
-type ReplicaSetMember struct {
-	// was ReplicaSetMember in UML
-	// TODO missing primary key.
-	ID       int64 `gorm:"primary_key"`
-	Hostname string
-	Port     PortNumber
-
-	// Foreign key to parent MongodState
-	MongodStateID int64 `sql:"type:integer REFERENCES mongod_states(id) DEFERRABLE INITIALLY DEFERRED"`
-}
 
 // msp.Error
 // duplicated for decoupling protocol & internal representation
