@@ -146,5 +146,21 @@ func TestTestSaveDB(t *testing.T) {
 	dump2, err = saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
 	assert.NotEqual(t, dump, dump2)
+}
 
+func TestClusterAllocator_CompileMongodLayout_Idempotence_Simple(t *testing.T) {
+	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_1.sql")
+	assert.NoError(t, err)
+	dump, err := saveDB(dsn, db.Driver)
+	assert.NoError(t, err)
+	var alloc ClusterAllocator
+	tx := db.Begin()
+	alloc.CompileMongodLayout(tx)
+	dump2, err := saveDB(dsn, db.Driver)
+	assert.NoError(t, err)
+	assert.Equal(t, dump, dump2)
+	alloc.CompileMongodLayout(tx)
+	dump2, err = saveDB(dsn, db.Driver)
+	assert.NoError(t, err)
+	assert.Equal(t, dump, dump2)
 }
