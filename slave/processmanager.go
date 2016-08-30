@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
+	"io/ioutil"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,7 +37,7 @@ func (p *ProcessManager) Run() {
 }
 
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
-	dbDir := fmt.Sprintf("%s/%s/%s", p.dataDir, DataDBDir, m.ReplicaSetConfig.ReplicaSetName)
+	dbDir := fmt.Sprintf("%s/%s/%d:%s", p.dataDir, DataDBDir, m.Port, m.ReplicaSetConfig.ReplicaSetName)
 	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
 		if err := unix.Mkdir(dbDir, 0700); err != nil {
 			panic(fmt.Sprintf("Could not create a readable and writable directory at %s", dbDir))
@@ -54,6 +57,37 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 
 	p.runningProcesses[m.Port] = cmd
 	return nil
+}
+
+func (p *ProcessManager) ExistingDataDirectories() (replSetNameByPortNumber map[msp.PortNumber]string, err error) {
+	entries, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", p.dataDir, DataDBDir))
+	if err != nil {
+		return
+	}
+	replSetNameByPortNumber = make(map[msp.PortNumber]string)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			dirname := entry.Name()
+			colonLoc := strings.Index(entry.Name(), ":")
+			if colonLoc < 0 {
+				log.Errorf("Directory with unparsable name `%s` in db dir", entry.Name())
+				continue
+			}
+			portStr := dirname[0:colonLoc]
+			port64, parseErr := strconv.ParseUint(portStr, 10, 16)
+			if parseErr != nil {
+				log.Errorf("Could not parse port `%s`", portStr)
+				continue
+			}
+			port := msp.PortNumber(port64)
+			replSetStr := dirname[colonLoc+1:]
+			replSetNameByPortNumber[port] = replSetStr
+		} else {
+			log.Errorf("File `%s` in db dir. There should be no files in db dir.", entry.Name())
+			continue
+		}
+	}
+	return
 }
 
 func (p *ProcessManager) RunningProcesses() []msp.PortNumber {

@@ -31,29 +31,49 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 }
 
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
-	ports := c.procManager.RunningProcesses()
-	mongods := make([]msp.Mongod, 0, len(ports))
-	mongodChannel := make(chan msp.Mongod, len(ports))
-	for _, port := range ports {
+	replSetNameByPortNumber, err := c.procManager.ExistingDataDirectories()
+	if err != nil {
+		return []msp.Mongod{}, &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Unable to read mongods from db directory"),
+			LongDescription: fmt.Sprintf("ProcessManager.ExistingDataDirectories() failed with error %s", err),
+		}
+	}
+	mongods := make([]msp.Mongod, 0, len(replSetNameByPortNumber))
+	mongodChannel := make(chan msp.Mongod, len(replSetNameByPortNumber))
+	for port, replSetName := range replSetNameByPortNumber {
 		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber) {
-			mongod, err := c.configurator.MongodConfiguration(port)
-			if err != nil {
-				log.Errorf("controller: error querying Mongod configuration: %s", err)
-				resultsChan <- msp.Mongod{
-					Port:        port,
-					StatusError: err,
-					State:       msp.MongodStateNotRunning,
+			if _, valid := c.procManager.runningProcesses[port]; valid {
+				mongod, err := c.configurator.MongodConfiguration(port)
+				if err != nil {
+					//Process is running but we cant get the state
+					log.Errorf("controller: error querying Mongod configuration: %s", err)
+					resultsChan <- msp.Mongod{
+						Port:        port,
+						StatusError: err,
+						State:       msp.MongodStateNotRunning,
+					}
+				} else {
+					//Could get state successfully
+					resultsChan <- mongod
 				}
 			} else {
-				resultsChan <- mongod
+				//Process is not running
+				resultsChan <- msp.Mongod{
+					Port: port,
+					ReplicaSetConfig: msp.ReplicaSetConfig{
+						ReplicaSetName: replSetName,
+					},
+					State: msp.MongodStateNotRunning,
+				}
 			}
 		}(mongodChannel, port)
 	}
 
-	if len(mongods) != len(ports) {
+	if len(mongods) != len(replSetNameByPortNumber) {
 		for m := range mongodChannel {
 			mongods = append(mongods, m)
-			if len(mongods) == len(ports) {
+			if len(mongods) == len(replSetNameByPortNumber) {
 				break
 			}
 		}
