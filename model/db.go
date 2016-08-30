@@ -145,7 +145,8 @@ const (
 	MongodExecutionStateRunning
 )
 
-type ReplicaSetMember struct { // was ReplicaSetMember in UML
+type ReplicaSetMember struct {
+	// was ReplicaSetMember in UML
 	// TODO missing primary key.
 	ID       int64 `gorm:"primary_key"`
 	Hostname string
@@ -197,6 +198,7 @@ type MamidMetadata struct {
 }
 
 type DB struct {
+	Driver  string
 	gormDB  *gorm.DB
 	dbName  sql.NullString
 	connDSN sql.NullString
@@ -310,7 +312,9 @@ func InitializeDB(driver, dsn string) (*DB, error) {
 
 	gormDB.SetLogger(modelLog)
 
-	db := &DB{gormDB: gormDB}
+	db := &DB{
+		Driver: driver,
+		gormDB: gormDB}
 
 	if err := db.migrate(); err != nil {
 		return nil, fmt.Errorf("could not migrate database: %s", err)
@@ -387,6 +391,7 @@ func InitializeTestDB() (db *DB, dsn string, err error) {
 	gormDB.SetLogger(modelLog)
 
 	db = &DB{
+		Driver:  driver,
 		gormDB:  gormDB,
 		dbName:  sql.NullString{String: dbName, Valid: true},
 		connDSN: sql.NullString{String: connDSN, Valid: true},
@@ -436,7 +441,8 @@ func PtrToNullInt(value *int64) sql.NullInt64 {
 }
 
 func IsIntegrityConstraintViolation(err error) bool {
-	if driverErr, ok := err.(*pq.Error); ok && driverErr.Code.Class() == "23" { // Integrity Constraint Violation
+	if driverErr, ok := err.(*pq.Error); ok && driverErr.Code.Class() == "23" {
+		// Integrity Constraint Violation
 		return true
 	} else {
 		return false
