@@ -95,9 +95,9 @@ CREATE OR REPLACE VIEW replica_set_effective_members AS
 	JOIN mongod_states observed ON observed.id = m.observed_state_id
 	JOIN mongod_states desired ON desired.id = m.desired_state_id
 	WHERE
-	observed.execution_state = 4 -- running
+	observed.execution_state = 5 -- running
 	AND
-	desired.execution_state = 4; -- running
+	desired.execution_state = 5; -- running
 
 
 CREATE OR REPLACE VIEW slave_utilization AS
