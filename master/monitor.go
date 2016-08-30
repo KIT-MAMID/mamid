@@ -113,7 +113,9 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 	// Return early if there were observation errors.
 	if mspError != nil {
-		tx.Commit()
+		if err := tx.Commit().Error; err != nil {
+			monitorLog.WithError(err).Error("could not commit monitor run")
+		}
 		return
 	}
 
@@ -125,7 +127,9 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 		return
 	}
 
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		monitorLog.WithError(err).Error("Could not commit monitor run")
+	}
 
 	// Read-only transaction
 	tx = m.DB.Begin()
