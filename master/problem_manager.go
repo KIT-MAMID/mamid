@@ -27,8 +27,9 @@ func (p *ProblemManager) Run() {
 					ProblemType: model.ProblemTypeConnection,
 					SlaveID:     model.NullIntValue(connStatus.Slave.ID),
 				}).Assign(&model.Problem{
-					Description: fmt.Sprintf("Slave `%s` is unreachable", connStatus.Slave.Hostname),
-					LastUpdated: time.Now(),
+					Description:     fmt.Sprintf("Slave `%s` is unreachable - %s", connStatus.Slave.Hostname, connStatus.CommunicationError.Description),
+					LongDescription: connStatus.CommunicationError.LongDescription,
+					LastUpdated:     time.Now(),
 				}).Attrs(&model.Problem{
 					FirstOccurred: time.Now(),
 				}).FirstOrCreate(&problem)
