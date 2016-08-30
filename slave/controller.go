@@ -101,6 +101,18 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		c.stopMongod(m)
 		//TODO Delete files if destroy
 		return nil
+	} else if m.State == msp.MongodStateForceDestroyed {
+		log.Debugf("Force killing mongod on port %d", m.Port)
+		killErr := c.procManager.KillProcess(m.Port)
+		if killErr != nil {
+			log.WithField("error", killErr).Errorf("could not kill mongod on port %d", m.Port)
+			return &msp.Error{
+				Identifier:      msp.SlaveShutdownError,
+				Description:     fmt.Sprintf("Could not kill mongod on port %d", m.Port),
+				LongDescription: fmt.Sprintf("Error was: %s", killErr.Error()),
+			}
+		}
+		return nil
 	}
 
 	// release lock preventing simultaneous configuration
@@ -115,11 +127,6 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 	if applyErr != nil {
 		log.WithField("error", applyErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
 	}
-
-	//killErr := c.procManager.KillAfterTimeout(m.Port, 2*time.Second)
-	//if killErr != nil {
-	//	log.WithField("error", killErr).Errorf("could not hard shutdown mongod on port %d", m.Port)
-	//}
 }
 
 func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {

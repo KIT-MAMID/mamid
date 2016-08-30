@@ -201,6 +201,8 @@ func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, 
 		return msp.MongodStateRecovering, nil
 	case MongodExecutionStateRunning:
 		return msp.MongodStateRunning, nil
+	case MongodExecutionStateForceDestroyed:
+		return msp.MongodStateForceDestroyed, nil
 	default:
 		return "", fmt.Errorf("deployer: unable to map `%v` from model.ExecutionState to msp.MongodState", s)
 	}

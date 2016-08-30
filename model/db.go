@@ -139,8 +139,9 @@ type MongodState struct {
 type MongodExecutionState uint
 
 const (
-	_                                                  = 0
-	MongodExecutionStateDestroyed MongodExecutionState = iota
+	_                                                       = 0
+	MongodExecutionStateForceDestroyed MongodExecutionState = iota
+	MongodExecutionStateDestroyed
 	MongodExecutionStateNotRunning
 	MongodExecutionStateRecovering // invalid for a desired MongodState
 	MongodExecutionStateRunning

@@ -67,7 +67,7 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 		}
 	}()
 
-	// mark orphaned Mongod.DesiredState as destroyed
+	// mark orphaned Mongod.DesiredState as force_destroyed
 	// orphaned = Mongods whose parent Replica Set has been destroyed
 	// NOTE: slaves do not cause orphaned Mongods as only slaves without Monogds can be deleted from the DB
 	caLog.Debug("updating desired state of orphaned Mongods")
@@ -75,12 +75,12 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
                        UPDATE mongod_states SET execution_state=?
                        WHERE id IN (
 		         SELECT desired_state_id FROM mongods m WHERE replica_set_id IS NULL
-		       )`, MongodExecutionStateDestroyed)
+		       )`, MongodExecutionStateForceDestroyed)
 	if markOrphanedMongodsDestroyedRes.Error != nil {
 		caLog.Errorf("error updating desired state of orphaned Mongods: %s", markOrphanedMongodsDestroyedRes.Error)
 		panic(markOrphanedMongodsDestroyedRes.Error)
 	} else {
-		caLog.Debugf("marked `%d` Mongod.DesiredState of orphaned Mongods as `destroyed`", markOrphanedMongodsDestroyedRes.RowsAffected)
+		caLog.Debugf("marked `%d` Mongod.DesiredState of orphaned Mongods as `force_destroyed`", markOrphanedMongodsDestroyedRes.RowsAffected)
 	}
 
 	// remove destroyed Mongods from the database
@@ -94,15 +94,17 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 			LEFT OUTER JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
 			LEFT OUTER JOIN mongod_states observed_state ON m.observed_state_id = observed_state.id
 			WHERE
-				desired_state.execution_state = ?
+				(desired_state.execution_state = ? OR desired_state.execution_state = ?)
 				AND
 				(
 					observed_state.execution_state = ?
 					OR
-					observed_state.execution_state IS NULL --don't have observed state
+					(m.observed_state_id IS NULL --we know mongod does not exist on slave
+					 AND
+					 m.observation_error_id IS NULL)
 				)
 		)
-	`, MongodExecutionStateDestroyed, MongodExecutionStateDestroyed)
+	`, MongodExecutionStateDestroyed, MongodExecutionStateForceDestroyed, MongodExecutionStateDestroyed)
 	if removeDestroyedMongodsRes.Error != nil {
 		caLog.Errorf("error removing destroyed Mongods from the database: %s", removeDestroyedMongodsRes.Error)
 		panic(removeDestroyedMongodsRes.Error)

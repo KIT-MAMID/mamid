@@ -7,12 +7,13 @@ import (
 type MongodState string
 
 const (
-	MongodStateDestroyed     = "destroyed"
-	MongodStateNotRunning    = "notrunning"
-	MongodStateUninitialized = "uninitiated"
-	MongodStateRecovering    = "recovering"
-	MongodStateRunning       = "running"
-	MongodStateRemoved       = "removed"
+	MongodStateForceDestroyed = "forcedestroyed"
+	MongodStateDestroyed      = "destroyed"
+	MongodStateNotRunning     = "notrunning"
+	MongodStateUninitialized  = "uninitiated"
+	MongodStateRecovering     = "recovering"
+	MongodStateRunning        = "running"
+	MongodStateRemoved        = "removed"
 )
 
 type PortNumber uint16
