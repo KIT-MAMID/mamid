@@ -411,7 +411,7 @@ func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod, observedMongod
 	}
 
 	return model.MongodMatchStatus{
-		Mismatch: mongodStatesEquivalent && replicaSetMembersEquivalent,
+		Mismatch: !(mongodStatesEquivalent && replicaSetMembersEquivalent),
 		Mongod:   mongod,
 	}, nil
 
@@ -431,13 +431,13 @@ func MSPReplicaSetMembersDeepEqualsIgnoringOrder(a, b []msp.ReplicaSetMember) (e
 		return false
 	}
 
-	seen := make(map[msp.ReplicaSetMember]bool)
+	seen := make(map[msp.ReplicaSetMember]interface{})
 	for _, m := range a {
-		seen[m] = true
+		seen[m] = struct{}{}
 	}
-	for i, m := range b {
-		s, exists := seen[m]
-		if !exists || !s || !ReplicaSetMembersEquivalent(a[i], b[i]) {
+	for _, m := range b {
+		_, exists := seen[m]
+		if !exists {
 			return false
 		}
 	}
