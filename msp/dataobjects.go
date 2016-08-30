@@ -12,6 +12,7 @@ const (
 	MongodStateUninitialized = "uninitiated"
 	MongodStateRecovering    = "recovering"
 	MongodStateRunning       = "running"
+	MongodStateRemoved       = "removed"
 )
 
 type PortNumber uint16

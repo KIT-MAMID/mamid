@@ -57,6 +57,10 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session,
 }
 
 func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port msp.PortNumber) (msp.Mongod, *msp.Error, replSetState) {
+	mongod := msp.Mongod{
+		Port: port,
+	}
+
 	running := bson.M{}
 	if err := sess.Run("isMaster", &running); err != nil {
 		return msp.Mongod{}, &msp.Error{
@@ -77,40 +81,58 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 
 	status := bson.M{}
 	if err := sess.Run("replSetGetStatus", &status); err != nil {
+
+		if status_state, valid := status["state"]; valid {
+			if replSetState(status_state.(int)) == replSetRemoved {
+				mongod.State = msp.MongodStateRemoved
+				return mongod, nil, replSetRemoved
+			}
+		}
 		return msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
 			Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") failed with\n%s", err.Error()),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") result was %#v", status),
 		}, replSetUnknown
 	}
 
-	members := make([]msp.ReplicaSetMember, len(status["members"].([]interface{})))
-	for k, member := range status["members"].([]interface{}) {
-		pair := strings.Split(member.(bson.M)["name"].(string), ":")
-		remotePort, _ := strconv.Atoi(pair[1])
-		members[k] = msp.ReplicaSetMember{
-			HostPort: msp.HostPort{pair[0], msp.PortNumber(remotePort)},
+	mongod.ReplicaSetConfig.ReplicaSetName = status["set"].(string)
+
+	if status_state, valid := status["myState"]; valid {
+		var state msp.MongodState
+		switch replSetState(status_state.(int)) {
+		case replSetRecovering:
+			state = msp.MongodStateRecovering
+		case replSetPrimary:
+			state = msp.MongodStateRunning
+		case replSetSecondary:
+			state = msp.MongodStateRunning
+		case replSetRemoved:
+			state = msp.MongodStateRemoved
+		}
+		mongod.State = state
+	} else {
+		return msp.Mongod{}, &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Mongod on port %d returned no status", port),
+			LongDescription: fmt.Sprintf("status[myState] does not exist"),
+		}, replSetUnknown
+	}
+
+	var members []msp.ReplicaSetMember
+	if status_members, valid := status["members"]; valid {
+		members = make([]msp.ReplicaSetMember, len(status_members.([]interface{})))
+		for k, member := range status_members.([]interface{}) {
+			pair := strings.Split(member.(bson.M)["name"].(string), ":")
+			remotePort, _ := strconv.Atoi(pair[1])
+			members[k] = msp.ReplicaSetMember{
+				HostPort: msp.HostPort{pair[0], msp.PortNumber(remotePort)},
+				//TODO priority
+			}
 		}
 	}
+	mongod.ReplicaSetConfig.ReplicaSetMembers = members
 
-	var state msp.MongodState
-	if replSetState(status["myState"].(int)) == replSetRecovering {
-		state = msp.MongodStateRecovering
-	} else {
-		state = msp.MongodStateRunning
-	}
-
-	return msp.Mongod{
-		Port: port,
-		ReplicaSetConfig: msp.ReplicaSetConfig{
-			ReplicaSetName:       status["set"].(string),
-			ReplicaSetMembers:    members,
-			ShardingConfigServer: false,
-		},
-		StatusError:             nil,
-		LastEstablishStateError: nil,
-		State: state,
-	}, nil, replSetState(status["myState"].(int))
+	return mongod, nil, replSetState(status["myState"].(int))
 }
 
 func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (msp.Mongod, *msp.Error) {
@@ -172,25 +194,27 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	if m.State == msp.MongodStateDestroyed {
 		var status bson.M
 		if err := sess.Run("replSetGetStatus", &status); err != nil {
+			if status_state, valid := status["state"]; valid {
+				if replSetState(status_state.(int)) == replSetRemoved {
+					//Mongod was removed by the primary so it can be shut down
+					var result interface{}
+					err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
+					if err != nil {
+						log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
+						return &msp.Error{
+							Identifier:      msp.SlaveShutdownError,
+							Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
+							LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
+						}
+					}
+					return nil
+				}
+			}
 			return &msp.Error{
 				Identifier:      msp.SlaveGetMongodStatusError,
 				Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", m.Port),
 				LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") failed with\n%s", err.Error()),
 			}
-		}
-		if status["state"] == replSetRemoved {
-			//Mongod was removed by the primary so it can be shut down
-			var result interface{}
-			err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
-			if err != nil {
-				log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
-				return &msp.Error{
-					Identifier:      msp.SlaveShutdownError,
-					Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
-					LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
-				}
-			}
-			return nil
 		} else {
 			if isMaster {
 				//Cant remove ourselves so somebody else has to become master and remove us
@@ -204,6 +228,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 						LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetStepDown\") failed with\n%s", stepDownErr.Error()),
 					}
 				}
+				return nil
 			} else {
 				//Wait for this slave to be removed by the primary
 				return nil
