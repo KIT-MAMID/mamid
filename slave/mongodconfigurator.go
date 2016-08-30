@@ -235,52 +235,9 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			}
 			var config bson.M = getConfigRes["config"].(bson.M)
 
-			//Update config members list
-			//Only use ids not used before for new members
-			//https://docs.mongodb.com/manual/reference/replica-configuration/#rsconf.members[n]._id
-			reportedUsedIDs := make(map[int]bool)
-			reportedMembersByHostPortString := make(map[string]bson.M)
-			log.Debugf("members is %#v", config["members"])
-			for _, value := range config["members"].([]interface{}) {
-				member := value.(bson.M)
-				reportedUsedIDs[member["_id"].(int)] = true
-				reportedMembersByHostPortString[member["host"].(string)] = member
-			}
-
-			var resultingMembers []bson.M
-
-			for _, member := range m.ReplicaSetConfig.ReplicaSetMembers {
-
-				hostPortString := fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)
-
-				member, ok := reportedMembersByHostPortString[hostPortString]
-				if !ok {
-					freeId := 0
-					found := false
-					// Create it
-					for j := 0; j < 256; j++ {
-						if _, used := reportedUsedIDs[j]; !used {
-							freeId = j
-							found = true
-							break
-						}
-					}
-					if !found {
-						return &msp.Error{
-							Identifier:      msp.SlaveReplicaSetConfigError,
-							Description:     fmt.Sprintf("Could not find free member `_id`"),
-							LongDescription: fmt.Sprintf("No free member `_id` left for ReplicaSetMembers of ReplicaSet of Mongod on port `%d`", m.Port),
-						}
-					}
-					member = bson.M{"_id": freeId}
-
-				}
-
-				member["host"] = hostPortString
-				//TODO priority
-
-				resultingMembers = append(resultingMembers, member)
-
+			resultingMembers, updateListErr := updateMembersList(config, m.ReplicaSetConfig.ReplicaSetMembers)
+			if updateListErr != nil {
+				return updateListErr
 			}
 
 			config["_id"] = m.ReplicaSetConfig.ReplicaSetName
@@ -308,6 +265,58 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		Description:     "Protocol error",
 		LongDescription: fmt.Sprintf("Unexpected msp.Mongod.State value %s received", m.State),
 	}
+}
+
+func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMember) ([]bson.M, *msp.Error) {
+	//Update config members list
+	//Only use ids not used before for new members
+	//https://docs.mongodb.com/manual/reference/replica-configuration/#rsconf.members[n]._id
+	usedIds := make(map[int]bool)
+	reportedMembersByHostPortString := make(map[string]bson.M)
+	log.Debugf("members is %#v", currentConfig["members"])
+	for _, value := range currentConfig["members"].([]interface{}) {
+		member := value.(bson.M)
+		usedIds[member["_id"].(int)] = true
+		reportedMembersByHostPortString[member["host"].(string)] = member
+	}
+
+	var resultingMembers []bson.M
+
+	for _, member := range desiredMembers {
+
+		hostPortString := fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)
+
+		member, ok := reportedMembersByHostPortString[hostPortString]
+		if !ok {
+			freeId := 0
+			found := false
+			// Create it
+			for j := 0; j < 256; j++ {
+				if _, used := usedIds[j]; !used {
+					freeId = j
+					found = true
+					usedIds[j] = true
+					break
+				}
+			}
+			if !found {
+				return []bson.M{}, &msp.Error{
+					Identifier:      msp.SlaveReplicaSetConfigError,
+					Description:     fmt.Sprintf("Could not find free member `_id`"),
+					LongDescription: fmt.Sprintf("No free member `_id` left for ReplicaSetMembers of ReplicaSet of Mongod"),
+				}
+			}
+			member = bson.M{"_id": freeId}
+
+		}
+
+		member["host"] = hostPortString
+		//TODO priority
+
+		resultingMembers = append(resultingMembers, member)
+
+	}
+	return resultingMembers, nil
 }
 
 func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error {
