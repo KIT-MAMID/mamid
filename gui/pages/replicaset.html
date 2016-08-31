@@ -1,7 +1,8 @@
 <h1 class="page-header" ng-if="is_create_view">New Replica Set</h1>
 <h1 class="page-header" ng-if="!is_create_view">Edit Replica Set <code>{{replicaset.name}}</code></h1>
 
-<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problemsByReplicaSet[replicaset.id]" ng-if="!is_create_view">
+<div class="bs-callout bs-callout-unknown" ng-repeat="problem in problemsByReplicaSet[replicaset.id]"
+     ng-if="!is_create_view">
     <h4>{{problem.description}}
         <small>Known since {{formatDate(problem.first_occurred)}}</small>
     </h4>
@@ -18,7 +19,8 @@
     <table class="table" width="100%">
         <tr ng-repeat="mongo in replicaset.mongods">
             <td ng-class="{ 'bs-callout-unknown': problemsBySlave[mongo.slave.id].length > 0 }">
-                <a href="/#/slaves/{{mongo.slave.id}}">Mongod on <code>{{ mongo.slave.hostname }}:{{mongo.slave_port}}</code></a> -
+                <a href="/#/slaves/{{mongo.slave.id}}">Mongod on <code>{{ mongo.slave.hostname
+                    }}:{{mongo.slave_port}}</code></a> -
                 <b ng-if="!problemsBySlave[mongo.slave.id]"> Slave is in
                     {{ mongo.slave.configured_state }} mode.</b>
                 <b ng-if="problemsBySlave[mongo.slave.id].length > 0"> Slave has problems.</b>
@@ -56,11 +58,29 @@
                     </td>
                 </tr>
                 <tr>
-                    <th>Sharding configuration server
+                    <th style="vertical-align: top; padding-top: 12px;">Sharding role
                     </th>
                     <td colspan="2">
-                        <input ng-disabled="!is_create_view" type="checkbox" class="form-control"
-                               ng-model="edit_replicaset.configure_as_sharding_config_server"/>
+                        <div class="btn-group">
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn btn-default">
+                                    <input type="radio" ng-disabled="!is_create_view" ng-model="sharding_role"
+                                           value="configsvr">Config server (<code>--configsvr</code>)
+                                </label>
+                                <label class="btn btn-default">
+                                    <input type="radio" ng-disabled="!is_create_view" ng-model="sharding_role" value="shardsvr">Shard
+                                    server (<code>--shardsvr</code>)
+                                </label>
+                                <label class="btn btn-default active">
+                                    <input type="radio" ng-disabled="!is_create_view" ng-model="sharding_role" value="default" checked>Default (<code>&lt;No argument&gt;</code>)
+                                </label>
+                            </div>
+                        </div>
+                        <ul style="margin-top: 10px;">
+                            <li><b>Config server</b>:</li>
+                            <li><b>Shard server</b>:</li>
+                            <li><b>Default</b>:</li>
+                        </ul>
                     </td>
                 </tr>
                 <tr>
@@ -95,7 +115,8 @@
                 <h4 class="modal-title" id="myModalLabel">Confirm Replica Set Removal</h4>
             </div>
             <div class="modal-body">
-                You are about to remove the replica set <code>{{ replicaset.name }}</code>. By doing so, all the data of this
+                You are about to remove the replica set <code>{{ replicaset.name }}</code>. By doing so, all the data of
+                this
                 replica set will be unrecoverably removed.
             </div>
             <div class="modal-footer">
