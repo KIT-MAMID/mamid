@@ -1,4 +1,8 @@
 #!/bin/bash
+if [ ! -d ca ]; then
+	echo "Plean run 'generateCA.sh' first."
+	exit 1
+fi
 mkdir -p ./ca/slaves/$1
 CONF_STRING="[req]\nreq_extensions=ext\ndistinguished_name=dn\n[dn]\n[ext]\nsubjectAltName=DNS:$1"
 if [ "$#" = 2 ]
