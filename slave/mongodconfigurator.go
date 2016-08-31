@@ -147,6 +147,12 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	}
 	mongod.ReplicaSetConfig.ReplicaSetMembers = members
 
+	if configsvr, valid := config["configsvr"]; valid {
+		mongod.ReplicaSetConfig.ShardingConfigServer = configsvr.(bool)
+	} else {
+		mongod.ReplicaSetConfig.ShardingConfigServer = false
+	}
+
 	return mongod, nil, replSetState(status["myState"].(int))
 }
 
@@ -385,7 +391,7 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 	}
 
 	var result interface{}
-	cmd := bson.D{{"replSetInitiate", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members}}, {"force", true}}
+	cmd := bson.D{{"replSetInitiate", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members, "configsvr": m.ReplicaSetConfig.ShardingConfigServer}}, {"force", true}}
 	err := sess.Run(cmd, &result)
 	if err != nil {
 		if queryErr, valid := err.(*mgo.QueryError); valid {

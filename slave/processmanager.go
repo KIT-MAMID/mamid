@@ -44,7 +44,12 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 		}
 	}
 
-	cmd := exec.Command(p.command, "--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName)
+	args := []string{"--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName}
+	if m.ReplicaSetConfig.ShardingConfigServer {
+		args = append(args, "--configsvr")
+	}
+
+	cmd := exec.Command(p.command, args...)
 	err := cmd.Start()
 	if err != nil {
 		return err
