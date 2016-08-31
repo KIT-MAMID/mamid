@@ -32,6 +32,7 @@
   * Generate slave certs & keys by running `./scripts/generateAndSignSlaveCert.sh <hostname>`
      * If you can't use hostnames, you can add an IP to the cert as well by running `./scripts/generateAndSignSlaveCert.sh <hostname> <IP>`
      * Slave certs & keys are located in `./ca/slaves/<slavename>/`
+
 # Development Workflow
 
 ## Git Branches
