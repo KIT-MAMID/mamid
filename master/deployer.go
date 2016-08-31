@@ -191,23 +191,6 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 
 }
 
-func mspMongodStateFromExecutionState(s MongodExecutionState) (msp.MongodState, error) {
-	switch s {
-	case MongodExecutionStateDestroyed:
-		return msp.MongodStateDestroyed, nil
-	case MongodExecutionStateNotRunning:
-		return msp.MongodStateNotRunning, nil
-	case MongodExecutionStateRecovering:
-		return msp.MongodStateRecovering, nil
-	case MongodExecutionStateRunning:
-		return msp.MongodStateRunning, nil
-	case MongodExecutionStateForceDestroyed:
-		return msp.MongodStateForceDestroyed, nil
-	default:
-		return "", fmt.Errorf("deployer: unable to map `%v` from model.ExecutionState to msp.MongodState", s)
-	}
-}
-
 // Generate a ReplicaSetConfig used to describe the ReplicaSet r
 func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.ReplicaSetConfig, err error) {
 
