@@ -291,15 +291,10 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			}
 			var config bson.M = getConfigRes["config"].(bson.M)
 
-			resultingMembers, updateListErr := updateMembersList(config, m.ReplicaSetConfig.ReplicaSetMembers)
-			if updateListErr != nil {
-				return updateListErr
+			config, updateErr := updateConfig(config, m)
+			if updateErr != nil {
+				return updateErr
 			}
-
-			config["_id"] = m.ReplicaSetConfig.ReplicaSetName
-			config["members"] = resultingMembers
-			config["version"] = config["version"].(int) + 1
-			config["configsvr"] = m.ReplicaSetConfig.ShardingConfigServer
 
 			log.Debugf("`replSetReconfig` ReplicaSet `%s` from its PRIMARY Mongod on port `%d`: %#v",
 				m.ReplicaSetConfig.ReplicaSetName, m.Port, config)
@@ -326,17 +321,42 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 }
 
+func updateConfig(currentConfig bson.M, m msp.Mongod) (bson.M, *msp.Error) {
+	config := currentConfig
+
+	config["_id"] = m.ReplicaSetConfig.ReplicaSetName
+
+	resultingMembers, updateListErr := updateMembersList(config, m.ReplicaSetConfig.ReplicaSetMembers)
+	if updateListErr != nil {
+		return bson.M{}, updateListErr
+	}
+	config["members"] = resultingMembers
+
+	version := 0
+	if ver, valid := config["version"].(int); valid {
+		version = ver
+	}
+	config["version"] = version + 1 // Defaults to 1 if no version is set in currentConfig
+
+	config["configsvr"] = m.ReplicaSetConfig.ShardingConfigServer
+
+	return config, nil
+}
+
 func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMember) ([]bson.M, *msp.Error) {
 	//Update config members list
 	//Only use ids not used before for new members
 	//https://docs.mongodb.com/manual/reference/replica-configuration/#rsconf.members[n]._id
 	usedIds := make(map[int]bool)
 	reportedMembersByHostPortString := make(map[string]bson.M)
-	log.Debugf("members is %#v", currentConfig["members"])
-	for _, value := range currentConfig["members"].([]interface{}) {
-		member := value.(bson.M)
-		usedIds[member["_id"].(int)] = true
-		reportedMembersByHostPortString[member["host"].(string)] = member
+
+	if currentMembers, valid := currentConfig["members"]; valid {
+		log.Debugf("members is %#v", currentMembers)
+		for _, value := range currentMembers.([]interface{}) {
+			member := value.(bson.M)
+			usedIds[member["_id"].(int)] = true
+			reportedMembersByHostPortString[member["host"].(string)] = member
+		}
 	}
 
 	var resultingMembers []bson.M
@@ -390,8 +410,18 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 		members[k] = bson.M{"_id": k, "host": fmt.Sprintf("%s:%d", member.HostPort.Hostname, member.HostPort.Port)}
 	}
 
+	config, updateErr := updateConfig(bson.M{}, msp.Mongod{
+		Port:             m.Port,
+		ReplicaSetConfig: m.ReplicaSetConfig,
+	})
+	if updateErr != nil {
+		return updateErr
+	}
+
+	log.Debugf("CONFIG %#v", config)
+
 	var result interface{}
-	cmd := bson.D{{"replSetInitiate", bson.M{"_id": m.ReplicaSetConfig.ReplicaSetName, "version": 1, "members": members, "configsvr": m.ReplicaSetConfig.ShardingConfigServer}}, {"force", true}}
+	cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
 	err := sess.Run(cmd, &result)
 	if err != nil {
 		if queryErr, valid := err.(*mgo.QueryError); valid {
