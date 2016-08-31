@@ -138,11 +138,6 @@ subjectAltName	                = Subject Alt Name (eg, DNS:*.example.com)
 # SET-ex3			= SET extension number 3
 
 [ req_attributes ]
-challengePassword		= A challenge password
-challengePassword_min		= 4
-challengePassword_max		= 20
-
-unstructuredName		= An optional company name
 
 [ usr_cert ]
 basicConstraints        = critical, CA:FALSE
