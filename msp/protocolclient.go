@@ -28,7 +28,7 @@ func communicationErrorFromError(err error) *Error {
 }
 
 func (c MSPClientImpl) RequestStatus(Target HostPort) ([]Mongod, *Error) {
-	resp, err := c.HttpClient.Get(fmt.Sprintf("https://%s:%d/msp/status", Target.Hostname, Target.Port))
+	resp, err := c.HttpClient.Get(fmt.Sprintf("%smsp/status", constructBaseUrl(Target)))
 	if err == nil {
 		if resp.StatusCode == http.StatusOK {
 			var result []Mongod
@@ -73,7 +73,7 @@ func (c MSPClientImpl) EstablishMongodState(target HostPort, m Mongod) *Error {
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/establishMongodState", target.Hostname, target.Port), buffer)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%smsp/establishMongodState", constructBaseUrl(target)), buffer)
 	if err != nil {
 		mspLog.Errorf("msp: error creating request object for monogd: %s", err)
 		panic(err)
@@ -95,4 +95,8 @@ func (c MSPClientImpl) EstablishMongodState(target HostPort, m Mongod) *Error {
 	} else {
 		return communicationErrorFromError(err)
 	}
+}
+
+func constructBaseUrl(target HostPort) (base string) {
+	return fmt.Sprintf("https://%s:%d/", target.Hostname, target.Port)
 }
