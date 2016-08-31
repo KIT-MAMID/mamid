@@ -1,5 +1,6 @@
 # Development Setup
 
+* Assert `openssl` installed
 * Assert `go version` >= 1.6
 * Assert `go env`
   * contains `GO15VENDOREXPERIMENT="1"` (dependencies are tracked using [vendoring](https://golang.org/cmd/go/#hdr-Vendor_Directories))
@@ -24,6 +25,13 @@
     MAMID_TESTDB_DSN="host=localhost sslmode=disable dbname=postgres" make test-verbose
     ```
 
+* Creating the msp certificate infrastructure
+  * Generate a ca by running `./scripts/generateCA.sh`
+     * The ca certificate will be located in `./ca/mamid.pem`
+     * The ca's private key will be located in `./ca/private/mamid_private.pem`
+  * Generate slave certs & keys by running `./scripts/generateAndSignSlaveCert.sh <hostname>`
+     * If you can't use hostnames, you can add an IP to the cert as well by running `./scripts/generateAndSignSlaveCert.sh <hostname> <IP>`
+     * Slave certs & keys are located in `./ca/slaves/<slavename>/`
 # Development Workflow
 
 ## Git Branches
