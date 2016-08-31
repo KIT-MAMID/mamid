@@ -10,12 +10,20 @@ import (
 	"strconv"
 )
 
+type ShardingRole string
+
+const (
+	ShardingRoleNone         = "none"
+	ShardingRoleShardServer  = "shardsvr"
+	ShardingRoleConfigServer = "configsvr"
+)
+
 type ReplicaSet struct {
-	ID                              int64  `json:"id"`
-	Name                            string `json:"name"`
-	PersistentNodeCount             uint   `json:"persistent_node_count"`
-	VolatileNodeCount               uint   `json:"volatile_node_count"`
-	ConfigureAsShardingConfigServer bool   `json:"configure_as_sharding_config_server"`
+	ID                  int64        `json:"id"`
+	Name                string       `json:"name"`
+	PersistentNodeCount uint         `json:"persistent_node_count"`
+	VolatileNodeCount   uint         `json:"volatile_node_count"`
+	ShardingRole        ShardingRole `json:"sharding_role"`
 }
 
 func (m *MasterAPI) ReplicaSetIndex(w http.ResponseWriter, r *http.Request) {
@@ -323,12 +331,12 @@ func changeToReplicaSetAllowed(tx *gorm.DB, current *model.ReplicaSet, new *mode
 
 	if current != nil {
 
-		if current.ConfigureAsShardingConfigServer != new.ConfigureAsShardingConfigServer {
-			return false, "cannot change sharding config server role of a replica set after creation", nil
+		if current.ShardingRole != new.ShardingRole {
+			return false, "cannot change sharding role of a Replica Set after creation", nil
 		}
 
 		if current.Name != new.Name {
-			return false, "cannot change name of a replica set after creation", nil
+			return false, "cannot change name of a Replica Set after creation", nil
 		}
 
 	}

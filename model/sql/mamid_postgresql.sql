@@ -1,5 +1,7 @@
 START TRANSACTION;
 
+CREATE DOMAIN sharding_role AS VARCHAR(255) CHECK( value IN ('none', 'shardsvr', 'configsvr'));
+
 CREATE TABLE "risk_groups" (
 	"id" BIGSERIAL PRIMARY KEY,
 	"name" varchar(255) UNIQUE
@@ -12,7 +14,7 @@ CREATE TABLE "replica_sets" (
 	"name" varchar(255) UNIQUE,
 	"persistent_member_count" integer,
 	"volatile_member_count" integer,
-	"configure_as_sharding_config_server" bool,
+	"sharding_role" sharding_role NOT NULL,
 	"initiated" BOOLEAN NOT NULL
 );
 
@@ -42,7 +44,7 @@ CREATE TABLE slaves (
 CREATE TABLE "mongod_states" (
 	"id" BIGSERIAL PRIMARY KEY,
 	"parent_mongod_id" integer NOT NULL, -- foreign key constraint added below
-	"is_sharding_config_server" bool,
+	"sharding_role" sharding_role,
 	"execution_state" integer
 );
 

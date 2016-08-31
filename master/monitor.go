@@ -298,9 +298,9 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, observedState *model.MongodState) (err error) {
 
 	observedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
-	observedState.IsShardingConfigServer = observedMongod.ReplicaSetConfig.ShardingConfigServer
+	observedState.ShardingRole, err = ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
 
-	return nil
+	return err
 }
 
 // Remove observed state of mongods the slave does not report
@@ -420,7 +420,7 @@ func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod, observedMongod
 // check if MongodStates are equivalent with regards to monitored attributes
 func MongodStatesEquivalent(a, b model.MongodState) (e bool) {
 	e = a.ExecutionState == b.ExecutionState
-	e = e && a.IsShardingConfigServer == b.IsShardingConfigServer
+	e = e && a.ShardingRole == b.ShardingRole
 	return e
 }
 

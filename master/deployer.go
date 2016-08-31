@@ -1,7 +1,6 @@
 package master
 
 import (
-	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
@@ -148,6 +147,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 
 	var slave Slave
 	var desiredState MongodState
+	var shardingRole msp.ShardingRole
 	var mspMongodState msp.MongodState
 	var replicaSetMembers []msp.ReplicaSetMember
 
@@ -163,13 +163,17 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 		return
 	}
 
-	// TODO use DesiredState once this is set
 	if !mongod.ReplicaSetID.Valid {
 		replicaSetMembers = make([]msp.ReplicaSetMember, 0, 0)
 	} else {
 		if replicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64); err != nil {
 			return
 		}
+	}
+
+	shardingRole, err = ProjectModelShardingRoleToMSPShardingRole(desiredState.ShardingRole)
+	if err != nil {
+		return
 	}
 
 	// Construct msp representation
@@ -180,9 +184,9 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	mspMongod = msp.Mongod{
 		Port: msp.PortNumber(mongod.Port),
 		ReplicaSetConfig: msp.ReplicaSetConfig{
-			ReplicaSetName:       mongod.ReplSetName,
-			ReplicaSetMembers:    replicaSetMembers,
-			ShardingConfigServer: desiredState.IsShardingConfigServer,
+			ReplicaSetName:    mongod.ReplSetName,
+			ReplicaSetMembers: replicaSetMembers,
+			ShardingRole:      shardingRole,
 		},
 		State: mspMongodState,
 	}
@@ -194,10 +198,13 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 // Generate a ReplicaSetConfig used to describe the ReplicaSet r
 func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.ReplicaSetConfig, err error) {
 
+	var shardingRole msp.ShardingRole
+	shardingRole, err = ProjectModelShardingRoleToMSPShardingRole(r.ShardingRole)
+
 	config = msp.ReplicaSetConfig{
-		ReplicaSetName:       r.Name,
-		ReplicaSetMembers:    make([]msp.ReplicaSetMember, 0, 0),
-		ShardingConfigServer: r.ConfigureAsShardingConfigServer,
+		ReplicaSetName:    r.Name,
+		ReplicaSetMembers: make([]msp.ReplicaSetMember, 0, 0),
+		ShardingRole:      shardingRole,
 	}
 
 	config.ReplicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)

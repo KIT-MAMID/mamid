@@ -3,6 +3,7 @@ package model
 import (
 	"bufio"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
@@ -84,14 +85,26 @@ const (
 	SlaveStateDisabled
 )
 
+type ShardingRole string
+
+const (
+	ShardingRoleNone         ShardingRole = "none"
+	ShardingRoleShardServer  ShardingRole = "shardsvr"
+	ShardingRoleConfigServer ShardingRole = "configsvr"
+)
+
+func (s ShardingRole) Value() (driver.Value, error) {
+	return string(s), nil
+}
+
 type ReplicaSet struct {
-	ID                              int64  `gorm:"primary_key"` //TODO needs to start incrementing at 1
-	Name                            string `gorm:"unique_index"`
-	PersistentMemberCount           uint
-	VolatileMemberCount             uint
-	ConfigureAsShardingConfigServer bool
-	Initiated                       bool
-	Mongods                         []*Mongod
+	ID                    int64  `gorm:"primary_key"` //TODO needs to start incrementing at 1
+	Name                  string `gorm:"unique_index"`
+	PersistentMemberCount uint
+	VolatileMemberCount   uint
+	ShardingRole          ShardingRole
+	Initiated             bool
+	Mongods               []*Mongod
 
 	Problems []*Problem
 }
@@ -128,11 +141,11 @@ type Mongod struct {
 }
 
 type MongodState struct {
-	ID                     int64 `gorm:"primary_key"`
-	ParentMongod           *Mongod
-	ParentMongodID         int64 `sql:"type:integer NOT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
-	IsShardingConfigServer bool
-	ExecutionState         MongodExecutionState
+	ID             int64 `gorm:"primary_key"`
+	ParentMongod   *Mongod
+	ParentMongodID int64 `sql:"type:integer NOT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED"`
+	ShardingRole   ShardingRole
+	ExecutionState MongodExecutionState
 }
 
 type MongodExecutionState uint

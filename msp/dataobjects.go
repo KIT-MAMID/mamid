@@ -23,10 +23,18 @@ type HostPort struct {
 	Port     PortNumber
 }
 
+type ShardingRole string
+
+const (
+	ShardingRoleNone         ShardingRole = "none"
+	ShardingRoleShardServer  ShardingRole = "shardsvr"
+	ShardingRoleConfigServer ShardingRole = "configsvr"
+)
+
 type ReplicaSetConfig struct {
-	ReplicaSetName       string
-	ReplicaSetMembers    []ReplicaSetMember
-	ShardingConfigServer bool
+	ReplicaSetName    string
+	ReplicaSetMembers []ReplicaSetMember
+	ShardingRole      ShardingRole
 }
 
 type ReplicaSetMember struct {

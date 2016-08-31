@@ -147,11 +147,32 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 	}
 	mongod.ReplicaSetConfig.ReplicaSetMembers = members
 
-	if configsvr, valid := config["configsvr"]; valid {
-		mongod.ReplicaSetConfig.ShardingConfigServer = configsvr.(bool)
+	var shardingRole msp.ShardingRole
+	if configsvr, valid := config["configsvr"]; valid && configsvr.(bool) == true {
+		shardingRole = msp.ShardingRoleConfigServer
 	} else {
-		mongod.ReplicaSetConfig.ShardingConfigServer = false
+		// Fall back to parsing command line options
+		cmdLineOptsRes := bson.M{}
+		if err := sess.Run("getCmdLineOpts", &cmdLineOptsRes); err != nil {
+			log.Debugf("getCmdLineOpts result %#v, err %#v", status, err)
+			return msp.Mongod{}, &msp.Error{
+				Identifier:      msp.SlaveGetMongodStatusError,
+				Description:     fmt.Sprintf("Getting command line options from Mongod instance on port `%d` failed", port),
+				LongDescription: fmt.Sprintf("getCmdLineOpts result was: %#v", status),
+			}, replSetUnknown
+		}
+
+		cmdLineShardingRole := cmdLineOptsRes["parsed"].(bson.M)["sharding"].(bson.M)["clusterRole"].(string)
+		switch cmdLineShardingRole {
+		case "shardsvr":
+			shardingRole = msp.ShardingRoleShardServer
+		case "configsvr":
+			shardingRole = msp.ShardingRoleConfigServer
+		default:
+			shardingRole = msp.ShardingRoleNone
+		}
 	}
+	mongod.ReplicaSetConfig.ShardingRole = shardingRole
 
 	return mongod, nil, replSetState(status["myState"].(int))
 }
@@ -338,7 +359,7 @@ func updateConfig(currentConfig bson.M, m msp.Mongod) (bson.M, *msp.Error) {
 	}
 	config["version"] = version + 1 // Defaults to 1 if no version is set in currentConfig
 
-	config["configsvr"] = m.ReplicaSetConfig.ShardingConfigServer
+	config["configsvr"] = m.ReplicaSetConfig.ShardingRole == msp.ShardingRoleConfigServer
 
 	return config, nil
 }

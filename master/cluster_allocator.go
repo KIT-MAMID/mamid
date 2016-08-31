@@ -462,9 +462,9 @@ func (c *ClusterAllocator) spawnMongodOnSlave(tx *gorm.DB, s *Slave, r *ReplicaS
 	}
 
 	desiredState := MongodState{
-		ParentMongodID:         m.ID,
-		IsShardingConfigServer: r.ConfigureAsShardingConfigServer,
-		ExecutionState:         MongodExecutionStateRunning,
+		ParentMongodID: m.ID,
+		ShardingRole:   r.ShardingRole,
+		ExecutionState: MongodExecutionStateRunning,
 	}
 	if err := tx.Create(&desiredState).Error; err != nil {
 		panic(err)
