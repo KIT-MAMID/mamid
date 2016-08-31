@@ -8,3 +8,4 @@ mamid.sqlite3
 mamid.sqlite3-journal
 /cover/
 model/bindata.go
+/ca/
