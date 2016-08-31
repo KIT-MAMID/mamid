@@ -497,6 +497,7 @@ mamidApp.controller('replicasetByIdController',
 
             //Copy replicaset for edit form so that changes are only applied to model when apply is clicked
             $scope.edit_replicaset = angular.copy($scope.replicaset);
+            $scope.edit_replicaset.sharding_role = "none";
         } else {
             $scope.replicaset = ReplicaSetService.get({replicaset: replicasetId});
 
@@ -527,6 +528,11 @@ mamidApp.controller('replicasetByIdController',
             });
             $('#confirm_remove').modal('hide');
         };
+        $scope.setShardingRole = function (role) {
+            if ($scope.is_create_view) {
+                $scope.edit_replicaset.sharding_role = role;
+            }
+        }
     });
 
 mamidApp.controller('systemController', function ($scope, $http) {

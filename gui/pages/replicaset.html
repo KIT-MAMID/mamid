@@ -35,8 +35,8 @@
         <h3 class="panel-title" ng-if="!is_create_view">Replica Set Settings</h3>
         <h3 class="panel-title" ng-if="is_create_view">New Set Settings</h3>
     </div>
-    <div class="panel-body">
-        <form ng-submit="updateReplicaSet()">
+    <form ng-submit="updateReplicaSet()">
+        <div class="panel-body">
             <table width="100%">
                 <tr>
                     <th>Replica Set name</th>
@@ -61,35 +61,50 @@
                     <th style="vertical-align: top; padding-top: 12px;">Sharding support
                     </th>
                     <td colspan="2">
-                            <div class="btn-group btn-group-justified" data-toggle="buttons">
-                                <label class="btn btn-default">
-                                    <input type="radio" ng-disabled="!is_create_view" ng-model="edit_replicaset.sharding_role"
-                                           value="configsvr">Config
-                                </label>
-                                <label class="btn btn-default">
-                                    <input type="radio" ng-disabled="!is_create_view" ng-model="edit_replicaset.sharding_role" value="shardsvr">Shard
-                                </label>
-                                <label class="btn btn-default active">
-                                    <input type="radio" ng-disabled="!is_create_view" ng-model="edit_replicaset.sharding_role" value="none" checked>None
-                                </label>
-                            </div>
-                        <ul style="margin-top: 10px; list-style-type: none; padding-left: 0pt; line-height: 1.5em " class="clearfix">
-				<li><b>Config</b>: Mongod is started with the <a target="_blank" href="https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr"><code>--configsvr</code></a></li>
-				<li><b>Shard</b>: Mongod is started with the <a target="_blank" href="https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr"><code>--shardsvr</code></a></li>
-                                <li><b>None</b>: Mongod is started without CLI flags regarding Sharding</li>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default"
+                                    ng-class="{active: edit_replicaset.sharding_role == 'configsvr'}"
+                                    ng-disabled="!is_create_view"
+                                    ng-click="setShardingRole('configsvr')">Config
+                            </button>
+                            <button type="button" class="btn btn-default"
+                                    ng-class="{active: edit_replicaset.sharding_role == 'shardsvr'}"
+                                    ng-disabled="!is_create_view"
+                                    ng-click="setShardingRole('shardsvr')">Shard
+                            </button>
+                            <button type="button" class="btn btn-default"
+                                    ng-class="{active: edit_replicaset.sharding_role == 'none'}"
+                                    ng-disabled="!is_create_view"
+                                    ng-click="setShardingRole('none')">None
+                            </button>
+                        </div>
+                        <ul style="margin-top: 10px; list-style-type: none; padding-left: 0pt; line-height: 1.5em "
+                            class="clearfix">
+                            <li><b>Config</b>: Mongod is started with the <a target="_blank"
+                                                                             href="https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr"><code>--configsvr</code></a>
+                            </li>
+                            <li><b>Shard</b>: Mongod is started with the <a target="_blank"
+                                                                            href="https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr"><code>--shardsvr</code></a>
+                            </li>
+                            <li><b>None</b>: Mongod is started without CLI flags regarding Sharding</li>
                         </ul>
+
                     </td>
                 </tr>
                 <tr>
                     <td colspan="2"></td>
                     <td>
-                        <button type="submit" ng-if="!is_create_view" class="btn btn-primary pull-right">Apply</button>
-                        <button type="submit" ng-if="is_create_view" class="btn btn-success pull-right">Create</button>
+                        <button type="submit" ng-if="!is_create_view"
+                                class="btn btn-primary pull-right">Apply
+                        </button>
+                        <button type="submit" ng-if="is_create_view"
+                                class="btn btn-success pull-right">Create
+                        </button>
                     </td>
                 </tr>
             </table>
-        </form>
-    </div>
+    </form>
+</div>
 </div>
 
 <div class="panel panel-danger" ng-if="!is_create_view">
