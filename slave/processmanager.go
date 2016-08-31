@@ -5,6 +5,7 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -126,6 +127,11 @@ func (p *ProcessManager) KillAfterTimeout(port msp.PortNumber, timeout time.Dura
 		}
 	}
 	return nil
+}
+
+func (p *ProcessManager) DestroyDataDirectory(port msp.PortNumber, replSetName string) error {
+	dbDir := fmt.Sprintf("%s/%s/%d:%s", p.dataDir, DataDBDir, port, replSetName)
+	return os.RemoveAll(dbDir)
 }
 
 // killProcess is destructive. Even when there was an error (already killed, stuck state, permissions lost), we do not care. The error is purely informational that _something_ went wrong.

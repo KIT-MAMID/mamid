@@ -117,9 +117,16 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		}
 		return applyErr
 
-	} else if m.State == msp.MongodStateDestroyed || m.State == msp.MongodStateNotRunning {
+	} else if m.State == msp.MongodStateNotRunning {
 		c.stopMongod(m)
-		//TODO Delete files if destroy
+		return nil
+	} else if m.State == msp.MongodStateDestroyed {
+		c.stopMongod(m)
+
+		//Destroy data when process is not running anymore
+		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+			c.procManager.DestroyDataDirectory(m.Port, m.ReplicaSetConfig.ReplicaSetName)
+		}
 		return nil
 	} else if m.State == msp.MongodStateForceDestroyed {
 		log.Debugf("Force killing mongod on port %d", m.Port)
@@ -131,6 +138,11 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 				Description:     fmt.Sprintf("Could not kill mongod on port %d", m.Port),
 				LongDescription: fmt.Sprintf("Error was: %s", killErr.Error()),
 			}
+		}
+
+		//Destroy data when process is not running anymore
+		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+			c.procManager.DestroyDataDirectory(m.Port, m.ReplicaSetConfig.ReplicaSetName)
 		}
 		return nil
 	}
