@@ -142,7 +142,7 @@ subjectAltName	                = Subject Alt Name (eg, DNS:*.example.com)
 [ usr_cert ]
 basicConstraints        = critical, CA:FALSE
 keyUsage                = critical, digitalSignature, keyEncipherment, keyAgreement
-
+extendedKeyUsage        = clientAuth, serverAuth
 [ v3_req ]
 
 # Extensions to add to a certificate request
