@@ -1,7 +1,3 @@
-| Overall | Test | Format | Vet | Build |
-| --- | --- | --- | --- | --- | --- |
-| [![Overall](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid)](https://jenkins.dogcraft.de/job/mamid/) | [![Test](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=test)](https://jenkins.dogcraft.de/job/mamid/target=test) | [![Format](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=check-format)](https://jenkins.dogcraft.de/job/mamid/target=check-format) | [![Vet](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=vet)](https://jenkins.dogcraft.de/job/mamid/target=vet) | [![Release](https://jenkins.dogcraft.de/buildStatus/icon?job=mamid/target=build)](https://jenkins.dogcraft.de/job/mamid/target=build) |
-
 # Development Setup
 
 * Assert `go version` >= 1.6
