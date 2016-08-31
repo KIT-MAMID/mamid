@@ -61,22 +61,28 @@
                     <th style="vertical-align: top; padding-top: 12px;">Sharding support
                     </th>
                     <td colspan="2">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default"
-                                    ng-class="{active: edit_replicaset.sharding_role == 'configsvr'}"
-                                    ng-disabled="!is_create_view"
-                                    ng-click="setShardingRole('configsvr')">Config
-                            </button>
-                            <button type="button" class="btn btn-default"
-                                    ng-class="{active: edit_replicaset.sharding_role == 'shardsvr'}"
-                                    ng-disabled="!is_create_view"
-                                    ng-click="setShardingRole('shardsvr')">Shard
-                            </button>
-                            <button type="button" class="btn btn-default"
-                                    ng-class="{active: edit_replicaset.sharding_role == 'none'}"
-                                    ng-disabled="!is_create_view"
-                                    ng-click="setShardingRole('none')">None
-                            </button>
+                        <div class="btn-group btn-group-justified" style="width: auto !important;">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default"
+                                        ng-class="{active: edit_replicaset.sharding_role == 'configsvr'}"
+                                        ng-disabled="!is_create_view"
+                                        ng-click="setShardingRole('configsvr')">Config
+                                </button>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default"
+                                        ng-class="{active: edit_replicaset.sharding_role == 'shardsvr'}"
+                                        ng-disabled="!is_create_view"
+                                        ng-click="setShardingRole('shardsvr')">Shard
+                                </button>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default"
+                                        ng-class="{active: edit_replicaset.sharding_role == 'none'}"
+                                        ng-disabled="!is_create_view"
+                                        ng-click="setShardingRole('none')">None
+                                </button>
+                            </div>
                         </div>
                         <ul style="margin-top: 10px; list-style-type: none; padding-left: 0pt; line-height: 1.5em "
                             class="clearfix">
