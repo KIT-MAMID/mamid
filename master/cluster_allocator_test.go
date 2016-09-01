@@ -167,4 +167,5 @@ func TestClusterAllocator_CompileMongodLayout_Idempotence_Simple(t *testing.T) {
 	dump2, err = saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
 	assert.Equal(t, dump, dump2)
+	tx.Rollback()
 }
