@@ -55,20 +55,13 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 		}, nil, replSetStartup
 	}
 
-	status := bson.M{}
-	if err := sess.Run("replSetGetStatus", &status); err != nil {
-
-		if status_state, valid := status["state"]; valid {
-			if replSetState(status_state.(int)) == replSetRemoved {
-				mongod.State = msp.MongodStateRemoved
-				return mongod, nil, replSetRemoved
-			}
-		}
-		return msp.Mongod{}, &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting Replica Set status information from Mongod instance on port `%d` failed", port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") result was %#v", status),
-		}, replSetUnknown
+	var status bson.M
+	replSetState, err = ctx.ReplSetGetStatus(&status)
+	if replSetState == replSetRemoved {
+		mongod.State = msp.MongodStateRemoved
+		return mongod, nil, replSetRemoved
+	} else if err != nil {
+		return msp.Mongod{}, err, replSetUnknown
 	}
 
 	configResult := bson.M{}
@@ -226,29 +219,26 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 
 	if m.State == msp.MongodStateDestroyed {
+
 		var status bson.M
-		if err := sess.Run("replSetGetStatus", &status); err != nil {
-			if status_state, valid := status["state"]; valid {
-				if replSetState(status_state.(int)) == replSetRemoved {
-					//Mongod was removed by the primary so it can be shut down
-					var result interface{}
-					err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
-					if err != nil {
-						log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
-						return &msp.Error{
-							Identifier:      msp.SlaveShutdownError,
-							Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
-							LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
-						}
+		replSetState, err := ctx.ReplSetGetStatus(&status)
+
+		if err != nil {
+			if replSetState == replSetRemoved {
+				//Mongod was removed by the primary so it can be shut down
+				var result interface{}
+				err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
+				if err != nil {
+					log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
+					return &msp.Error{
+						Identifier:      msp.SlaveShutdownError,
+						Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
+						LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
 					}
-					return nil
 				}
+				return nil
 			}
-			return &msp.Error{
-				Identifier:      msp.SlaveGetMongodStatusError,
-				Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", m.Port),
-				LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") failed with\n%s", err.Error()),
-			}
+			return err
 		} else {
 			if isMaster {
 				//Cant remove ourselves so somebody else has to become master and remove us
