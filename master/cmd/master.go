@@ -39,14 +39,13 @@ func main() {
 	// Command Line Flags
 	var (
 		logLevel                                                    LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
-		dbPath, listenString                                        string
+		listenString                                                string
 		rootCA, clientCert, clientKey, apiCert, apiKey, apiVerifyCA string
 		dbDriver, dbDSN                                             string
 		monitorInterval                                             time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
-	flag.StringVar(&dbPath, "db.path", "", "path to the SQLite file where MAMID data is stored")
 	flag.StringVar(&dbDriver, "db.driver", "postgres", "the database driver to use. See https://golang.org/pkg/database/sql/#Open")
 	flag.StringVar(&dbDSN, "db.dsn", "", "the data source name to use. for PostgreSQL, checkout https://godoc.org/github.com/lib/pq")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
