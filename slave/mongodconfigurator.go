@@ -65,11 +65,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	}
 
 	configResult := bson.M{}
-	if err := sess.Run("replSetGetConfig", &configResult); err != nil {
+	if err := ctx.Session.Run("replSetGetConfig", &configResult); err != nil {
 		log.Debugf("replSetGetConfig result %#v, err %#v", status, err)
 		return msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting Replica Set config information from Mongod instance on port `%d` failed", port),
+			Description:     fmt.Sprintf("Getting Replica Set config information from Mongod instance on port `%d` failed", ctx.Port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", configResult),
 		}, replSetUnknown
 	}
@@ -93,7 +93,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	} else {
 		return msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Mongod on port %d returned no status", port),
+			Description:     fmt.Sprintf("Mongod on port %d returned no status", ctx.Port),
 			LongDescription: fmt.Sprintf("status[myState] does not exist"),
 		}, replSetUnknown
 	}
@@ -122,11 +122,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	} else {
 		// Fall back to parsing command line options
 		cmdLineOptsRes := bson.M{}
-		if err := sess.Run("getCmdLineOpts", &cmdLineOptsRes); err != nil {
+		if err := ctx.Session.Run("getCmdLineOpts", &cmdLineOptsRes); err != nil {
 			log.Debugf("getCmdLineOpts result %#v, err %#v", status, err)
 			return msp.Mongod{}, &msp.Error{
 				Identifier:      msp.SlaveGetMongodStatusError,
-				Description:     fmt.Sprintf("Getting command line options from Mongod instance on port `%d` failed", port),
+				Description:     fmt.Sprintf("Getting command line options from Mongod instance on port `%d` failed", ctx.Port),
 				LongDescription: fmt.Sprintf("getCmdLineOpts result was: %#v", status),
 			}, replSetUnknown
 		}
@@ -191,11 +191,11 @@ func (m mongodMembers) Swap(i, j int) {
 }
 
 func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp.Error {
-	sess, err := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
+	ctx, err := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
 	if err != nil {
 		return err
 	}
-	defer sess.Close()
+	defer ctx.Close()
 
 	//current, err, state := c.fetchConfiguration(sess, m.Port) TODO What is this for?
 	//if err != nil {
@@ -227,7 +227,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			if replSetState == replSetRemoved {
 				//Mongod was removed by the primary so it can be shut down
 				var result interface{}
-				err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
+				err := ctx.Session.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
 				if err != nil {
 					log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
 					return &msp.Error{
@@ -244,7 +244,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 				//Cant remove ourselves so somebody else has to become master and remove us
 				log.Debugf("Letting Mongod on port `%d` step down to have it be removed by the new PRIMARY", m.Port)
 				var stepDownRes interface{}
-				stepDownErr := sess.Run(bson.D{{"replSetStepDown", 120}}, stepDownRes)
+				stepDownErr := ctx.Session.Run(bson.D{{"replSetStepDown", 120}}, stepDownRes)
 				log.WithError(stepDownErr).Errorf("could not step down mongod on port %d (mongodb returned error)", m.Port)
 				if stepDownErr != nil {
 					return &msp.Error{
@@ -265,7 +265,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		//Temporary maintenance - just shut down without removing from replica set
 		log.Debugf("shutting down Mongod: %f", m)
 		var result interface{}
-		err := sess.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
+		err := ctx.Session.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
 		if err != nil {
 			log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
 			return &msp.Error{
@@ -278,7 +278,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	} else if m.State == msp.MongodStateRunning {
 		if isMaster {
 			var getConfigRes bson.M
-			if err := sess.Run("replSetGetConfig", &getConfigRes); err != nil {
+			if err := ctx.Session.Run("replSetGetConfig", &getConfigRes); err != nil {
 				return &msp.Error{
 					Identifier:      msp.SlaveGetMongodStatusError,
 					Description:     fmt.Sprintf("Getting replica set config from mongod instance on port %d failed", m.Port),
@@ -297,7 +297,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 			var result interface{}
 			cmd := bson.D{{"replSetReconfig", config}}
-			err := sess.Run(cmd, &result)
+			err := ctx.Session.Run(cmd, &result)
 			if err != nil {
 				return &msp.Error{
 					Identifier:      msp.SlaveReplicaSetConfigError,
@@ -396,11 +396,11 @@ func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMemb
 
 func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error {
 	// connect unauthenticated in case the replica set is not initialized
-	sess, mspErr := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
+	ctx, mspErr := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
 	if mspErr != nil {
 		return mspErr
 	}
-	defer sess.Close()
+	defer ctx.Close()
 
 	members := make([]bson.M, len(m.ReplicaSetConfig.ReplicaSetMembers))
 	for k, member := range m.ReplicaSetConfig.ReplicaSetMembers {
@@ -420,7 +420,7 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 	{
 		var result interface{}
 		cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
-		err := sess.Run(cmd, &result)
+		err := ctx.Session.Run(cmd, &result)
 		if err != nil {
 			queryErr, valid := err.(*mgo.QueryError)
 			switch {
@@ -437,7 +437,7 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 
 	// Create root user on admin database
 	{
-		adminDB := sess.DB(mongodbAdminDatabase)
+		adminDB := ctx.Session.DB(mongodbAdminDatabase)
 		var result interface{}
 		cmd := bson.M{
 			"createUser": m.ReplicaSetConfig.RootCredential.Username,
