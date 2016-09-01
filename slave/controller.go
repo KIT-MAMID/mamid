@@ -3,17 +3,13 @@ package slave
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
-	"sync"
 	"time"
 )
 
 type Controller struct {
-	procManager  *ProcessManager
-	configurator MongodConfigurator
-
-	busyTable     map[msp.PortNumber]*sync.Mutex
-	busyTableLock sync.Mutex
-
+	procManager               *ProcessManager
+	configurator              MongodConfigurator
+	busyTable                 *busyTable
 	mongodHardShutdownTimeout time.Duration
 }
 
@@ -21,8 +17,7 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 	return &Controller{
 		procManager:               processManager,
 		configurator:              configurator,
-		busyTable:                 make(map[msp.PortNumber]*sync.Mutex),
-		busyTableLock:             sync.Mutex{},
+		busyTable:                 NewBusyTable(),
 		mongodHardShutdownTimeout: mongodHardShutdownTimeout,
 	}
 }
@@ -80,15 +75,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 
 func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
-	c.busyTableLock.Lock()
-	// acquire a lock if possible [otherwise there is no process and we need to respawn immediately]
-	if _, exists := c.busyTable[m.Port]; !exists {
-		c.busyTable[m.Port] = &sync.Mutex{}
-	}
-	mutex := c.busyTable[m.Port]
-	mutex.Lock()
-	defer mutex.Unlock()
-	c.busyTableLock.Unlock()
+	defer c.busyTable.AcquireLock(m.Port).Unlock()
 
 	if m.State == msp.MongodStateRunning {
 
@@ -159,15 +146,6 @@ func (c *Controller) stopMongod(m msp.Mongod) {
 }
 
 func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {
-	c.busyTableLock.Lock()
-	// acquire a lock if possible [otherwise there is no process and we need to respawn immediately]
-	if _, exists := c.busyTable[m.Port]; !exists {
-		c.busyTable[m.Port] = &sync.Mutex{}
-	}
-	mutex := c.busyTable[m.Port]
-	mutex.Lock()
-	defer mutex.Unlock()
-	c.busyTableLock.Unlock()
-
+	defer c.busyTable.AcquireLock(m.Port).Unlock()
 	return c.configurator.InitiateReplicaSet(m)
 }
