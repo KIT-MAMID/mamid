@@ -49,12 +49,12 @@ func main() {
 	flag.StringVar(&dbDriver, "db.driver", "postgres", "the database driver to use. See https://golang.org/pkg/database/sql/#Open")
 	flag.StringVar(&dbDSN, "db.dsn", "", "the data source name to use. for PostgreSQL, checkout https://godoc.org/github.com/lib/pq")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
-	flag.StringVar(&slaveVerifyCA, "slave.verifyCA", "", "The CA certificate to verify slaves against it")
+	flag.StringVar(&slaveVerifyCA, "slave.verifyCA", "", "The CA certificate to verify slaves against")
 	flag.StringVar(&slaveAuthCert, "slave.auth.cert", "", "The client certificate for authentication against the slave")
 	flag.StringVar(&slaveAuthKey, "slave.auth.key", "", "The key for the client certificate for authentication against the slave")
 	flag.StringVar(&apiCert, "api.cert", "", "Optional: a certificate for the api/webinterface")
-	flag.StringVar(&apiKey, "api.key", "", "Optional: the for the certificate for the api/webinterface")
-	flag.StringVar(&apiVerifyCA, "api.verifyCA", "", "Optional: a ca, to check client certs from webinterface/api users. Implies authentication.")
+	flag.StringVar(&apiKey, "api.key", "", "Optional: the key for the certificate for the api/webinterface")
+	flag.StringVar(&apiVerifyCA, "api.verifyCA", "", "Optional: a ca to check client certs of webinterface/api users. Implies authentication")
 
 	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
 		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
