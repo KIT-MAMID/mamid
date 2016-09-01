@@ -94,8 +94,8 @@ func TestMonitor_observeSlave(t *testing.T) {
 				ReplicaSetMembers: []msp.ReplicaSetMember{
 					msp.ReplicaSetMember{
 						HostPort: msp.HostPort{
-							slave.Hostname,
-							2000,
+							Hostname: slave.Hostname,
+							Port:     2000,
 						},
 						Priority: ReplicaSetMemberPriorityLow,
 					},
@@ -261,8 +261,8 @@ func TestMonitor_compareStates(t *testing.T) {
 			ReplicaSetMembers: []msp.ReplicaSetMember{
 				msp.ReplicaSetMember{
 					HostPort: msp.HostPort{
-						"host1",
-						2000,
+						Hostname: "host1",
+						Port:     2000,
 					},
 					Priority: ReplicaSetMemberPriorityLow,
 				},

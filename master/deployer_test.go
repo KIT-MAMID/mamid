@@ -68,7 +68,7 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 			ReplicaSetName: dbMongod.ReplSetName,
 			ShardingRole:   msp.ShardingRole(dbMongod.DesiredState.ShardingRole),
 			ReplicaSetMembers: []msp.ReplicaSetMember{msp.ReplicaSetMember{
-				HostPort: msp.HostPort{"host1", 2000},
+				HostPort: msp.HostPort{Hostname: "host1", Port: 2000},
 				Priority: ReplicaSetMemberPriorityLow,
 			}},
 		},
@@ -105,7 +105,7 @@ func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
 	members, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(members))
-	assert.EqualValues(t, msp.ReplicaSetMember{HostPort: msp.HostPort{parentSlave.Hostname, msp.PortNumber(dbMongod.Port)}, Priority: ReplicaSetMemberPriorityLow}, members[0],
+	assert.EqualValues(t, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: parentSlave.Hostname, Port: msp.PortNumber(dbMongod.Port)}, Priority: ReplicaSetMemberPriorityLow}, members[0],
 		"the list of replica set members of mongod m should include mongod m") // TODO do we actually want this?
 
 	// Set the desired state to not running
