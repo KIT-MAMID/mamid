@@ -180,7 +180,7 @@ testbed_up: testbed_down testbed_net docker/testbed_images.depend ca/mamid.pem c
 		--volume=$(shell pwd)/ca/slaves/master/master.pem:/mamid/master.pem \
 		--volume=$(shell pwd)/ca/slaves/master/master_key.pem:/mamid/master_key.pem \
 		mamid/master /mamid/master -db.dsn "host=10.101.202.3 user=postgres password=postgres sslmode=disable dbname=postgres" \
-		-cacert /mamid/ca.pem -clientCert /mamid/master.pem -clientKey /mamid/master_key.pem
+		-slave.verifyCA /mamid/ca.pem -slave.auth.cert /mamid/master.pem -slave.auth.key /mamid/master_key.pem
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \

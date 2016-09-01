@@ -3,4 +3,4 @@ WORKDIR /mamid
 
 ADD build/master_docker /mamid/master
 
-CMD ["/mamid/master", "-cacert=/mamid/ca.pem", "-clientKey=/mamid/master_key.pem", "-clientCert=/mamid/master.pem"]
+CMD ["/mamid/master", "-slave.verifyCA=/mamid/ca.pem", "-slave.auth.key=/mamid/master_key.pem", "-slave.auth.cert=/mamid/master.pem"]
