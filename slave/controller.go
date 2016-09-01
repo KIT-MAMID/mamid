@@ -29,7 +29,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 		return []msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
 			Description:     fmt.Sprintf("Unable to read mongods from db directory"),
-			LongDescription: fmt.Sprintf("ProcessManager.ExistingDataDirectories() failed with error %s", err),
+			LongDescription: fmt.Sprintf("ProcessManager.ExistingDataDirectories() failed: %s", err),
 		}
 	}
 
@@ -93,10 +93,10 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 			err := c.procManager.SpawnProcess(m)
 
 			if err != nil {
-				log.Errorf("controller: error spawning process: %s", err)
+				log.Errorf("error spawning process: %s", err)
 				return &msp.Error{
 					Identifier:      msp.SlaveSpawnError,
-					Description:     fmt.Sprintf("Unable to start a Mongod instance on port %d", m.Port),
+					Description:     fmt.Sprintf("Unable to start a Mongod instance on port `%d`", m.Port),
 					LongDescription: fmt.Sprintf("ProcessManager.spawnProcess() failed to spawn Mongod on port `%d` with name `%s`: %s", m.Port, m.ReplicaSetConfig.ReplicaSetName, err),
 				}
 			}
@@ -112,7 +112,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		stopErr := c.configurator.ApplyMongodConfiguration(m)
 		if stopErr != nil {
-			log.WithField("error", stopErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
+			log.WithField("error", stopErr).Errorf("could not soft shutdown mongod on port `%d`", m.Port)
 		}
 		return nil
 
@@ -120,7 +120,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		stopErr := c.configurator.ApplyMongodConfiguration(m)
 		if stopErr != nil {
-			log.WithField("error", stopErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
+			log.WithField("error", stopErr).Errorf("could not soft shutdown Mongod on port `%d`", m.Port)
 		}
 
 		//Destroy data when process is not running anymore
@@ -132,16 +132,16 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 	case msp.MongodStateForceDestroyed:
 
-		log.Debugf("Force killing mongod on port %d", m.Port)
+		log.Debugf("Force killing Mongod on port `%d`", m.Port)
 
 		killErr := c.procManager.KillProcess(m.Port)
 
 		if killErr != nil {
-			log.WithField("error", killErr).Errorf("could not kill mongod on port %d", m.Port)
+			log.WithField("error", killErr).Errorf("could not kill Mongod on port `%d`", m.Port)
 			return &msp.Error{
 				Identifier:      msp.SlaveShutdownError,
-				Description:     fmt.Sprintf("Could not kill mongod on port %d", m.Port),
-				LongDescription: fmt.Sprintf("Error was: %s", killErr.Error()),
+				Description:     fmt.Sprintf("could not kill Mongod on port `%d`", m.Port),
+				LongDescription: fmt.Sprintf("error was: %s", killErr.Error()),
 			}
 		}
 
