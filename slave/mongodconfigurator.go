@@ -455,16 +455,18 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 	cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
 	err := sess.Run(cmd, &result)
 	if err != nil {
-		if queryErr, valid := err.(*mgo.QueryError); valid {
-			if queryErr.Code == 23 {
-				return nil //Replica set is already initialized. Return no error for idempotence.
+		queryErr, valid := err.(*mgo.QueryError)
+		switch {
+		case valid && queryErr == 23: // Replica Set is already initalized
+		default:
+			return &msp.Error{
+				Identifier:      msp.SlaveReplicaSetInitError,
+				Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
+				LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
 			}
 		}
-		return &msp.Error{
-			Identifier:      msp.SlaveReplicaSetInitError,
-			Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-			LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
-		}
 	}
+
 	return nil
+
 }
