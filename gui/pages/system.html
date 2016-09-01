@@ -1,24 +1,4 @@
 <h1 class="page-header">System</h1>
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">Save/Restore config</h3>
-    </div>
-    <div class="panel-body">
-        <p>Backup the running configuration as sql-dump.</p>
-        <a download="/api/system/runningconfig" href="/api/system/runningconfig" class="btn btn-primary"><span class="glyphicon glyphicon-export" aria-hidden="true"></span>
-            Export dump</a>
-        <hr/>
-        <p>Import a configuration as sql-dump.</p>
-        <form enctype="multipart/form-data" action="/api/system/runningconfig" method="post" class="upload">
-            <input class="form-inline" name="config" id="file"
-                   ng-model="file" type="file">
-            <button type="submit" id="submit" disabled class="form-inline btn btn-primary disabled"><span
-                    class="glyphicon glyphicon-import"
-                    aria-hidden="true"></span> Import dump
-            </button>
-        </form>
-    </div>
-</div>
 
 <div class="panel panel-default">
     <div class="panel-heading">
