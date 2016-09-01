@@ -90,7 +90,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		}
 		return msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting replica set status information from mongod instance on port %d failed", port),
+			Description:     fmt.Sprintf("Getting Replica Set status information from Mongod instance on port `%d` failed", port),
 			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") result was %#v", status),
 		}, replSetUnknown
 	}
@@ -100,8 +100,8 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 		log.Debugf("replSetGetConfig result %#v, err %#v", status, err)
 		return msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting replica set config information from mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", status),
+			Description:     fmt.Sprintf("Getting Replica Set config information from Mongod instance on port `%d` failed", port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", configResult),
 		}, replSetUnknown
 	}
 	config := configResult["config"].(bson.M)
