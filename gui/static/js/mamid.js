@@ -35,7 +35,10 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 h4.innerHTML = 'Houps! An error occurred.';
                 ediv.appendChild(h4);
                 var p = document.createElement('p');
-                p.innerHTML = rejection.data;
+                if(rejection.data != null)
+                    p.innerHTML = rejection.data;
+                else
+                    p.innerHTML = "A fatal application error occurred (maybe connection to the server lost?).";
                 ediv.appendChild(p);
                 $(ediv).hide();
                 root.insertBefore(ediv, root.firstChild);
