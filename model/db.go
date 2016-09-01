@@ -347,7 +347,7 @@ func InitializeTestDBFromFile(file string) (db *DB, dsn string, err error) {
 	if err != nil {
 		return
 	}
-	_, err = nativeDb.Query("DELETE FROM mamid_metadata")
+	_, err = nativeDb.Exec("DELETE FROM mamid_metadata")
 	if err != nil {
 		return nil, "", err
 	}
