@@ -47,6 +47,7 @@ func TestConfigFileMissingFile(t *testing.T) {
 func TestConfigFileMissingConf(t *testing.T) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
 	assert.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 	_, err = tmpFile.WriteString("[smtp]\n")
 	assert.NoError(t, err)
 	_, err = tmpFile.WriteString("relay_host=localhost:25\n")
@@ -70,6 +71,7 @@ func TestConfigFileMissingConf(t *testing.T) {
 func TestConfigFileMissingSection(t *testing.T) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
 	assert.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 	//_, err = tmpFile.WriteString("[smtp]\n")
 	//assert.NoError(t, err)
 	_, err = tmpFile.WriteString("relay_host=localhost:25\n")
@@ -99,6 +101,7 @@ func TestConfigFileNoFile(t *testing.T) {
 func TestContactsFile(t *testing.T) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
 	assert.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 	_, err = tmpFile.WriteString("[hans]\n")
 	assert.NoError(t, err)
 	_, err = tmpFile.WriteString("email=hans@localhost\n")
@@ -123,6 +126,7 @@ func TestContactsFile(t *testing.T) {
 func TestContactsFileAdditionalType(t *testing.T) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "mamid_test")
 	assert.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 	_, err = tmpFile.WriteString("[hans]\n")
 	assert.NoError(t, err)
 	_, err = tmpFile.WriteString("email=hans@localhost\n")
