@@ -43,7 +43,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	mongodChannel := make(chan msp.Mongod, len(replSetNameByPortNumber))
 	for port, replSetName := range replSetNameByPortNumber {
 		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber, replSetName string) {
-			if _, valid := c.procManager.runningProcesses[port]; valid {
+			if c.procManager.HasProcess(port) {
 				mongod, err := c.configurator.MongodConfiguration(port)
 				if err != nil {
 					//Process is running but we cant get the state
@@ -97,7 +97,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		// check if still existing after locking [else possible race condition: process might have been in destruction phase while we were waiting for the lock],
 		// else we need to respawn
-		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+		if !c.procManager.HasProcess(m.Port) {
 
 			err := c.procManager.SpawnProcess(m)
 
@@ -124,7 +124,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		c.stopMongod(m)
 
 		//Destroy data when process is not running anymore
-		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+		if !c.procManager.HasProcess(m.Port) {
 			c.procManager.destroyDataDirectory(m)
 		}
 		return nil
@@ -141,7 +141,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		}
 
 		//Destroy data when process is not running anymore
-		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
+		if !c.procManager.HasProcess(m.Port) {
 			c.procManager.destroyDataDirectory(m)
 		}
 		return nil

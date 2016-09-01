@@ -31,6 +31,11 @@ func (p *ProcessManager) Run() {
 	}()
 }
 
+func (p *ProcessManager) HasProcess(port msp.PortNumber) bool {
+	_, exists := p.runningProcesses[port]
+	return exists
+}
+
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) (err error) {
 
 	if err = p.createDirSkeleton(m); err != nil {
