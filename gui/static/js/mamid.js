@@ -275,8 +275,10 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
+    $scope.loading = true;
     SlaveService.query(function (slaves) {
         $scope.slaves = slaves;
+        $scope.loading = false;
     });
 
 });
@@ -456,8 +458,10 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
 });
 
 mamidApp.controller('replicasetIndexController', function ($scope, $http, ReplicaSetService) {
+    $scope.loading = true;
     ReplicaSetService.query(function (replicasets) {
         $scope.replicasets = replicasets;
+        $scope.loading = false;
     });
 });
 

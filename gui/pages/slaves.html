@@ -1,6 +1,6 @@
 <h1 class="page-header">Slaves<span class="pull-right"><a href="/#/slaves/new"
                                                           class="btn btn-success">Create new Slave</a></span></h1>
-<div ng-if="slaves.length == 0" class="jumbotron">
+<div ng-if="slaves.length == 0 && !loading" class="jumbotron">
     <h1><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span> No Slaves created yet.</h1>
     <p><br/><a class="btn btn-success btn-lg" href="/#/slaves/new" role="button">Create one</a></p>
 </div>

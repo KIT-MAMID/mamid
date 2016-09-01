@@ -1,6 +1,6 @@
 <h1 class="page-header">Replica Sets<span class="pull-right"><a href="/#/replicasets/new" class="btn btn-success">Create new Replica Set</a></span>
 </h1>
-<div ng-if="replicasets.length == 0" class="jumbotron">
+<div ng-if="replicasets.length == 0 && !loading" class="jumbotron">
     <h1><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> No Replica Sets created yet.</h1>
     <p><br/><a class="btn btn-success btn-lg" href="/#/replicasets/new" role="button">Create one</a></p>
 </div>
