@@ -54,8 +54,10 @@ func TestProcessManager_SpawnProcess(t *testing.T) {
 	p.Run()
 
 	err = p.SpawnProcess(msp.Mongod{
-		ReplicaSetName: "replSet",
-		Port:           10,
+		Port: 10,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: "replSet",
+		},
 	})
 	assert.NoError(t, err)
 
@@ -71,7 +73,7 @@ func TestProcessManager_SpawnProcess(t *testing.T) {
 	assert.Equal(t, []string{
 		"./fakemongod.sh",
 		"--dbpath",
-		"/tmp/testdir/db/replSet",
+		"/tmp/testdir/db/10:replSet",
 		"--port",
 		"10",
 		"--replSet",
@@ -92,14 +94,18 @@ func TestProcessManager_KillProcess(t *testing.T) {
 	p.Run()
 
 	err = p.SpawnProcess(msp.Mongod{
-		ReplicaSetName: "replSet",
-		Port:           10,
+		Port: 10,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: "replSet",
+		},
 	})
 	assert.NoError(t, err)
 
 	err = p.SpawnProcess(msp.Mongod{
-		ReplicaSetName: "replSet",
-		Port:           11,
+		Port: 11,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: "replSet",
+		},
 	})
 	assert.NoError(t, err)
 
@@ -156,16 +162,20 @@ func TestProcessManager_KillProcesses(t *testing.T) {
 	p.Run()
 
 	err = p.SpawnProcess(msp.Mongod{
-		ReplicaSetName: "replSet",
-		Port:           10,
+		Port: 10,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: "replSet",
+		},
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = p.SpawnProcess(msp.Mongod{
-		ReplicaSetName: "replSet",
-		Port:           11,
+		Port: 11,
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: "replSet",
+		},
 	})
 	if err != nil {
 		t.Error(err)
