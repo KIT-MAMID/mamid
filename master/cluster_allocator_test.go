@@ -160,12 +160,17 @@ func TestClusterAllocator_CompileMongodLayout_Idempotence_Simple(t *testing.T) {
 	var alloc ClusterAllocator
 	tx := db.Begin()
 	alloc.CompileMongodLayout(tx)
+	tx.Commit()
+	defer tx.Close()
 	dump2, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
-	assert.Equal(t, dump, dump2)
+	assert.NotEqual(t, dump, dump2)
+
+	tx = db.Begin()
 	alloc.CompileMongodLayout(tx)
-	dump2, err = saveDB(dsn, db.Driver)
+	tx.Commit()
+	defer tx.Close()
+	dump3, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
-	assert.Equal(t, dump, dump2)
-	tx.Rollback()
+	assert.Equal(t, dump2, dump3)
 }
