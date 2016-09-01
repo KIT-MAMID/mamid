@@ -36,7 +36,7 @@ type ConcreteMongodConfigurator struct {
 
 const mongodbAdminDatabase string = "admin"
 
-func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod msp.Mongod, err *msp.Error, replSetState replSetState) {
+func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod msp.Mongod, err *msp.Error, state replSetState) {
 
 	mongod = msp.Mongod{
 		Port: ctx.Port,
@@ -56,8 +56,8 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	}
 
 	var status bson.M
-	replSetState, err = ctx.ReplSetGetStatus(&status)
-	if replSetState == replSetRemoved {
+	state, err = ctx.ReplSetGetStatus(&status)
+	if state == replSetRemoved {
 		mongod.State = msp.MongodStateRemoved
 		return mongod, nil, replSetRemoved
 	} else if err != nil {
