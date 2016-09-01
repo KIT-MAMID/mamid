@@ -26,7 +26,8 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 	}
 	assert.NoError(t, tx.Create(&dbSlave).Error)
 	dbReplSet := model.ReplicaSet{
-		Name: "foo",
+		Name:         "foo",
+		ShardingRole: model.ShardingRoleNone,
 	}
 	assert.NoError(t, tx.Create(&dbReplSet).Error)
 	m1 := model.Mongod{
@@ -89,9 +90,17 @@ func TestMonitor_observeSlave(t *testing.T) {
 		msp.Mongod{
 			Port: 2000,
 			ReplicaSetConfig: msp.ReplicaSetConfig{
-				ReplicaSetName:    "repl1",
-				ReplicaSetMembers: []msp.HostPort{},
-				ShardingRole:      msp.ShardingRoleNone,
+				ReplicaSetName: "repl1",
+				ReplicaSetMembers: []msp.ReplicaSetMember{
+					msp.ReplicaSetMember{
+						HostPort: msp.HostPort{
+							slave.Hostname,
+							2000,
+						},
+						Priority: ReplicaSetMemberPriorityLow,
+					},
+				},
+				ShardingRole: msp.ShardingRoleNone,
 			},
 			StatusError:             nil,
 			LastEstablishStateError: nil,
@@ -230,7 +239,9 @@ func TestMonitor_compareStates(t *testing.T) {
 	var dbMongod model.Mongod
 	assert.NoError(t, tx.First(&dbMongod).Error)
 
-	msg, err := monitor.compareStates(tx, dbMongod)
+	mspMongod := msp.Mongod{}
+
+	msg, err := monitor.compareStates(tx, dbMongod, mspMongod)
 	assert.NoError(t, err)
 	assert.EqualValues(t, true, msg.Mismatch, "Mongods without ObservedState should always result in mismatch")
 
@@ -244,7 +255,22 @@ func TestMonitor_compareStates(t *testing.T) {
 	assert.NoError(t, tx.Create(&dbMongod.ObservedState).Error)
 	assert.NoError(t, tx.Model(&dbMongod).Update("ObservedStateID", dbMongod.ObservedState.ID).Error)
 
-	msg, err = monitor.compareStates(tx, dbMongod)
+	//msp result for replica set members as they are not stored in the database
+	mspMongod = msp.Mongod{
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetMembers: []msp.ReplicaSetMember{
+				msp.ReplicaSetMember{
+					HostPort: msp.HostPort{
+						"host1",
+						2000,
+					},
+					Priority: ReplicaSetMemberPriorityLow,
+				},
+			},
+		},
+	}
+
+	msg, err = monitor.compareStates(tx, dbMongod, mspMongod)
 	assert.NoError(t, err)
 	assert.EqualValues(t, false, msg.Mismatch, "Mongods with equal Observed & Desired states should not result in a mismatch")
 
@@ -254,58 +280,27 @@ func TestMonitor_compareStates(t *testing.T) {
 
 	// Test with unequal execution state
 	assert.NoError(t, tx.Model(&dbMongod.ObservedState).Update("ExecutionState", model.MongodExecutionStateNotRunning).Error)
-	msg, err = monitor.compareStates(tx, dbMongod)
+	msg, err = monitor.compareStates(tx, dbMongod, mspMongod)
 	assert.NoError(t, err)
 	assert.EqualValues(t, true, msg.Mismatch, "unequal ExecutionState should result in a mismatch")
 
 	tx.Rollback()
 	tx = db.Begin()
 
-	// Test with unequal IsShardingConfigServer field
-	assert.NoError(t, tx.Model(&dbMongod.ObservedState).Update("IsShardingConfigServer", !dbMongod.DesiredState.IsShardingConfigServer).Error)
-	msg, err = monitor.compareStates(tx, dbMongod)
+	// Test with unequal ShardingRole field
+	assert.NoError(t, tx.Model(&dbMongod.ObservedState).Update("ShardingRole", model.ShardingRoleShardServer).Error)
+	msg, err = monitor.compareStates(tx, dbMongod, mspMongod)
 	assert.NoError(t, err)
 	assert.EqualValues(t, true, msg.Mismatch, "unequal IsShardingConfigServer should result in a mismatch")
 
 	tx.Rollback()
 	tx = db.Begin()
 
-	var slave model.Slave
-	assert.NoError(t, tx.First(&slave).Error)
-
-	desiredMember1 := model.ReplicaSetMember{
-		MongodStateID: dbMongod.DesiredStateID,
-		Hostname:      slave.Hostname,
-		Port:          dbMongod.Port,
-	}
-	assert.NoError(t, tx.Create(&desiredMember1).Error)
-	assert.True(t, dbMongod.ObservedStateID.Valid)
-	observedMember1 := model.ReplicaSetMember{
-		MongodStateID: dbMongod.ObservedStateID.Int64,
-		Hostname:      desiredMember1.Hostname,
-		Port:          desiredMember1.Port,
-	}
-	assert.NoError(t, tx.Create(&observedMember1).Error)
-
-	// Test with equal ReplicaSetMembers
-	msg, err = monitor.compareStates(tx, dbMongod)
-	assert.NoError(t, err)
-	assert.EqualValues(t, false, msg.Mismatch, "equal ReplicaSetMembers should not result in a mismatch")
-
-	// Keep them equal
-	tx.Commit()
-	tx = db.Begin()
-
 	// Test with same number of members but different values
-	assert.NoError(t, tx.Model(&observedMember1).Update("Port", observedMember1.Port+1).Error)
-	assert.NoError(t, tx.Model(&observedMember1).Update("Hostname", "someunknownhost").Error)
+	mspMongodSameNumDiffValMembers := mspMongod
+	mspMongodSameNumDiffValMembers.ReplicaSetConfig.ReplicaSetMembers[0].Priority = 12
 
-	var desiredMemberRefetched model.ReplicaSetMember
-	assert.NoError(t, tx.Model(&dbMongod).Related(&desiredMemberRefetched, "DesiredState").Error)
-	assert.EqualValues(t, slave.Hostname, desiredMemberRefetched.Hostname)
-	assert.EqualValues(t, "someunknownhost", observedMember1.Hostname)
-
-	msg, err = monitor.compareStates(tx, dbMongod)
+	msg, err = monitor.compareStates(tx, dbMongod, mspMongod)
 	assert.NoError(t, err)
 	assert.EqualValues(t, true, msg.Mismatch, "unequal ReplicaSetMembers should result in a mismatch")
 
@@ -313,13 +308,12 @@ func TestMonitor_compareStates(t *testing.T) {
 	tx = db.Begin()
 
 	// Test with different number of members but same values
-	observedMember2 := observedMember1
-	observedMember2.Hostname = "anotherhost"
-	assert.False(t, observedMember2.Hostname == observedMember1.Hostname, "error in test logic")
-	observedMember2.ID = 0
-	assert.NoError(t, tx.Create(&observedMember2).Error)
+	mspMongodDiffNumSameValMembers := mspMongod
+	mspMongodDiffNumSameValMembers.ReplicaSetConfig.ReplicaSetMembers =
+		append(mspMongodDiffNumSameValMembers.ReplicaSetConfig.ReplicaSetMembers,
+			mspMongodDiffNumSameValMembers.ReplicaSetConfig.ReplicaSetMembers[0])
 
-	msg, err = monitor.compareStates(tx, dbMongod)
+	msg, err = monitor.compareStates(tx, dbMongod, mspMongodDiffNumSameValMembers)
 	assert.NoError(t, err)
 	assert.EqualValues(t, true, msg.Mismatch, "different sets of ReplicaSetMembers should result in a mismatch")
 
@@ -328,9 +322,9 @@ func TestMonitor_compareStates(t *testing.T) {
 }
 
 func TestMonitor_ReplicaSetMembersEquivalent(t *testing.T) {
-	assert.True(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
-	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 2}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
-	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 200}, Priority: 1}))
-	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host2", Port: 100}, Priority: 1}))
-	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host2", Port: 200}, Priority: 1}))
+	assert.True(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 2}, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 200}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host2", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: "host2", Port: 200}, Priority: 1}))
 }
