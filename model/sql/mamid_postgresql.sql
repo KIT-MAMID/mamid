@@ -23,8 +23,8 @@ CREATE TABLE "replica_sets" (
 CREATE TABLE "msp_errors" (
 	"id" BIGSERIAL PRIMARY KEY,
 	"identifier" varchar(255),
-	"description" varchar(255),
-	"long_description" varchar(255)
+	"description" TEXT,
+	"long_description" TEXT
 );
 
 CREATE TABLE slaves (
@@ -72,8 +72,8 @@ ALTER TABLE mongod_states ADD CONSTRAINT constr_parent_mongod FOREIGN KEY (paren
 
 CREATE TABLE "problems" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"description" varchar(255),
-	"long_description" varchar(255),
+	"description" TEXT,
+	"long_description" TEXT,
 	"problem_type" integer,
 	"first_occurred" TIMESTAMP,
 	"last_updated" TIMESTAMP,
