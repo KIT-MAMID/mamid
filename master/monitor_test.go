@@ -37,9 +37,9 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 	}
 	assert.NoError(t, tx.Create(&m1).Error)
 	des1 := model.MongodState{
-		ParentMongodID:         m1.ID,
-		IsShardingConfigServer: false,
-		ExecutionState:         model.MongodExecutionStateRunning,
+		ParentMongodID: m1.ID,
+		ShardingRole:   model.ShardingRoleNone,
+		ExecutionState: model.MongodExecutionStateRunning,
 	}
 	assert.NoError(t, tx.Create(&des1).Error)
 	assert.NoError(t, tx.Model(&m1).Update("DesiredStateID", des1.ID).Error)
@@ -87,10 +87,12 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	monitor.handleObservation([]msp.Mongod{
 		msp.Mongod{
-			Port:                    2000,
-			ReplicaSetName:          "repl1",
-			ReplicaSetMembers:       []msp.HostPort{},
-			ShardingConfigServer:    false,
+			Port: 2000,
+			ReplicaSetConfig: msp.ReplicaSetConfig{
+				ReplicaSetName:    "repl1",
+				ReplicaSetMembers: []msp.HostPort{},
+				ShardingRole:      msp.ShardingRoleNone,
+			},
 			StatusError:             nil,
 			LastEstablishStateError: nil,
 			State: msp.MongodStateRunning,
@@ -126,8 +128,10 @@ func TestMonitor_observeSlave(t *testing.T) {
 
 	monitor.handleObservation([]msp.Mongod{
 		msp.Mongod{
-			Port:           2000,
-			ReplicaSetName: "repl1",
+			Port: 2000,
+			ReplicaSetConfig: msp.ReplicaSetConfig{
+				ReplicaSetName: "repl1",
+			},
 			StatusError: &msp.Error{
 				Identifier:  "foo",
 				Description: "cannot observe mongod",
@@ -324,8 +328,9 @@ func TestMonitor_compareStates(t *testing.T) {
 }
 
 func TestMonitor_ReplicaSetMembersEquivalent(t *testing.T) {
-	assert.True(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host1", Port: 100}))
-	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host1", Port: 200}))
-	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host2", Port: 100}))
-	assert.False(t, ReplicaSetMembersEquivalent(model.ReplicaSetMember{Hostname: "host1", Port: 100}, model.ReplicaSetMember{Hostname: "host2", Port: 200}))
+	assert.True(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 2}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 200}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host2", Port: 100}, Priority: 1}))
+	assert.False(t, ReplicaSetMembersEquivalent(msp.ReplicaSetMember{msp.HostPort{Hostname: "host1", Port: 100}, Priority: 1}, msp.ReplicaSetMember{msp.HostPort{Hostname: "host2", Port: 200}, Priority: 1}))
 }
