@@ -1,8 +1,11 @@
 package msp
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -17,14 +20,27 @@ type Listener struct {
 	router       *mux.Router
 	certFile     string
 	keyFile      string
+	tlsConfig    *tls.Config
 }
 
-func NewServer(listener Consumer, listenString string, certFile string, keyFile string) *Listener {
+func NewServer(listener Consumer, listenString string, caFile string, certFile string, keyFile string) *Listener {
 	s := new(Listener)
 	s.listener = listener
 	s.listenString = listenString
 	s.certFile = certFile
 	s.keyFile = keyFile
+
+	certPool := x509.NewCertPool()
+	caCertContent, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		mspLog.Fatal(err)
+	}
+	certPool.AppendCertsFromPEM(caCertContent)
+	s.tlsConfig = &tls.Config{
+		ClientCAs:  certPool,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+	}
+	s.tlsConfig.BuildNameToCertificate()
 
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.router.Methods("GET").Path("/msp/status").Name("RequestStatus").HandlerFunc(s.handleRequestStatus)
@@ -54,6 +70,10 @@ func (s Listener) handleMspEstablishMongodState(w http.ResponseWriter, r *http.R
 }
 
 func (s Listener) Run() error {
-	return http.ListenAndServeTLS(s.listenString, s.certFile, s.keyFile,
-		s.router)
+	server := &http.Server{
+		TLSConfig: s.tlsConfig,
+		Addr:      s.listenString,
+		Handler:   s.router,
+	}
+	return server.ListenAndServeTLS(s.certFile, s.keyFile)
 }

@@ -38,10 +38,10 @@ func main() {
 
 	// Command Line Flags
 	var (
-		logLevel                     LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
-		dbPath, listenString, rootCA string
-		dbDriver, dbDSN              string
-		monitorInterval              time.Duration
+		logLevel                                            LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
+		dbPath, listenString, rootCA, clientCert, clientKey string
+		dbDriver, dbDSN                                     string
+		monitorInterval                                     time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
@@ -50,6 +50,8 @@ func main() {
 	flag.StringVar(&dbDSN, "db.dsn", "", "the data source name to use. for PostgreSQL, checkout https://godoc.org/github.com/lib/pq")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
 	flag.StringVar(&rootCA, "cacert", "", "The CA certificate to verify slaves against it")
+	flag.StringVar(&clientCert, "clientCert", "", "The client certificate for authentication against the slave")
+	flag.StringVar(&clientKey, "clientKey", "", "The key for the client certificate for authentication against the slave")
 	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
 		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
 	flag.Parse()
@@ -62,6 +64,12 @@ func main() {
 	}
 	if rootCA == "" {
 		masterLog.Fatal("No root certificate for the slave server communication passed. Specify with -cacert")
+	}
+	if clientCert == "" {
+		masterLog.Fatal("No client certificate for the slave server communication passed. Specify with -clientCert")
+	}
+	if clientKey == "" {
+		masterLog.Fatal("No key for the client certificate for the slave server communication passed. Specify with -clientKey")
 	}
 	// Start application
 	logrus.SetLevel(logLevel.lvl)
@@ -99,7 +107,14 @@ func main() {
 	cert, err := loadCertificateFromFile(rootCA)
 	dieOnError(err)
 	certPool.AddCert(cert)
-	httpTransport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool}}
+	clientAuthCert, err := tls.LoadX509KeyPair(clientCert, clientKey)
+	dieOnError(err)
+	httpTransport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs:      certPool,
+			Certificates: []tls.Certificate{clientAuthCert},
+		},
+	}
 	mspClient := msp.MSPClientImpl{HttpClient: http.Client{Transport: httpTransport}}
 
 	monitor := master.Monitor{

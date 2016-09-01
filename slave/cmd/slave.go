@@ -24,8 +24,8 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	var (
-		mongodExecutable, dataDir, listenString, x509CertFile, x509KeyFile string
-		mongodSoftShutdownTimeout, mongodHardShutdownTimeout               time.Duration
+		mongodExecutable, dataDir, listenString, x509CertFile, x509KeyFile, caCert string
+		mongodSoftShutdownTimeout, mongodHardShutdownTimeout                       time.Duration
 	)
 
 	flag.StringVar(&dataDir, "data", "", "Persistent data and slave configuration directory")
@@ -40,6 +40,7 @@ func main() {
 	flag.StringVar(&listenString, "listen", ":8081", "net.Listen() string, e.g. addr:port")
 	flag.StringVar(&x509CertFile, "serverCertFile", "", "The x509 cert file for the slave server")
 	flag.StringVar(&x509KeyFile, "serverKeyFile", "", "The x509 key file for x509 cert the slave server")
+	flag.StringVar(&caCert, "cacert", "", "The x509 ca that signed the certificates and to authenticate the master against")
 	flag.Parse()
 
 	// Assert dataDir is valid. TODO should we do this lazyly?
@@ -76,7 +77,7 @@ func main() {
 
 	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)
 
-	server := msp.NewServer(controller, listenString, x509CertFile, x509KeyFile)
+	server := msp.NewServer(controller, listenString, caCert, x509CertFile, x509KeyFile)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}

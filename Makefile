@@ -171,19 +171,23 @@ docker/testbed_images.depend: dockerbuild | \
 
 TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
-testbed_up: testbed_down testbed_net docker/testbed_images.depend ca/mamid.pem $(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD)))
+testbed_up: testbed_down testbed_net docker/testbed_images.depend ca/mamid.pem ca/slaves/master $(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD)))
 
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.3" --name=mamid-postgres -e POSTGRES_PASSWORD=postgres -d postgres
 	sleep 5 ## prevent race, yes, this is ugly
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/ca/mamid.pem:/mamid/ca.pem \
-		--volume=$(shell pwd)/gui:/mamid/gui mamid/master \
-		/mamid/master -db.dsn "host=10.101.202.3 user=postgres password=postgres sslmode=disable dbname=postgres" -cacert /mamid/ca.pem
+		--volume=$(shell pwd)/gui:/mamid/gui \
+		--volume=$(shell pwd)/ca/slaves/master/master.pem:/mamid/master.pem \
+		--volume=$(shell pwd)/ca/slaves/master/master_key.pem:/mamid/master_key.pem \
+		mamid/master /mamid/master -db.dsn "host=10.101.202.3 user=postgres password=postgres sslmode=disable dbname=postgres" \
+		-cacert /mamid/ca.pem -clientCert /mamid/master.pem -clientKey /mamid/master_key.pem
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
 		$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" \
 			--volume=$(shell pwd)/ca/slaves/slave$$i/slave$$i.pem:/mamid/cert.pem \
 			--volume=$(shell pwd)/ca/slaves/slave$$i/slave$${i}_key.pem:/mamid/key.pem \
+			--volume=$(shell pwd)/ca/mamid.pem:/mamid/ca.pem \
 			--name=slave$$i mamid/slave; \
 	done
 
