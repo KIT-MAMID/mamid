@@ -42,16 +42,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 		Port: ctx.Port,
 	}
 
-	running := bson.M{}
-	if err := sess.Run("isMaster", &running); err != nil {
-		return msp.Mongod{}, &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting master information from mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"isMaster\") failed with\n%s", err.Error()),
-		}, replSetUnknown
+	var isMasterRes bson.M
+	if err = ctx.IsMaster(&isMasterRes); err != nil {
+		return
 	}
-
-	if _, exists := running["setName"]; !exists {
+	if _, exists := isMasterRes["setName"]; !exists {
 		return msp.Mongod{
 			Port:                    ctx.Port,
 			StatusError:             nil,
@@ -219,13 +214,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 	log.Debugf("Applying Mongod configuration: %#v", m)
 
-	isMasterRes := bson.M{}
-	if err := sess.Run("isMaster", &isMasterRes); err != nil {
-		return &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting isMaster from mongod instance on port %d failed", m.Port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"isMaster\") failed with\n%s", err.Error()),
-		}
+	if err = sess.IsMaster(&isMasterRes); err != nil {
+		return err
 	}
 	isMaster := isMasterRes["ismaster"] == true
 

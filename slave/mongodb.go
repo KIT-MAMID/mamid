@@ -17,6 +17,16 @@ func (ctx *mgoContext) Close() {
 	ctx.Session.Close()
 }
 
+func (ctx *mgoContext) IsMaster(isMasterRes interface{}) *msp.Error {
+	if err := ctx.Session.Run("isMaster", &isMasterRes); err != nil {
+		return &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Getting master information from mongod instance on port %d failed", ctx.Port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"isMaster\") failed with\n%s", err.Error()),
+		}
+	}
+	return nil
+}
 
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
