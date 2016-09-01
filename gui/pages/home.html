@@ -1,5 +1,9 @@
 <h1 class="page-header">Your MongoDB Cluster</h1>
 <h2 class="sub-header">Recent problems</h2>
+<div ng-if="problems.length == 0" class="jumbotron">
+    <h1><span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> Everything is ok</h1>
+    <p>There are currently no known problems.</p>
+</div>
 <div class="bs-callout bs-callout-unknown"
      ng-repeat="problem in problems | orderBy:problem.first_occurred:true | limitTo:3">
     <h4>{{problem.description}}
@@ -14,6 +18,8 @@
 </div>
 <a href="/#/problems" class="btn btn-default pull-right" ng-if="problems.length > 3">{{ problems.length - 3 }} more
     Problems <span aria-hidden="true">&rarr;</span></a>
-<br/>
+<br ng-if="problems.length > 0"/>
+<div ng-if="slaves.length > 0">
 <h2 class="sub-header">Slave Health</h2>
 <div id="slaves"></div>
+</div>

@@ -1,5 +1,10 @@
 <h1 class="page-header">Replica Sets<span class="pull-right"><a href="/#/replicasets/new" class="btn btn-success">Create new Replica Set</a></span>
 </h1>
+<div ng-if="replicasets.length == 0" class="jumbotron">
+    <h1><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span> No Replica Sets created yet.</h1>
+    <p><br/><a class="btn btn-success btn-lg" href="/#/replicasets/new" role="button">Create one</a></p>
+</div>
+<div ng-if="replicasets.length > 0">
 <div class="panel panel-danger">
     <div class="panel-heading">
         <h3 class="panel-title">Replica Sets with Problems</h3>
@@ -28,4 +33,5 @@
             <code>{{ replicaset.name }}</code>
         </a>
     </div>
+</div>
 </div>
