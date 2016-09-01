@@ -23,6 +23,7 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 }
 
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
+
 	replSetNameByPortNumber, err := c.procManager.parseProcessDirTree()
 	if err != nil {
 		return []msp.Mongod{}, &msp.Error{
@@ -31,8 +32,10 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 			LongDescription: fmt.Sprintf("ProcessManager.ExistingDataDirectories() failed with error %s", err),
 		}
 	}
+
 	mongods := make([]msp.Mongod, 0, len(replSetNameByPortNumber))
 	mongodChannel := make(chan msp.Mongod, len(replSetNameByPortNumber))
+
 	for port, replSetName := range replSetNameByPortNumber {
 		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber, replSetName string) {
 			if c.procManager.HasProcess(port) {
@@ -62,6 +65,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 		}(mongodChannel, port, replSetName)
 	}
 
+	// Wait for all goroutines to return
 	if len(mongods) != len(replSetNameByPortNumber) {
 		for m := range mongodChannel {
 			mongods = append(mongods, m)
@@ -70,6 +74,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 			}
 		}
 	}
+
 	return mongods, nil
 }
 
