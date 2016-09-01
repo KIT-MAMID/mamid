@@ -38,10 +38,11 @@ func main() {
 
 	// Command Line Flags
 	var (
-		logLevel                                            LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
-		dbPath, listenString, rootCA, clientCert, clientKey string
-		dbDriver, dbDSN                                     string
-		monitorInterval                                     time.Duration
+		logLevel                                                    LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
+		dbPath, listenString                                        string
+		rootCA, clientCert, clientKey, apiCert, apiKey, apiVerifyCA string
+		dbDriver, dbDSN                                             string
+		monitorInterval                                             time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
@@ -52,6 +53,10 @@ func main() {
 	flag.StringVar(&rootCA, "cacert", "", "The CA certificate to verify slaves against it")
 	flag.StringVar(&clientCert, "clientCert", "", "The client certificate for authentication against the slave")
 	flag.StringVar(&clientKey, "clientKey", "", "The key for the client certificate for authentication against the slave")
+	flag.StringVar(&apiCert, "apiCert", "", "Optional: a certificate for the api/webinterface")
+	flag.StringVar(&apiKey, "apiKey", "", "Optional: the for the certificate for the api/webinterface")
+	flag.StringVar(&apiVerifyCA, "apiVerifyCA", "", "Optional: a ca, to check client certs from webinterface/api users. Implies authentication.")
+
 	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
 		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
 	flag.Parse()
@@ -70,6 +75,9 @@ func main() {
 	}
 	if clientKey == "" {
 		masterLog.Fatal("No key for the client certificate for the slave server communication passed. Specify with -clientKey")
+	}
+	if check := apiKey + apiCert; check == apiKey || check == apiCert {
+		masterLog.Fatal("Either -apiCert specified without -apiKey or vice versa.")
 	}
 	// Start application
 	logrus.SetLevel(logLevel.lvl)
@@ -139,8 +147,11 @@ func main() {
 	go problemManager.Run()
 
 	// Listen
-
-	err = http.ListenAndServe(listenString, mainRouter)
+	if apiCert != "" {
+		err = http.ListenAndServeTLS(listenString, apiCert, apiKey, mainRouter)
+	} else {
+		err = http.ListenAndServe(listenString, mainRouter)
+	}
 	dieOnError(err)
 }
 
