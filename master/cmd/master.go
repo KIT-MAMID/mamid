@@ -76,7 +76,7 @@ func main() {
 	if clientKey == "" {
 		masterLog.Fatal("No key for the client certificate for the slave server communication passed. Specify with -clientKey")
 	}
-	if check := apiKey + apiCert; check == apiKey || check == apiCert {
+	if check := apiKey + apiCert; check != "" && (check == apiKey || check == apiCert) {
 		masterLog.Fatal("Either -apiCert specified without -apiKey or vice versa.")
 	}
 	// Start application
@@ -146,13 +146,7 @@ func main() {
 	}
 	go problemManager.Run()
 
-	// Listen
-	if apiCert != "" {
-		err = http.ListenAndServeTLS(listenString, apiCert, apiKey, mainRouter)
-	} else {
-		err = http.ListenAndServe(listenString, mainRouter)
-	}
-	dieOnError(err)
+	listenAndServe(listenString, mainRouter, apiCert, apiKey, apiVerifyCA)
 }
 
 func dieOnError(err error) {
@@ -169,4 +163,35 @@ func loadCertificateFromFile(file string) (cert *x509.Certificate, err error) {
 	block, _ := pem.Decode(certFile)
 	cert, err = x509.ParseCertificate(block.Bytes)
 	return
+}
+
+func listenAndServe(listenString string, mainRouter *mux.Router, apiCert string, apiKey string, apiVerifyCA string) {
+	// Listen...
+	if apiCert != "" {
+		// ...with TLS but WITHOUT client cert auth
+		if apiVerifyCA == "" {
+			err := http.ListenAndServeTLS(listenString, apiCert, apiKey, mainRouter)
+			dieOnError(err)
+		} else { // ...with TLS AND client cert auth
+			certPool := x509.NewCertPool()
+			caCertContent, err := ioutil.ReadFile(apiVerifyCA)
+			dieOnError(err)
+			certPool.AppendCertsFromPEM(caCertContent)
+			tlsConfig := &tls.Config{
+				ClientCAs:  certPool,
+				ClientAuth: tls.RequireAndVerifyClientCert,
+			}
+			server := &http.Server{
+				TLSConfig: tlsConfig,
+				Addr:      listenString,
+				Handler:   mainRouter,
+			}
+			err = server.ListenAndServeTLS(apiCert, apiKey)
+			dieOnError(err)
+		}
+	} else {
+		// ...insecure and unauthenticated
+		err := http.ListenAndServe(listenString, mainRouter)
+		dieOnError(err)
+	}
 }
