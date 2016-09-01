@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// TODO make all these constants defaults for CLI parameters.
+const DataDBDir = "db"
+
 // Create directories managed by ProcessManager
 // returns nil if already exists and permissions are suitable
 func (p *ProcessManager) CreateManagedDirs() (err error) {

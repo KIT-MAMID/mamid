@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// TODO make all these constants defaults for CLI parameters.
-const DataDBDir = "db"
-
 type Controller struct {
 	procManager  *ProcessManager
 	configurator MongodConfigurator
