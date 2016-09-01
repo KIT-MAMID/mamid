@@ -37,7 +37,7 @@ func (ctx *mgoContext) ReplSetGetStatus(status *bson.M) (replSetMemberState repl
 	replSetMemberState = replSetUnknown
 
 	cmdRunErr := ctx.Session.Run("replSetGetStatus", status)
-	queryErr, isQueryErr := cmdRunErr.(*mgo.QueryError)
+	_, isQueryErr := cmdRunErr.(*mgo.QueryError)
 
 	if cmdRunErr == nil || isQueryErr {
 		// in case of QueryError, mgo marshals the resulting error-document into &status
