@@ -38,23 +38,23 @@ func main() {
 
 	// Command Line Flags
 	var (
-		logLevel                                                    LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
-		listenString                                                string
-		rootCA, clientCert, clientKey, apiCert, apiKey, apiVerifyCA string
-		dbDriver, dbDSN                                             string
-		monitorInterval                                             time.Duration
+		logLevel                                                                 LogLevelFlag = LogLevelFlag{logrus.DebugLevel}
+		listenString                                                             string
+		slaveVerifyCA, slaveAuthCert, slaveAuthKey, apiCert, apiKey, apiVerifyCA string
+		dbDriver, dbDSN                                                          string
+		monitorInterval                                                          time.Duration
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
 	flag.StringVar(&dbDriver, "db.driver", "postgres", "the database driver to use. See https://golang.org/pkg/database/sql/#Open")
 	flag.StringVar(&dbDSN, "db.dsn", "", "the data source name to use. for PostgreSQL, checkout https://godoc.org/github.com/lib/pq")
 	flag.StringVar(&listenString, "listen", ":8080", "net.Listen() string, e.g. addr:port")
-	flag.StringVar(&rootCA, "cacert", "", "The CA certificate to verify slaves against it")
-	flag.StringVar(&clientCert, "clientCert", "", "The client certificate for authentication against the slave")
-	flag.StringVar(&clientKey, "clientKey", "", "The key for the client certificate for authentication against the slave")
-	flag.StringVar(&apiCert, "apiCert", "", "Optional: a certificate for the api/webinterface")
-	flag.StringVar(&apiKey, "apiKey", "", "Optional: the for the certificate for the api/webinterface")
-	flag.StringVar(&apiVerifyCA, "apiVerifyCA", "", "Optional: a ca, to check client certs from webinterface/api users. Implies authentication.")
+	flag.StringVar(&slaveVerifyCA, "slave.verifyCA", "", "The CA certificate to verify slaves against it")
+	flag.StringVar(&slaveAuthCert, "slave.auth.cert", "", "The client certificate for authentication against the slave")
+	flag.StringVar(&slaveAuthKey, "slave.auth.key", "", "The key for the client certificate for authentication against the slave")
+	flag.StringVar(&apiCert, "api.cert", "", "Optional: a certificate for the api/webinterface")
+	flag.StringVar(&apiKey, "api.key", "", "Optional: the for the certificate for the api/webinterface")
+	flag.StringVar(&apiVerifyCA, "api.verifyCA", "", "Optional: a ca, to check client certs from webinterface/api users. Implies authentication.")
 
 	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
 		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
@@ -66,14 +66,14 @@ func main() {
 	if dbDSN == "" {
 		masterLog.Fatal("-db.dsn cannot be empty")
 	}
-	if rootCA == "" {
-		masterLog.Fatal("No root certificate for the slave server communication passed. Specify with -cacert")
+	if slaveVerifyCA == "" {
+		masterLog.Fatal("No root certificate for the slave server communication passed. Specify with -slave.verifyCA")
 	}
-	if clientCert == "" {
-		masterLog.Fatal("No client certificate for the slave server communication passed. Specify with -clientCert")
+	if slaveAuthCert == "" {
+		masterLog.Fatal("No client certificate for the slave server communication passed. Specify with -slave.auth.cert")
 	}
-	if clientKey == "" {
-		masterLog.Fatal("No key for the client certificate for the slave server communication passed. Specify with -clientKey")
+	if slaveAuthKey == "" {
+		masterLog.Fatal("No key for the client certificate for the slave server communication passed. Specify with -slave.auth.key")
 	}
 	if check := apiKey + apiCert; check != "" && (check == apiKey || check == apiCert) {
 		masterLog.Fatal("Either -apiCert specified without -apiKey or vice versa.")
@@ -111,10 +111,10 @@ func main() {
 	masterAPI.Setup()
 
 	certPool := x509.NewCertPool()
-	cert, err := loadCertificateFromFile(rootCA)
+	cert, err := loadCertificateFromFile(slaveVerifyCA)
 	dieOnError(err)
 	certPool.AddCert(cert)
-	clientAuthCert, err := tls.LoadX509KeyPair(clientCert, clientKey)
+	clientAuthCert, err := tls.LoadX509KeyPair(slaveAuthCert, slaveAuthKey)
 	dieOnError(err)
 	httpTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{
