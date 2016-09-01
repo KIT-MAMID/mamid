@@ -7,7 +7,6 @@ import (
 	. "github.com/KIT-MAMID/mamid/slave"
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"gopkg.in/mgo.v2"
 	"os/exec"
 	"time"
 )
@@ -74,7 +73,6 @@ func main() {
 	processManager.Run()
 
 	configurator := &ConcreteMongodConfigurator{
-		Dial: mgo.Dial,
 		MongodSoftShutdownTimeout: mongodSoftShutdownTimeout,
 	}
 

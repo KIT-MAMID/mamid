@@ -45,7 +45,7 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 		}
 	}
 
-	args := []string{"--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName}
+	args := []string{"--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName, "--keyFile", "/mamid/keyfile"}
 	switch m.ReplicaSetConfig.ShardingRole {
 	case msp.ShardingRoleShardServer:
 		args = append(args, "--shardsvr")

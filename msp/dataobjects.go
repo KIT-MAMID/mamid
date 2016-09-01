@@ -35,6 +35,11 @@ type ReplicaSetConfig struct {
 	ReplicaSetName    string
 	ReplicaSetMembers []ReplicaSetMember
 	ShardingRole      ShardingRole
+	RootCredential    MongodCredential // user with the Superuse Role `root`, see https://docs.mongodb.com/manual/reference/built-in-roles/#root
+}
+
+type MongodCredential struct {
+	Username, Password string
 }
 
 type ReplicaSetMember struct {
@@ -86,6 +91,7 @@ const SlaveSpawnError string = "SLAVESPAWN"
 const SlaveConnectMongodError string = "SLAVECONERR"
 const SlaveGetMongodStatusError string = "SLAVEGETSTATUSERR"
 const SlaveReplicaSetInitError string = "SLAVEREPLSETINIT"
+const SlaveReplicaSetCreateRootUserError string = "SLAVEREPLSETCREATEROOTUSER"
 const SlaveReplicaSetConfigError string = "SLAVEREPLSETCONFIG"
 const SlaveMongodProtocolError string = "SLAVEMONGODPROTOERR"
 const NotImplementedError string = "NOTIMPLEMENTED"

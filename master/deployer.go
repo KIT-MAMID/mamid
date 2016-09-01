@@ -189,6 +189,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 			ReplicaSetName:    mongod.ReplSetName,
 			ReplicaSetMembers: replicaSetMembers,
 			ShardingRole:      shardingRole,
+			RootCredential:    msp.MongodCredential{"mamid", "mamid"},
 		},
 		State: mspMongodState,
 	}
@@ -207,6 +208,7 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 		ReplicaSetName:    r.Name,
 		ReplicaSetMembers: make([]msp.ReplicaSetMember, 0, 0),
 		ShardingRole:      shardingRole,
+		RootCredential:    msp.MongodCredential{"mamid", "mamid"},
 	}
 
 	config.ReplicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)

@@ -5,10 +5,12 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 	//"sort"
+	golog "log"
+	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -29,20 +31,25 @@ type MongodConfigurator interface {
 }
 
 type ConcreteMongodConfigurator struct {
-	Dial                      func(url string) (*mgo.Session, error)
 	MongodSoftShutdownTimeout time.Duration
 }
 
-func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session, *msp.Error) {
-	sess, err := c.Dial(fmt.Sprintf("mongodb://127.0.0.1:%d/?connect=direct", port)) // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
+const mongodbAdminDatabase string = "admin"
 
-	/*
-		mgo.SetDebug(true)
+func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (*mgo.Session, *msp.Error) {
 
-		var aLogger *log.Logger
-		aLogger = log.New(os.Stderr, "", log.LstdFlags)
-		mgo.SetLogger(aLogger)
-	*/
+	mgo.SetDebug(false)
+
+	var aLogger *golog.Logger
+	aLogger = golog.New(os.Stderr, "", golog.LstdFlags)
+	mgo.SetLogger(aLogger)
+
+	sess, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs:    []string{fmt.Sprintf("127.0.0.1:%d", port)}, // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
+		Direct:   true,
+		Timeout:  4 * time.Second,
+		Database: mongodbAdminDatabase,
+	})
 
 	if err != nil {
 		return nil, &msp.Error{
@@ -51,7 +58,16 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber) (*mgo.Session,
 			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.connect() failed with: %s", err),
 		}
 	}
+
+	// Decrease the level of consistency, allowing reads from other members than PRIMARY
+	// sess.Login() requires read access
 	sess.SetMode(mgo.Monotonic, true)
+
+	// attempt login because replica set management commands don't work if unauthenticated & RS already initialized
+	loginError := sess.Login(&mgo.Credential{Username: credential.Username, Password: credential.Password})
+	if loginError != nil {
+		log.Infof("ignoring login error, assuming Replica Set is uninitialized: %s", loginError)
+	}
 
 	return sess, nil
 }
@@ -188,7 +204,10 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 }
 
 func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (msp.Mongod, *msp.Error) {
-	sess, err := c.connect(port)
+
+	// TODO get credential from store filled by EstablishState
+	// connect unauthenticated in case the replica set is not initialized
+	sess, err := c.connect(port, "r1", msp.MongodCredential{"mamid", "mamid"})
 	if err != nil {
 		return msp.Mongod{}, err
 	}
@@ -203,6 +222,7 @@ type mongodMembers []msp.ReplicaSetMember
 func (m mongodMembers) Len() int {
 	return len(m)
 }
+
 func (m mongodMembers) Less(i, j int) bool {
 	diff := m[i].HostPort.Port - m[j].HostPort.Port
 	if diff < 0 {
@@ -218,7 +238,7 @@ func (m mongodMembers) Swap(i, j int) {
 }
 
 func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp.Error {
-	sess, err := c.connect(m.Port)
+	sess, err := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
 	if err != nil {
 		return err
 	}
@@ -430,7 +450,8 @@ func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMemb
 }
 
 func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error {
-	sess, mspErr := c.connect(m.Port)
+	// connect unauthenticated in case the replica set is not initialized
+	sess, mspErr := c.connect(m.Port, m.ReplicaSetConfig.ReplicaSetName, m.ReplicaSetConfig.RootCredential)
 	if mspErr != nil {
 		return mspErr
 	}
@@ -451,18 +472,39 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 
 	log.Debugf("CONFIG %#v", config)
 
-	var result interface{}
-	cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
-	err := sess.Run(cmd, &result)
-	if err != nil {
-		queryErr, valid := err.(*mgo.QueryError)
-		switch {
-		case valid && queryErr == 23: // Replica Set is already initalized
-		default:
+	{
+		var result interface{}
+		cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
+		err := sess.Run(cmd, &result)
+		if err != nil {
+			queryErr, valid := err.(*mgo.QueryError)
+			switch {
+			case valid && queryErr.Code == 23: // Replica Set is already initalized
+			default:
+				return &msp.Error{
+					Identifier:      msp.SlaveReplicaSetInitError,
+					Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
+					LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
+				}
+			}
+		}
+	}
+
+	// Create root user on admin database
+	{
+		adminDB := sess.DB(mongodbAdminDatabase)
+		var result interface{}
+		cmd := bson.M{
+			"createUser": m.ReplicaSetConfig.RootCredential.Username,
+			"pwd":        m.ReplicaSetConfig.RootCredential.Password,
+			"roles":      []string{"root"},
+		}
+		err := adminDB.Run(cmd, &result)
+		if err != nil {
 			return &msp.Error{
-				Identifier:      msp.SlaveReplicaSetInitError,
-				Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-				LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
+				Identifier:      msp.SlaveReplicaSetCreateRootUserError,
+				Description:     fmt.Sprintf("Could not create MAMID management user on Replica Set `%s`", m.ReplicaSetConfig.ReplicaSetName),
+				LongDescription: fmt.Sprintf("Command createUser on instance on port `%d` failed: %#v", m.Port, err),
 			}
 		}
 	}
