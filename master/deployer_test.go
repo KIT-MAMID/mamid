@@ -63,16 +63,20 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 	expectedMongodState, _ := mspMongodStateFromExecutionState(dbMongod.DesiredState.ExecutionState)
 
 	assert.Equal(t, msp.Mongod{
-		Port:           msp.PortNumber(dbMongod.Port),
-		ReplicaSetName: dbMongod.ReplSetName,
+		Port: msp.PortNumber(dbMongod.Port),
+		ReplicaSetConfig: msp.ReplicaSetConfig{
+			ReplicaSetName: dbMongod.ReplSetName,
+			ShardingRole:   msp.ShardingRole(dbMongod.DesiredState.ShardingRole),
+			ReplicaSetMembers: []msp.ReplicaSetMember{msp.ReplicaSetMember{
+				HostPort: msp.HostPort{"host1", 2000},
+				Priority: ReplicaSetMemberPriorityLow,
+			}},
+		},
 
 		// TODO: this is hardcoded knowlege about the contents of the test database.
 		// Use something auto-generated instead.
 		// Also: is this field actually relevant in an EstablishState call?
-		ReplicaSetMembers: []msp.HostPort{{"host1", 2000}},
-
-		ShardingConfigServer: dbMongod.DesiredState.IsShardingConfigServer,
-		State:                expectedMongodState,
+		State: expectedMongodState,
 	}, mspMongod)
 
 }
@@ -95,18 +99,18 @@ func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
 	assert.Nil(t, tx.Model(&dbMongod).Related(&parentSlave, "ParentSlave").Error)
 	assert.Nil(t, tx.Model(&dbMongod).Related(&desiredState, "DesiredState").Error)
 
-	var members []msp.HostPort
+	var members []msp.ReplicaSetMember
 
 	// Test for one slave in DB
-	members, err = mspDesiredReplicaSetMembersForMongod(tx, dbMongod)
+	members, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(members))
-	assert.EqualValues(t, msp.HostPort{parentSlave.Hostname, msp.PortNumber(dbMongod.Port)}, members[0],
+	assert.EqualValues(t, msp.ReplicaSetMember{HostPort: msp.HostPort{parentSlave.Hostname, msp.PortNumber(dbMongod.Port)}, Priority: ReplicaSetMemberPriorityLow}, members[0],
 		"the list of replica set members of mongod m should include mongod m") // TODO do we actually want this?
 
 	// Set the desired state to not running
 	assert.EqualValues(t, 1, tx.Model(&desiredState).Update("ExecutionState", model.MongodExecutionStateNotRunning).RowsAffected)
-	members, err = mspDesiredReplicaSetMembersForMongod(tx, dbMongod)
+	members, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
 	assert.Nil(t, err)
 	assert.EqualValues(t, 0, len(members),
 		"a mongod with desired execution state != running should have no replica set members")
