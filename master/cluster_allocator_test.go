@@ -130,18 +130,18 @@ func saveDB(dsn string, driver string) (dump map[string][]string, err error) {
 
 func TestTestSaveDB(t *testing.T) {
 	// Check equality
-	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_1.sql")
+	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
 	assert.NoError(t, err)
 	dump, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
-	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_1.sql")
+	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
 	assert.NoError(t, err)
 	dump2, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
 	assert.Equal(t, dump, dump2)
 
 	//Check non-equality
-	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_2.sql")
+	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_allocated_degraded.sql")
 	assert.NoError(t, err)
 	dump2, err = saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
@@ -149,7 +149,7 @@ func TestTestSaveDB(t *testing.T) {
 }
 
 func TestClusterAllocator_CompileMongodLayout_Idempotence_Simple(t *testing.T) {
-	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_1.sql")
+	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
 	assert.NoError(t, err)
 	dump, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
