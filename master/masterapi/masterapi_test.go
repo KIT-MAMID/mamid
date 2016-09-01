@@ -51,9 +51,9 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 
 	dbReplicaset := model.ReplicaSet{
 		Name: "repl1",
-		PersistentMemberCount:           1,
-		VolatileMemberCount:             2,
-		ConfigureAsShardingConfigServer: false,
+		PersistentMemberCount: 1,
+		VolatileMemberCount:   2,
+		ShardingRole:          model.ShardingRoleNone,
 	}
 	assert.NoError(t, tx.Create(&dbReplicaset).Error)
 
@@ -67,6 +67,7 @@ func createDBAndMasterAPI(t *testing.T) (db *model.DB, mainRouter *mux.Router, e
 	assert.NoError(t, tx.Create(&m1).Error)
 	ds1 := model.MongodState{
 		ParentMongodID: m1.ID,
+		ShardingRole:   model.ShardingRoleNone,
 	}
 	assert.NoError(t, tx.Create(&ds1).Error)
 	assert.NoError(t, tx.Model(&m1).Update("DesiredStateID", ds1.ID).Error)
@@ -492,7 +493,7 @@ func TestMasterAPI_ReplicaSetIndex(t *testing.T) {
 	assert.Equal(t, "repl1", getReplsetResult[0].Name)
 	assert.EqualValues(t, 1, getReplsetResult[0].PersistentNodeCount)
 	assert.EqualValues(t, 2, getReplsetResult[0].VolatileNodeCount)
-	assert.EqualValues(t, false, getReplsetResult[0].ConfigureAsShardingConfigServer)
+	assert.EqualValues(t, model.ShardingRoleNone, getReplsetResult[0].ShardingRole)
 }
 
 func TestMasterAPI_ReplicaSetById(t *testing.T) {
@@ -519,7 +520,7 @@ func TestMasterAPI_ReplicaSetById(t *testing.T) {
 	assert.Equal(t, "repl1", getReplSetResult.Name)
 	assert.EqualValues(t, 1, getReplSetResult.PersistentNodeCount)
 	assert.EqualValues(t, 2, getReplSetResult.VolatileNodeCount)
-	assert.Equal(t, false, getReplSetResult.ConfigureAsShardingConfigServer)
+	assert.EqualValues(t, model.ShardingRoleNone, getReplSetResult.ShardingRole)
 }
 
 func TestMasterAPI_ReplicaSetById_not_existing(t *testing.T) {
@@ -547,7 +548,7 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	req_body := "{\"id\":0,\"name\":\"repl2\",\"persistent_node_count\":1," +
-		"\"volatile_node_count\":2,\"configure_as_sharding_config_server\":true}"
+		"\"volatile_node_count\":2,\"sharding_role\":\"configsvr\"}"
 	req, err := http.NewRequest("PUT", "/api/replicasets", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -568,7 +569,7 @@ func TestMasterAPI_ReplicaSetPut(t *testing.T) {
 	assert.Equal(t, "repl2", createdReplSet.Name)
 	assert.EqualValues(t, 1, createdReplSet.PersistentMemberCount)
 	assert.EqualValues(t, 2, createdReplSet.VolatileMemberCount)
-	assert.Equal(t, true, createdReplSet.ConfigureAsShardingConfigServer)
+	assert.Equal(t, model.ShardingRoleConfigServer, createdReplSet.ShardingRole)
 
 	//Check returned object
 	var getReplicaSetResult ReplicaSet
@@ -587,7 +588,7 @@ func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	req_body := "{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":1," +
-		"\"volatile_node_count\":4,\"configure_as_sharding_config_server\":false}"
+		"\"volatile_node_count\":4,\"sharding_role\":\"none\"}"
 	req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -604,7 +605,7 @@ func TestMasterAPI_ReplicaSetUpdate(t *testing.T) {
 	assert.Equal(t, "repl1", updateReplSet.Name)
 	assert.EqualValues(t, 1, updateReplSet.PersistentMemberCount)
 	assert.EqualValues(t, 4, updateReplSet.VolatileMemberCount)
-	assert.Equal(t, false, updateReplSet.ConfigureAsShardingConfigServer)
+	assert.EqualValues(t, model.ShardingRoleNone, updateReplSet.ShardingRole)
 }
 
 func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
@@ -615,7 +616,7 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	req_body := "{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":0," +
-		"\"volatile_node_count\":3,\"configure_as_sharding_config_server\":false}"
+		"\"volatile_node_count\":3,\"sharding_role\":\"none\"}"
 	req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
 	assert.NoError(t, err)
 	mainRouter.ServeHTTP(resp, req)
@@ -632,7 +633,7 @@ func TestMasterAPI_ReplicaSetUpdate_zero_values(t *testing.T) {
 	assert.Equal(t, "repl1", updateReplSet.Name)
 	assert.EqualValues(t, 0, updateReplSet.PersistentMemberCount)
 	assert.EqualValues(t, 3, updateReplSet.VolatileMemberCount)
-	assert.Equal(t, false, updateReplSet.ConfigureAsShardingConfigServer)
+	assert.EqualValues(t, model.ShardingRoleNone, updateReplSet.ShardingRole)
 }
 
 func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
@@ -660,7 +661,7 @@ func TestMasterAPI_ReplicaSetUpdate_oddMemberCounts(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		req_body := fmt.Sprintf("{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":%d,"+
-			"\"volatile_node_count\":%d,\"configure_as_sharding_config_server\":false}",
+			"\"volatile_node_count\":%d,\"sharding_role\":\"none\"}",
 			persistent, volatile)
 		req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
 		assert.NoError(t, err)
