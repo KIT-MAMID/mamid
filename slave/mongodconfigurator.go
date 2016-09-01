@@ -207,7 +207,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 	log.Debugf("Applying Mongod configuration: %#v", m)
 
-	if err = sess.IsMaster(&isMasterRes); err != nil {
+	var isMasterRes bson.M
+	if err = ctx.IsMaster(&isMasterRes); err != nil {
 		return err
 	}
 	isMaster := isMasterRes["ismaster"] == true
