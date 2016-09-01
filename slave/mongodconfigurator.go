@@ -162,7 +162,17 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 			}, replSetUnknown
 		}
 
-		cmdLineShardingRole := cmdLineOptsRes["parsed"].(bson.M)["sharding"].(bson.M)["clusterRole"].(string)
+		var cmdLineShardingRole string
+		{
+			parsed := cmdLineOptsRes["parsed"].(bson.M)
+			sharding, ok := parsed["sharding"]
+			if ok {
+				clusterRole, ok := sharding.(bson.M)["clusterRole"]
+				if ok {
+					cmdLineShardingRole = clusterRole.(string)
+				}
+			}
+		}
 		switch cmdLineShardingRole {
 		case "shardsvr":
 			shardingRole = msp.ShardingRoleShardServer
