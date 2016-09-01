@@ -131,10 +131,12 @@ func saveDB(dsn string, driver string) (dump map[string][]string, err error) {
 func TestTestSaveDB(t *testing.T) {
 	// Check equality
 	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	dump, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
 	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	dump2, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
@@ -142,6 +144,7 @@ func TestTestSaveDB(t *testing.T) {
 
 	//Check non-equality
 	db, dsn, err = InitializeTestDBFromFile("cluster_allocator_test_fixture_allocated_degraded.sql")
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	dump2, err = saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
@@ -150,6 +153,7 @@ func TestTestSaveDB(t *testing.T) {
 
 func TestClusterAllocator_CompileMongodLayout_Idempotence_Simple(t *testing.T) {
 	db, dsn, err := InitializeTestDBFromFile("cluster_allocator_test_fixture_allocate_full.sql")
+	defer db.CloseAndDrop()
 	assert.NoError(t, err)
 	dump, err := saveDB(dsn, db.Driver)
 	assert.NoError(t, err)
