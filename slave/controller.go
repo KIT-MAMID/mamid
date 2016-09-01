@@ -77,7 +77,9 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 	defer c.busyTable.AcquireLock(m.Port).Unlock()
 
-	if m.State == msp.MongodStateRunning {
+	switch m.State {
+
+	case msp.MongodStateRunning:
 
 		// check if still existing after locking [else possible race condition: process might have been in destruction phase while we were waiting for the lock],
 		// else we need to respawn
@@ -101,20 +103,34 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		}
 		return applyErr
 
-	} else if m.State == msp.MongodStateNotRunning {
-		c.stopMongod(m)
+	case msp.MongodStateNotRunning:
+
+		stopErr := c.configurator.ApplyMongodConfiguration(m)
+		if stopErr != nil {
+			log.WithField("error", stopErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
+		}
 		return nil
-	} else if m.State == msp.MongodStateDestroyed {
-		c.stopMongod(m)
+
+	case msp.MongodStateDestroyed:
+
+		stopErr := c.configurator.ApplyMongodConfiguration(m)
+		if stopErr != nil {
+			log.WithField("error", stopErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
+		}
 
 		//Destroy data when process is not running anymore
 		if !c.procManager.HasProcess(m.Port) {
 			c.procManager.destroyDataDirectory(m)
 		}
+
 		return nil
-	} else if m.State == msp.MongodStateForceDestroyed {
+
+	case msp.MongodStateForceDestroyed:
+
 		log.Debugf("Force killing mongod on port %d", m.Port)
+
 		killErr := c.procManager.KillProcess(m.Port)
+
 		if killErr != nil {
 			log.WithField("error", killErr).Errorf("could not kill mongod on port %d", m.Port)
 			return &msp.Error{
@@ -128,21 +144,18 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 		if !c.procManager.HasProcess(m.Port) {
 			c.procManager.destroyDataDirectory(m)
 		}
+
 		return nil
+
+	default:
+
+		return &msp.Error{
+			Identifier:  msp.BadStateDescription,
+			Description: fmt.Sprintf("Unknown desired state"),
+		}
+
 	}
 
-	// release lock preventing simultaneous configuration
-	return &msp.Error{
-		Identifier:  msp.BadStateDescription,
-		Description: fmt.Sprintf("Unknown desired state"),
-	}
-}
-
-func (c *Controller) stopMongod(m msp.Mongod) {
-	applyErr := c.configurator.ApplyMongodConfiguration(m) // ignore error of destruction, will be killed
-	if applyErr != nil {
-		log.WithField("error", applyErr).Errorf("could not soft shutdown mongod on port %d", m.Port)
-	}
 }
 
 func (c *Controller) RsInitiate(m msp.RsInitiateMessage) *msp.Error {
