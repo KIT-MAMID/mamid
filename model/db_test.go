@@ -25,7 +25,9 @@ func fixtureEmptyMongod() *Mongod {
 }
 
 func fixtureEmptyMongodState() MongodState {
-	return MongodState{}
+	return MongodState{
+		ShardingRole: ShardingRoleNone,
+	}
 }
 
 func fixtureEmptyRiskGroup() *RiskGroup {
@@ -38,9 +40,9 @@ func fixtureEmptyRiskGroup() *RiskGroup {
 func fixtureEmptyReplicaSet() *ReplicaSet {
 	return &ReplicaSet{
 		Name: "repl1",
-		PersistentMemberCount:           1,
-		VolatileMemberCount:             2,
-		ConfigureAsShardingConfigServer: false,
+		PersistentMemberCount: 1,
+		VolatileMemberCount:   2,
+		ShardingRole:          ShardingRoleNone,
 	}
 }
 
@@ -179,15 +181,13 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 	m := fixtureEmptyMongod()
 
 	o := MongodState{
-		IsShardingConfigServer: false,
-		ExecutionState:         MongodExecutionStateNotRunning,
-		ReplicaSetMembers:      []ReplicaSetMember{},
+		ShardingRole:   ShardingRoleNone,
+		ExecutionState: MongodExecutionStateNotRunning,
 	}
 
 	d := MongodState{
-		IsShardingConfigServer: false,
-		ExecutionState:         MongodExecutionStateRunning,
-		ReplicaSetMembers:      []ReplicaSetMember{},
+		ShardingRole:   ShardingRoleNone,
+		ExecutionState: MongodExecutionStateRunning,
 	}
 
 	assert.NoError(t, tx.Create(m).Error)
@@ -211,34 +211,6 @@ func TestMongodMongodStateRelationship(t *testing.T) {
 	assert.NoError(t, tx.Model(&mdb).Related(&mdb.DesiredState, "DesiredState").Error)
 	assert.NotZero(t, mdb.DesiredState)
 	assert.Equal(t, mdb.DesiredState.ExecutionState, MongodExecutionStateRunning)
-
-}
-
-// Test MongodState - ReplicaSetMember relationship
-func TestMongodStateReplicaSetMembersRelationship(t *testing.T) {
-	db, _, _ := InitializeTestDB()
-	defer db.CloseAndDrop()
-	tx := db.Begin()
-	defer tx.Rollback()
-
-	m := ReplicaSetMember{Hostname: "h1"}
-
-	s := MongodState{ReplicaSetMembers: []ReplicaSetMember{m}}
-
-	assert.NoError(t, tx.Create(&m).Error)
-	s.ParentMongodID = m.ID
-	assert.NoError(t, tx.Create(&s).Error)
-	assert.NoError(t, tx.Model(&m).Update("DesiredStateID", s.ID).Error)
-
-	var sdb MongodState
-
-	assert.NoError(t, tx.First(&sdb).Error)
-	assert.Zero(t, sdb.ReplicaSetMembers)
-
-	assert.NoError(t, tx.Model(&sdb).Related(&sdb.ReplicaSetMembers, "ReplicaSetMembers").Error)
-	assert.NotZero(t, sdb.ReplicaSetMembers)
-	assert.Equal(t, len(sdb.ReplicaSetMembers), 1)
-	assert.Equal(t, sdb.ReplicaSetMembers[0].Hostname, m.Hostname)
 
 }
 
