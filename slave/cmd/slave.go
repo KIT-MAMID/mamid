@@ -6,7 +6,6 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	. "github.com/KIT-MAMID/mamid/slave"
 	"github.com/Sirupsen/logrus"
-	"golang.org/x/sys/unix"
 	"os/exec"
 	"time"
 )
@@ -42,7 +41,7 @@ func main() {
 	flag.StringVar(&caCert, "master.verifyCA", "", "The x509 ca that signed the certificates and to authenticate the master against")
 	flag.Parse()
 
-	// Assert dataDir is valid. TODO should we do this lazyly?
+	// Validate non-optional fields
 
 	if dataDir == "" {
 		log.Fatal("No root data directory passed; specify with -data=/path/to/root/dir")
@@ -56,20 +55,13 @@ func main() {
 	if caCert == "" {
 		log.Fatal("No master verification ca passen; specify with -master.verifyCA=/path/to/cert")
 	}
-	if err := unix.Access(dataDir, unix.W_OK); err != nil {
-		log.Fatal(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))
-	}
 
-	// ensure that main database directory exists
-	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
-	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			log.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
-			return
-		}
-	}
+	// Application setup
 
 	processManager := NewProcessManager(mongodExecutable, dataDir)
+	if err := processManager.CreateManagedDirs(); err != nil {
+		log.Fatal(fmt.Sprintf("cannot not create or access slave data directory `%s` (-data): %s", dataDir, err))
+	}
 	processManager.Run()
 
 	configurator := &ConcreteMongodConfigurator{

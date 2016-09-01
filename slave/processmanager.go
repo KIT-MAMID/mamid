@@ -1,14 +1,8 @@
 package slave
 
 import (
-	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
-	"golang.org/x/sys/unix"
-	"io/ioutil"
-	"os"
 	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -37,25 +31,14 @@ func (p *ProcessManager) Run() {
 	}()
 }
 
-func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
-	dbDir := fmt.Sprintf("%s/%s/%d:%s", p.dataDir, DataDBDir, m.Port, m.ReplicaSetConfig.ReplicaSetName)
-	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			panic(fmt.Sprintf("Could not create a readable and writable directory at %s", dbDir))
-		}
+func (p *ProcessManager) SpawnProcess(m msp.Mongod) (err error) {
+
+	if err = p.createDirSkeleton(m); err != nil {
+		return
 	}
 
-	args := []string{"--dbpath", dbDir, "--port", fmt.Sprintf("%d", m.Port), "--replSet", m.ReplicaSetConfig.ReplicaSetName, "--keyFile", "/mamid/keyfile"}
-	switch m.ReplicaSetConfig.ShardingRole {
-	case msp.ShardingRoleShardServer:
-		args = append(args, "--shardsvr")
-	case msp.ShardingRoleConfigServer:
-		args = append(args, "--configsvr")
-	}
-
-	cmd := exec.Command(p.command, args...)
-	err := cmd.Start()
-	if err != nil {
+	cmd := exec.Command(p.command, p.buildMongodCommandLine(m)...)
+	if err := cmd.Start(); err != nil {
 		return err
 	}
 
@@ -66,37 +49,7 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) error {
 
 	p.runningProcesses[m.Port] = cmd
 	return nil
-}
 
-func (p *ProcessManager) ExistingDataDirectories() (replSetNameByPortNumber map[msp.PortNumber]string, err error) {
-	entries, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", p.dataDir, DataDBDir))
-	if err != nil {
-		return
-	}
-	replSetNameByPortNumber = make(map[msp.PortNumber]string)
-	for _, entry := range entries {
-		if entry.IsDir() {
-			dirname := entry.Name()
-			colonLoc := strings.Index(entry.Name(), ":")
-			if colonLoc < 0 {
-				log.Errorf("Directory with unparsable name `%s` in db dir", entry.Name())
-				continue
-			}
-			portStr := dirname[0:colonLoc]
-			port64, parseErr := strconv.ParseUint(portStr, 10, 16)
-			if parseErr != nil {
-				log.Errorf("Could not parse port `%s`", portStr)
-				continue
-			}
-			port := msp.PortNumber(port64)
-			replSetStr := dirname[colonLoc+1:]
-			replSetNameByPortNumber[port] = replSetStr
-		} else {
-			log.Errorf("File `%s` in db dir. There should be no files in db dir.", entry.Name())
-			continue
-		}
-	}
-	return
 }
 
 func (p *ProcessManager) RunningProcesses() []msp.PortNumber {
@@ -130,11 +83,6 @@ func (p *ProcessManager) KillAfterTimeout(port msp.PortNumber, timeout time.Dura
 		}
 	}
 	return nil
-}
-
-func (p *ProcessManager) DestroyDataDirectory(port msp.PortNumber, replSetName string) error {
-	dbDir := fmt.Sprintf("%s/%s/%d:%s", p.dataDir, DataDBDir, port, replSetName)
-	return os.RemoveAll(dbDir)
 }
 
 // killProcess is destructive. Even when there was an error (already killed, stuck state, permissions lost), we do not care. The error is purely informational that _something_ went wrong.

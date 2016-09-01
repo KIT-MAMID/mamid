@@ -31,7 +31,7 @@ func NewController(processManager *ProcessManager, configurator MongodConfigurat
 }
 
 func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
-	replSetNameByPortNumber, err := c.procManager.ExistingDataDirectories()
+	replSetNameByPortNumber, err := c.procManager.parseProcessDirTree()
 	if err != nil {
 		return []msp.Mongod{}, &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
@@ -125,7 +125,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		//Destroy data when process is not running anymore
 		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
-			c.procManager.DestroyDataDirectory(m.Port, m.ReplicaSetConfig.ReplicaSetName)
+			c.procManager.destroyDataDirectory(m)
 		}
 		return nil
 	} else if m.State == msp.MongodStateForceDestroyed {
@@ -142,7 +142,7 @@ func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 		//Destroy data when process is not running anymore
 		if _, exists := c.procManager.runningProcesses[m.Port]; !exists {
-			c.procManager.DestroyDataDirectory(m.Port, m.ReplicaSetConfig.ReplicaSetName)
+			c.procManager.destroyDataDirectory(m)
 		}
 		return nil
 	}
