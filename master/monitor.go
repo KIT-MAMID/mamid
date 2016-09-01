@@ -236,7 +236,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 			}
 			desiredState := model.MongodState{
 				ParentMongodID: dbMongod.ID,
-				ExecutionState: model.MongodExecutionStateDestroyed,
+				ExecutionState: model.MongodExecutionStateForceDestroyed,
 			}
 			if err := tx.Create(&desiredState).Error; err != nil {
 				return modelToObservedMap, fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
