@@ -36,45 +36,10 @@ type ConcreteMongodConfigurator struct {
 
 const mongodbAdminDatabase string = "admin"
 
-func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (*mgo.Session, *msp.Error) {
+func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod msp.Mongod, err *msp.Error, replSetState replSetState) {
 
-	mgo.SetDebug(false)
-
-	var aLogger *golog.Logger
-	aLogger = golog.New(os.Stderr, "", golog.LstdFlags)
-	mgo.SetLogger(aLogger)
-
-	sess, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs:    []string{fmt.Sprintf("127.0.0.1:%d", port)}, // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
-		Direct:   true,
-		Timeout:  4 * time.Second,
-		Database: mongodbAdminDatabase,
-	})
-
-	if err != nil {
-		return nil, &msp.Error{
-			Identifier:      msp.SlaveConnectMongodError,
-			Description:     fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.connect() failed with: %s", err),
-		}
-	}
-
-	// Decrease the level of consistency, allowing reads from other members than PRIMARY
-	// sess.Login() requires read access
-	sess.SetMode(mgo.Monotonic, true)
-
-	// attempt login because replica set management commands don't work if unauthenticated & RS already initialized
-	loginError := sess.Login(&mgo.Credential{Username: credential.Username, Password: credential.Password})
-	if loginError != nil {
-		log.Infof("ignoring login error, assuming Replica Set is uninitialized: %s", loginError)
-	}
-
-	return sess, nil
-}
-
-func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port msp.PortNumber) (msp.Mongod, *msp.Error, replSetState) {
-	mongod := msp.Mongod{
-		Port: port,
+	mongod = msp.Mongod{
+		Port: ctx.Port,
 	}
 
 	running := bson.M{}
@@ -88,7 +53,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 
 	if _, exists := running["setName"]; !exists {
 		return msp.Mongod{
-			Port:                    port,
+			Port:                    ctx.Port,
 			StatusError:             nil,
 			LastEstablishStateError: nil,
 			State: msp.MongodStateUninitialized,
@@ -207,13 +172,13 @@ func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (m
 
 	// TODO get credential from store filled by EstablishState
 	// connect unauthenticated in case the replica set is not initialized
-	sess, err := c.connect(port, "r1", msp.MongodCredential{"mamid", "mamid"})
+	ctx, err := c.connect(port, "r1", msp.MongodCredential{"mamid", "mamid"})
 	if err != nil {
 		return msp.Mongod{}, err
 	}
-	defer sess.Close()
+	defer ctx.Close()
 
-	mongod, err, _ := c.fetchConfiguration(sess, port)
+	mongod, err, _ := c.fetchConfiguration(ctx)
 	return mongod, err
 }
 
