@@ -49,7 +49,7 @@ func (ctx *mgoContext) ReplSetGetStatus(status *bson.M) (replSetMemberState repl
 	}
 
 	if errorDocState, valid := (*status)[stateFieldName]; valid {
-		replSetMemberState = errorDocState.(replSetState)
+		replSetMemberState = replSetState(errorDocState.(int))
 	} else {
 		if cmdRunErr != nil {
 			// an real error must have occurred
