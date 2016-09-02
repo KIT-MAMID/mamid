@@ -263,7 +263,7 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
     $scope.getStateCount = function (state) {
         var s = []
         for (var i = 0; i < $scope.slaves.length; i++) {
-            if (!$scope.problemsByReplicaSet[$scope.slaves[i].id + ""]) {
+            if (!$scope.problemsBySlave[$scope.slaves[i].id + ""]) {
                 s.push($scope.slaves[i]);
             }
         }
