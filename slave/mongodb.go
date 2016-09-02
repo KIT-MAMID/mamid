@@ -157,6 +157,7 @@ func (ctx *mgoContext) CreateUser(user, password, purpose string, roles []string
 		{"createUser", user},
 		{"pwd", password},
 		{"roles", roles},
+		{"writeConcern", bson.M{"w": "majority"}}, // Config servers need the majority write concern. And it doesn't hurt for non-config servers, too
 	}
 	err := ctx.Session.Run(cmd, &result)
 	log.Debugf("error creating user: %#v", err)
