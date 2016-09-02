@@ -32,7 +32,7 @@ type ConcreteMongodConfigurator struct {
 
 const mongodbAdminDatabase string = "admin"
 
-func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod msp.Mongod, err *msp.Error, state replSetState) {
+func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod msp.Mongod, err *msp.Error) {
 
 	mongod = msp.Mongod{
 		Port: ctx.Port,
@@ -48,45 +48,38 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 			StatusError:             nil,
 			LastEstablishStateError: nil,
 			State: msp.MongodStateUninitialized,
-		}, nil, replSetStartup
+		}, nil
 	}
 
 	var status bson.M
+	var state replSetState
 	state, err = ctx.ReplSetGetStatus(&status)
-	if state == replSetRemoved {
+	if err != nil {
+		return mongod, err
+	}
+
+	switch state {
+	case replSetRecovering:
+		mongod.State = msp.MongodStateRecovering
+	case replSetPrimary:
+		mongod.State = msp.MongodStateRunning
+	case replSetSecondary:
+		mongod.State = msp.MongodStateRunning
+	case replSetRemoved:
 		mongod.State = msp.MongodStateRemoved
-		return mongod, nil, replSetRemoved
-	} else if err != nil {
-		return msp.Mongod{}, err, replSetUnknown
+	}
+
+	//If we are removed ReplSetGetConfig will fail => exit now
+	if mongod.State == msp.MongodStateRemoved {
+		return mongod, nil
 	}
 
 	config, err := ctx.ReplSetGetConfig()
 	if err != nil {
-		return msp.Mongod{}, err, replSetUnknown
+		return mongod, err
 	}
 
 	mongod.ReplicaSetConfig.ReplicaSetName = status["set"].(string)
-
-	if status_state, valid := status["myState"]; valid {
-		var state msp.MongodState
-		switch replSetState(status_state.(int)) {
-		case replSetRecovering:
-			state = msp.MongodStateRecovering
-		case replSetPrimary:
-			state = msp.MongodStateRunning
-		case replSetSecondary:
-			state = msp.MongodStateRunning
-		case replSetRemoved:
-			state = msp.MongodStateRemoved
-		}
-		mongod.State = state
-	} else {
-		return msp.Mongod{}, &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Mongod on port %d returned no status", ctx.Port),
-			LongDescription: fmt.Sprintf("status[myState] does not exist"),
-		}, replSetUnknown
-	}
 
 	var members []msp.ReplicaSetMember
 
@@ -113,7 +106,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 		// Fall back to parsing command line options
 		cmdLineShardingRole, err := ctx.ParseCmdLineShardingRole()
 		if err != nil {
-			return msp.Mongod{}, err, replSetUnknown
+			return msp.Mongod{}, err
 		}
 
 		switch cmdLineShardingRole {
@@ -127,7 +120,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	}
 	mongod.ReplicaSetConfig.ShardingRole = shardingRole
 
-	return mongod, nil, replSetState(status["myState"].(int))
+	return mongod, nil
 }
 
 func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (msp.Mongod, *msp.Error) {
@@ -140,7 +133,7 @@ func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (m
 	}
 	defer ctx.Close()
 
-	mongod, err, _ := c.fetchConfiguration(ctx)
+	mongod, err := c.fetchConfiguration(ctx)
 	return mongod, err
 }
 
@@ -213,13 +206,13 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 		var status bson.M
 		replSetState, err := ctx.ReplSetGetStatus(&status)
-
 		if err != nil {
-			if replSetState == replSetRemoved {
-				//Mongod was removed by the primary so it can be shut down
-				err = ctx.ShutdownWithTimeout(int64(c.MongodSoftShutdownTimeout.Seconds()))
-			}
 			return err
+		}
+
+		if replSetState == replSetRemoved {
+			//Mongod was removed by the primary so it can be shut down
+			err = ctx.ShutdownWithTimeout(int64(c.MongodSoftShutdownTimeout.Seconds()))
 		} else {
 			if isMaster {
 				//Cant remove ourselves so somebody else has to become master and remove us

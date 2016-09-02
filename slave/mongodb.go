@@ -38,27 +38,33 @@ func (ctx *mgoContext) ReplSetGetStatus(status *bson.M) (replSetMemberState repl
 	replSetMemberState = replSetUnknown
 
 	cmdRunErr := ctx.Session.Run("replSetGetStatus", status)
-	_, isQueryErr := cmdRunErr.(*mgo.QueryError)
 
-	if cmdRunErr == nil || isQueryErr {
-		// in case of QueryError, mgo marshals the resulting error-document into &status
-		// => the "state" field is set in QueryError and no-error cases
-		if errorDocState, valid := (*status)["state"]; valid {
-			replSetMemberState = errorDocState.(replSetState)
-		} else if cmdRunErr == nil {
-			// Don't know what to do if expected field state is not found
+	//If the replica set is in removed state the replSetGetStatus command returns an error
+	//This error still contains the replica set state but in the "state" field instead of the "myState" field
+	var stateFieldName string
+	if cmdRunErr != nil {
+		stateFieldName = "state"
+	} else {
+		stateFieldName = "myState"
+	}
+
+	if errorDocState, valid := (*status)[stateFieldName]; valid {
+		replSetMemberState = errorDocState.(replSetState)
+	} else {
+		if cmdRunErr != nil {
+			// an real error must have occurred
 			err = &msp.Error{
 				Identifier:      msp.SlaveGetMongodStatusError,
 				Description:     fmt.Sprintf("Getting Replica Set status information from Mongod instance on port `%d` failed", ctx.Port),
-				LongDescription: fmt.Sprintf("field `state` does not exist in non-error response: %#v", status),
+				LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") result was %#v", status),
 			}
-		}
-	} else {
-		// an error must have occurred
-		err = &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting Replica Set status information from Mongod instance on port `%d` failed", ctx.Port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetStatus\") result was %#v", status),
+		} else {
+			//myState field does not exist
+			err = &msp.Error{
+				Identifier:      msp.SlaveGetMongodStatusError,
+				Description:     fmt.Sprintf("Getting Replica Set status information from Mongod instance on port `%d` failed", ctx.Port),
+				LongDescription: fmt.Sprintf("`myState` field does not exist in mgo/Session.Run(\"replSetGetStatus\") result: %#v", status),
+			}
 		}
 	}
 
