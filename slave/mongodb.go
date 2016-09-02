@@ -142,6 +142,30 @@ func (ctx *mgoContext) ReplSetStepDown(stepDownSec int64) *msp.Error {
 	return nil
 }
 
+func (ctx *mgoContext) ReplSetInitiate(config bson.M, force bool) (alreadyInitialized bool, mspErr *msp.Error) {
+
+	var result interface{}
+	cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
+
+	err := ctx.Session.Run(cmd, &result)
+
+	if err != nil {
+		queryErr, valid := err.(*mgo.QueryError)
+		switch {
+		case valid && queryErr.Code == 23: // Replica Set is already initalized
+			return true, nil
+		default:
+			return false, &msp.Error{
+				Identifier:      msp.SlaveReplicaSetInitError,
+				Description:     fmt.Sprintf("Replica Set could not be initiated on Mongod on port `%d`", ctx.Port),
+				LongDescription: fmt.Sprintf("Command `replSetInitiate` failed:\nConfig: %#v\nError: %#v", config, err),
+			}
+		}
+	}
+	return false, nil
+
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)

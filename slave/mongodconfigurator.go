@@ -3,7 +3,6 @@ package slave
 import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	"strings"
@@ -353,22 +352,11 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 
 	log.Debugf("CONFIG %#v", config)
 
-	{
-		var result interface{}
-		cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
-		err := ctx.Session.Run(cmd, &result)
-		if err != nil {
-			queryErr, valid := err.(*mgo.QueryError)
-			switch {
-			case valid && queryErr.Code == 23: // Replica Set is already initalized
-			default:
-				return &msp.Error{
-					Identifier:      msp.SlaveReplicaSetInitError,
-					Description:     fmt.Sprintf("Replica Set `%s` could not be initiated on instance on port `%d`", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-					LongDescription: fmt.Sprintf("Command replSetInitiate failed with %#v", err),
-				}
-			}
-		}
+	alreadyInitialized, err := ctx.ReplSetInitiate(config, true)
+	if err != nil {
+		return err
+	} else if alreadyInitialized {
+		return nil
 	}
 
 	// Create root user on admin database
