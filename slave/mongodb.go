@@ -78,6 +78,20 @@ func (ctx *mgoContext) ReplSetGetConfig() (bson.M, *msp.Error) {
 
 }
 
+func (ctx *mgoContext) ReplSetReconfig(config bson.M) *msp.Error {
+	cmd := bson.D{{"replSetReconfig", config}}
+	var result bson.M
+	reconfigErr := ctx.Session.Run(cmd, &result)
+	if reconfigErr != nil {
+		return &msp.Error{
+			Identifier:      msp.SlaveReplicaSetConfigError,
+			Description:     fmt.Sprintf("Could not reconfigure Replica Set"),
+			LongDescription: fmt.Sprintf("replSetReconfig on Mongod instance on port `%d` failed. Config: %#v Error: %#v", cmd, reconfigErr),
+		}
+	}
+	return nil
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)

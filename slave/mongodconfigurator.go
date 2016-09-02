@@ -283,16 +283,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			log.Debugf("`replSetReconfig` ReplicaSet `%s` from its PRIMARY Mongod on port `%d`: %#v",
 				m.ReplicaSetConfig.ReplicaSetName, m.Port, config)
 
-			var result interface{}
-			cmd := bson.D{{"replSetReconfig", config}}
-			reconfigErr := ctx.Session.Run(cmd, &result)
-			if reconfigErr != nil {
-				return &msp.Error{
-					Identifier:      msp.SlaveReplicaSetConfigError,
-					Description:     fmt.Sprintf("Replica Set %s could not be reconfigured with ReplicaSetMembers on instance on port %d", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-					LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, reconfigErr),
-				}
-			}
+			ctx.ReplSetReconfig(config)
+
 		}
 
 		return nil
