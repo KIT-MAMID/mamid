@@ -205,6 +205,10 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 
 	var shardingRole msp.ShardingRole
 	shardingRole, err = ProjectModelShardingRoleToMSPShardingRole(r.ShardingRole)
+	if err != nil {
+		return config, err
+	}
+
 
 	config = msp.ReplicaSetConfig{
 		ReplicaSetName:    r.Name,
@@ -214,6 +218,9 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 	}
 
 	config.ReplicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)
+	if err != nil {
+		return config, err
+	}
 
 	return
 }
