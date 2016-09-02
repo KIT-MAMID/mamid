@@ -42,7 +42,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	mongods := make([]msp.Mongod, 0, len(replSetNameByPortNumber))
 	mongodChannel := make(chan msp.Mongod, len(replSetNameByPortNumber))
 	for port, replSetName := range replSetNameByPortNumber {
-		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber) {
+		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber, replSetName string) {
 			if _, valid := c.procManager.runningProcesses[port]; valid {
 				mongod, err := c.configurator.MongodConfiguration(port)
 				if err != nil {
@@ -67,7 +67,7 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 					State: msp.MongodStateNotRunning,
 				}
 			}
-		}(mongodChannel, port)
+		}(mongodChannel, port, replSetName)
 	}
 
 	if len(mongods) != len(replSetNameByPortNumber) {
