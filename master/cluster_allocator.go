@@ -1,6 +1,8 @@
 package master
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
@@ -49,6 +51,75 @@ func (c *ClusterAllocator) Run(db *DB) {
 			}
 		}
 	}()
+}
+
+const MamidManagementUsername = "mamid"
+
+func (c *ClusterAllocator) InitializeGlobalSecrets(tx *gorm.DB) (err error) {
+
+	var keyfile MongodKeyfile
+	res := tx.First(&keyfile)
+	switch { // Assume there is at most one
+	case res.Error != nil && !res.RecordNotFound():
+		return res.Error
+	case res.Error == nil:
+		// Do nothing, assume already created
+	case res.Error != nil && res.RecordNotFound():
+		// Create keyfile.
+		// MongoDB documentation indicates contents of the keyfile must be base64 with max 1024 characters
+
+		content, err := randomBase64(1024)
+		if err != nil {
+			return fmt.Errorf("could not generate keyfile contents: %s", err)
+		}
+
+		keyfile = MongodKeyfile{
+			Content: content,
+		}
+
+		if err := tx.Create(&keyfile).Error; err != nil {
+			return fmt.Errorf("could not create keyfile contents: error inserting into database: %s", err)
+		}
+
+	}
+
+	var rootCredential MongodbCredential
+	res = tx.Table("mongodb_root_credentials").First(&rootCredential)
+	switch { // Assume there is at most one
+	case res.Error != nil && !res.RecordNotFound():
+		return res.Error
+	case res.Error == nil:
+		// Do nothing, assume already created
+	case res.Error != nil && res.RecordNotFound():
+		// Create root credential.
+
+		password, err := randomBase64(40)
+		if err != nil {
+			return fmt.Errorf("could not generate management user passphrase: %s", err)
+		}
+
+		rootCredential = MongodbCredential{
+			Username: MamidManagementUsername,
+			Password: password,
+		}
+
+		if err := tx.Table("mongodb_root_credentials").Create(&rootCredential).Error; err != nil {
+			return fmt.Errorf("could not create MongoDB root credential: %s", err)
+		}
+
+	}
+
+	return nil
+
+}
+
+func randomBase64(len int) (str string, err error) {
+	randBytes := make([]byte, len)
+	_, err = rand.Read(randBytes)
+	if err != nil {
+		return "", fmt.Errorf("error reading random bytes: %s", err)
+	}
+	return base64.StdEncoding.EncodeToString(randBytes)[:len], nil
 }
 
 func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {

@@ -1,8 +1,7 @@
 package slave
 
 import (
-	"bytes"
-	"encoding/base64"
+	"bufio"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
@@ -136,12 +135,7 @@ func (p *ProcessManager) UpdateKeyfile(m msp.Mongod) (err error) {
 
 	var keyFilePath = p.processKeyfilePath(m)
 
-	expectedContents, err := base64.StdEncoding.DecodeString(m.KeyfileContentsBase64)
-	if err != nil {
-		return err
-	}
-
-	equal, err := fileContentEqualToBytes(keyFilePath, expectedContents)
+	equal, err := fileContentEqualToBytes(keyFilePath, m.KeyfileContent)
 	switch {
 	case equal:
 		return nil
@@ -149,8 +143,18 @@ func (p *ProcessManager) UpdateKeyfile(m msp.Mongod) (err error) {
 		return err
 	}
 
-	err = ioutil.WriteFile(keyFilePath, expectedContents, KeyfilePermissions)
+	keyFile, err := os.OpenFile(keyFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, KeyfilePermissions)
 	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+
+	w := bufio.NewWriter(keyFile)
+	_, err = w.WriteString(m.KeyfileContent)
+	if err != nil {
+		return err
+	}
+	if err = w.Flush(); err != nil {
 		return err
 	}
 
@@ -158,7 +162,7 @@ func (p *ProcessManager) UpdateKeyfile(m msp.Mongod) (err error) {
 
 }
 
-func fileContentEqualToBytes(path string, content []byte) (equal bool, err error) {
+func fileContentEqualToBytes(path string, content string) (equal bool, err error) {
 
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -169,6 +173,8 @@ func fileContentEqualToBytes(path string, content []byte) (equal bool, err error
 		}
 	}
 
-	return bytes.Equal(fileContent, content), nil
+	fileContentStr := string(fileContent)
+
+	return content == fileContentStr, nil
 
 }

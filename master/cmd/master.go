@@ -94,6 +94,14 @@ func main() {
 	clusterAllocator := &master.ClusterAllocator{
 		BusWriteChannel: &clusterAllocatorBusWriteChannel,
 	}
+
+	tx := db.Begin()
+	if err := clusterAllocator.InitializeGlobalSecrets(tx); err != nil {
+		tx.Rollback()
+		masterLog.Fatalf("Error initializing global secrets: %s", err)
+	}
+	tx.Commit()
+
 	go clusterAllocator.Run(db)
 
 	mainRouter := mux.NewRouter().StrictSlash(true)

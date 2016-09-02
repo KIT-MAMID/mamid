@@ -200,6 +200,17 @@ type MamidMetadata struct {
 	Key, Value string
 }
 
+type MongodKeyfile struct {
+	ID      int64 `gorm:"primary_key"`
+	Content string
+}
+
+type MongodbCredential struct {
+	ID       int64 `gorm:"primary_key"`
+	Username string
+	Password string
+}
+
 type DB struct {
 	Driver  string
 	gormDB  *gorm.DB

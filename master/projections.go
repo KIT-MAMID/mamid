@@ -52,3 +52,10 @@ func mspMongodStateFromExecutionState(s model.MongodExecutionState) (msp.MongodS
 		return "", fmt.Errorf("deployer: unable to map `%v` from model.ExecutionState to msp.MongodState", s)
 	}
 }
+
+func ProjectModelMongodbCredentialToMSPMongodCredential(m model.MongodbCredential) msp.MongodCredential {
+	return msp.MongodCredential{
+		Username: m.Username,
+		Password: m.Password,
+	}
+}

@@ -49,7 +49,7 @@ type ReplicaSetMember struct {
 
 type Mongod struct {
 	Port                    PortNumber
-	KeyfileContentsBase64   string
+	KeyfileContent          string
 	ReplicaSetConfig        ReplicaSetConfig
 	StatusError             *Error
 	LastEstablishStateError *Error

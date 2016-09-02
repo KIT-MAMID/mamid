@@ -1,7 +1,6 @@
 package master
 
 import (
-	"encoding/base64"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
@@ -179,6 +178,17 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 		return
 	}
 
+	var managementCredential msp.MongodCredential
+
+	if managementCredential, err = d.managementMongodCredential(tx); err != nil {
+		return
+	}
+
+	var keyfileContents string
+	if keyfileContents, err = d.keyfileContents(tx); err != nil {
+		return
+	}
+
 	// Construct msp representation
 	hostPort = msp.HostPort{
 		Hostname: slave.Hostname,
@@ -190,10 +200,10 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 			ReplicaSetName:    mongod.ReplSetName,
 			ReplicaSetMembers: replicaSetMembers,
 			ShardingRole:      shardingRole,
-			RootCredential:    msp.MongodCredential{"mamid", "mamid"},
+			RootCredential:    managementCredential,
 		},
-		KeyfileContentsBase64: base64.StdEncoding.EncodeToString([]byte("mysecretmongodbkey")),
-		State: mspMongodState,
+		KeyfileContent: keyfileContents,
+		State:          mspMongodState,
 	}
 
 	return
@@ -209,12 +219,17 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 		return config, err
 	}
 
+	var managementCredential msp.MongodCredential
+	managementCredential, err = d.managementMongodCredential(tx)
+	if err != nil {
+		return config, err
+	}
 
 	config = msp.ReplicaSetConfig{
 		ReplicaSetName:    r.Name,
 		ReplicaSetMembers: make([]msp.ReplicaSetMember, 0, 0),
 		ShardingRole:      shardingRole,
-		RootCredential:    msp.MongodCredential{"mamid", "mamid"},
+		RootCredential:    managementCredential,
 	}
 
 	config.ReplicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)
@@ -223,4 +238,30 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 	}
 
 	return
+}
+
+func (d *Deployer) managementMongodCredential(tx *gorm.DB) (credential msp.MongodCredential, err error) {
+
+	var rootCredential MongodbCredential
+	res := tx.Table("mongodb_root_credentials").First(&rootCredential)
+	switch { // Assume there is at most one
+	case res.Error != nil && !res.RecordNotFound():
+		return credential, res.Error
+	case res.Error == nil:
+		// Do nothing, assume already created
+		return ProjectModelMongodbCredentialToMSPMongodCredential(rootCredential), nil
+	}
+
+	return
+
+}
+
+func (d *Deployer) keyfileContents(tx *gorm.DB) (keyfileContents string, err error) {
+	var keyfile MongodKeyfile
+	res := tx.First(&keyfile)
+	if res.Error != nil {
+		return "", res.Error
+	} else {
+		return keyfile.Content, nil
+	}
 }

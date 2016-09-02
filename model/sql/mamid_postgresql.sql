@@ -133,4 +133,17 @@ CREATE TABLE "mamid_metadata" (
 	"value" TEXT
 );
 
+-- Mongod "keyfiles" for "Internal Authentication" between Mongods in a Replica Set
+CREATE TABLE "mongod_keyfiles" (
+	"id" BIGSERIAL PRIMARY KEY,
+	"content" TEXT NOT NULL
+);
+
+-- MongoDB credentials with "root" role used by MAMID to configure the cluster
+CREATE TABLE "mongodb_root_credentials" (
+	"id" BIGSERIAL PRIMARY KEY,
+	"username" VARCHAR(255) NOT NULL,
+	"password" VARCHAR(255) NOT NULL
+);
+
 COMMIT;
