@@ -193,9 +193,63 @@ mamidApp.factory('RiskGroupService', function ($resource) {
 mamidApp.controller('mainController', function ($scope, $location, $timeout, filterFilter, SlaveService, ProblemService) {
     $scope.problemsBySlave = {};
     $scope.problemsByReplicaSet = {};
-    $scope.slaves = SlaveService.query(function (slaves) {
-        $scope.genChart();
-    });
+    chart = null;
+    $scope.getStateCount = function (state) {
+        var s = [];
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            if (!$scope.problemsBySlave[$scope.slaves[i].id + ""]) {
+                s.push($scope.slaves[i]);
+            }
+        }
+        return filterFilter(s, {configured_state: state}).length;
+    };
+
+    $scope.getProblemCount = function () {
+        var count = 0;
+        for (var i = 0; i < $scope.slaves.length; i++) {
+            if ($scope.slaves[i].id + "" in $scope.problemsBySlave && $scope.problemsBySlave[$scope.slaves[i].id + ""].length > 0) {
+                count++;
+            }
+        }
+        return count;
+    };
+    var genChart = function () {
+        if (chart != null) {
+            var probs = $scope.getProblemCount();
+            (function(probs)
+            {chart.load({
+                columns: [
+                    ['Active', $scope.getStateCount('active')],
+                    ['Maintenance', $scope.getStateCount('maintenance')],
+                    ['Disabled', $scope.getStateCount('disabled')],
+                    ['Problematic', probs]
+                ]
+            })})(probs);
+            return;
+        }
+        chart = c3.generate({
+            bindto: '#slaves',
+            data: {
+                columns: [
+                    ['Active', $scope.getStateCount('active')],
+                    ['Maintenance', $scope.getStateCount('maintenance')],
+                    ['Disabled', $scope.getStateCount('disabled')],
+                    ['Problematic', $scope.getProblemCount()]
+                ],
+                type: 'donut',
+            },
+            donut: {
+                title: "Slave states"
+            }
+            ,
+            color: {
+                pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+            }
+            ,
+        })
+        ;
+    };
+    $scope.slaves = SlaveService.query();
     $scope.codeReplace = function (string) {
         return string.replace(
             /`(\w*)`/gi,
@@ -219,67 +273,22 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
                             $scope.problemsByReplicaSet[$scope.problems[i].replica_set_id + ""].push($scope.problems[i]);
                         }
                         if ($scope.problems[i].slave_id != null) {
-                            if (!($scope.problems[i].slave_id + "" in $scope.problemsBySlave)) {
+                            if (!($scope.problems[i].slave_id in $scope.problemsBySlave)) {
                                 $scope.problemsBySlave[$scope.problems[i].slave_id + ""] = [];
                             }
                             $scope.problemsBySlave[$scope.problems[i].slave_id + ""].push($scope.problems[i]);
                         }
                     }
-                    $scope.slaves.$promise.then(function () {
-                        if ($location.path() == "/") {
-                            $scope.genChart();
-                        }
-                    });
                     $timeout(tick, 1000 * 5);
                 }
             );
         })();
     }
     $scope.$location = $location;
+    $scope.$watch('problemsBySlave', function () {
+        genChart();
+    });
 
-    $scope.genChart = function () {
-        c3.generate({
-            bindto: '#slaves',
-            data: {
-                columns: [
-                    ['Active', $scope.getStateCount('active')],
-                    ['Maintenance', $scope.getStateCount('maintenance')],
-                    ['Disabled', $scope.getStateCount('disabled')],
-                    ['Problematic', $scope.getProblemCount()]
-                ],
-                type: 'donut',
-            },
-            donut: {
-                title: "Slave states"
-            }
-            ,
-            color: {
-                pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
-            }
-            ,
-        })
-        ;
-    };
-    $scope.getStateCount = function (state) {
-        var s = []
-        for (var i = 0; i < $scope.slaves.length; i++) {
-            if (!$scope.problemsBySlave[$scope.slaves[i].id + ""]) {
-                s.push($scope.slaves[i]);
-            }
-        }
-        return filterFilter(s, {configured_state: state}).length;
-    };
-
-    $scope.getProblemCount = function () {
-        var count = 0;
-        for (var i = 0; i < $scope.slaves.length; i++) {
-            if ($scope.slaves[i].id + "" in $scope.problemsBySlave && $scope.problemsBySlave[$scope.slaves[i].id + ""].length > 0) {
-                count++;
-            }
-        }
-        return count;
-    }
-    $scope.genChart();
 });
 
 mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
