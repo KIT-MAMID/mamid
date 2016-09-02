@@ -360,24 +360,14 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 	}
 
 	// Create root user on admin database
-	{
-		adminDB := ctx.Session.DB(mongodbAdminDatabase)
-		var result interface{}
-		cmd := bson.M{
-			"createUser": m.ReplicaSetConfig.RootCredential.Username,
-			"pwd":        m.ReplicaSetConfig.RootCredential.Password,
-			"roles":      []string{"root"},
-		}
-		err := adminDB.Run(cmd, &result)
-		if err != nil {
-			return &msp.Error{
-				Identifier:      msp.SlaveReplicaSetCreateRootUserError,
-				Description:     fmt.Sprintf("Could not create MAMID management user on Replica Set `%s`", m.ReplicaSetConfig.ReplicaSetName),
-				LongDescription: fmt.Sprintf("Command createUser on instance on port `%d` failed: %#v", m.Port, err),
-			}
-		}
-	}
+	// TODO make this idempotent
+	err = ctx.CreateUser(
+		m.ReplicaSetConfig.RootCredential.Username,
+		m.ReplicaSetConfig.RootCredential.Password,
+		"MAMID administrative user",
+		[]string{"root"},
+	)
 
-	return nil
+	return err
 
 }

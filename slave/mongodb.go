@@ -142,6 +142,26 @@ func (ctx *mgoContext) ReplSetStepDown(stepDownSec int64) *msp.Error {
 	return nil
 }
 
+// Create a user on the ctx's database with predefined roles
+// See https://docs.mongodb.com/manual/core/security-built-in-roles/
+func (ctx *mgoContext) CreateUser(user, password, purpose string, roles []string) *msp.Error {
+	var result interface{}
+	cmd := bson.M{
+		"createUser": user,
+		"pwd":        password,
+		"roles":      roles,
+	}
+	err := ctx.Session.Run(cmd, &result)
+	if err != nil {
+		return &msp.Error{
+			Identifier:      msp.SlaveReplicaSetCreateRootUserError,
+			Description:     fmt.Sprintf("Could not create %s `%s`", purpose, user),
+			LongDescription: fmt.Sprintf("Command `createUser` on port `%d` failed: %#v", ctx.Port, err),
+		}
+	}
+	return nil
+}
+
 func (ctx *mgoContext) ReplSetInitiate(config bson.M, force bool) (alreadyInitialized bool, mspErr *msp.Error) {
 
 	var result interface{}
