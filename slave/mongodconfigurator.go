@@ -138,7 +138,7 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(sess *mgo.Session, port 
 			remotePort, _ := strconv.Atoi(pair[1])
 			priority := member.(bson.M)["priority"].(float64)
 			members[k] = msp.ReplicaSetMember{
-				HostPort: msp.HostPort{pair[0], msp.PortNumber(remotePort)},
+				HostPort: msp.HostPort{Hostname: pair[0], Port: msp.PortNumber(remotePort)},
 				Priority: priority,
 			}
 		}
