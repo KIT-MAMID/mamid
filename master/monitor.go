@@ -329,19 +329,22 @@ outer:
 				continue outer
 			}
 		}
-
+		// We didn't find the expected modelMongod on the slave
+		// => delete observation
+		monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
 		if modelMongod.ObservedStateID.Valid {
-
-			// We didn't find the expected modelMongod on the slave
-			// => delete the observed state to indicate this to other components
-
-			monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
 			deleteErr := tx.Delete(&model.MongodState{ID: modelMongod.ObservedStateID.Int64}).Error
 			if deleteErr != nil {
 				monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
 				return deleteErr
 			}
-
+		}
+		if modelMongod.ObservationErrorID.Valid {
+			deleteErr := tx.Model(&modelMongod).Update("ObservationErrorID", sql.NullInt64{Valid: false}).Error
+			if deleteErr != nil {
+				monitorLog.Errorf("error removing observation error of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
+				return deleteErr
+			}
 		}
 	}
 
