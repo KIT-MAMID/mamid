@@ -276,7 +276,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 			//Put observations into model
 			dbMongod.ObservedState.ParentMongodID = dbMongod.ID // we could be creating the ObservedState of Mongod on first observation
 			if err := m.updateObservedState(tx, observedMongod, &dbMongod.ObservedState); err != nil {
-				return modelToObservedMap, fmt.Errorf("error updating observed state of Mongod `%s`", mongodTuple(slave, observedMongod))
+				return modelToObservedMap, fmt.Errorf("error updating observed state of Mongod `%s`: %s", mongodTuple(slave, observedMongod), err)
 			}
 			dbMongod.ObservationError = model.MSPError{}
 		} else {
