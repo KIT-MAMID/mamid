@@ -112,27 +112,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 		shardingRole = msp.ShardingRoleConfigServer
 	} else {
 		// Fall back to parsing command line options
-		cmdLineOptsRes := bson.M{}
-		if err := ctx.Session.Run("getCmdLineOpts", &cmdLineOptsRes); err != nil {
-			log.Debugf("getCmdLineOpts result %#v, err %#v", status, err)
-			return msp.Mongod{}, &msp.Error{
-				Identifier:      msp.SlaveGetMongodStatusError,
-				Description:     fmt.Sprintf("Getting command line options from Mongod instance on port `%d` failed", ctx.Port),
-				LongDescription: fmt.Sprintf("getCmdLineOpts result was: %#v", status),
-			}, replSetUnknown
+		cmdLineShardingRole, err := ctx.ParseCmdLineShardingRole()
+		if err != nil {
+			return msp.Mongod{}, err, replSetUnknown
 		}
 
-		var cmdLineShardingRole string
-		{
-			parsed := cmdLineOptsRes["parsed"].(bson.M)
-			sharding, ok := parsed["sharding"]
-			if ok {
-				clusterRole, ok := sharding.(bson.M)["clusterRole"]
-				if ok {
-					cmdLineShardingRole = clusterRole.(string)
-				}
-			}
-		}
 		switch cmdLineShardingRole {
 		case "shardsvr":
 			shardingRole = msp.ShardingRoleShardServer

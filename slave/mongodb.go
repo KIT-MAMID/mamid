@@ -92,6 +92,30 @@ func (ctx *mgoContext) ReplSetReconfig(config bson.M) *msp.Error {
 	return nil
 }
 
+// Parse sharding command line options
+// return an empty string and err = nil if option not specified but no other error occurred
+func (ctx *mgoContext) ParseCmdLineShardingRole() (role string, err *msp.Error) {
+
+	cmdLineOptsRes := bson.M{}
+	if err := ctx.Session.Run("getCmdLineOpts", &cmdLineOptsRes); err != nil {
+		return "", &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Getting command line options from Mongod instance on port `%d` failed", ctx.Port),
+			LongDescription: fmt.Sprintf("getCmdLineOpts failed with error: %#v", err),
+		}
+	}
+
+	parsed := cmdLineOptsRes["parsed"].(bson.M)
+	sharding, ok := parsed["sharding"]
+	if ok {
+		clusterRole, ok := sharding.(bson.M)["clusterRole"]
+		if ok {
+			role = clusterRole.(string)
+		}
+	}
+	return
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)
