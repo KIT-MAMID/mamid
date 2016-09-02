@@ -18,8 +18,8 @@ func (ctx *mgoContext) Close() {
 	ctx.Session.Close()
 }
 
-func (ctx *mgoContext) IsMaster(isMasterRes interface{}) *msp.Error {
-	if err := ctx.Session.Run("isMaster", &isMasterRes); err != nil {
+func (ctx *mgoContext) IsMaster(isMasterRes *bson.M) *msp.Error {
+	if err := ctx.Session.Run("isMaster", isMasterRes); err != nil {
 		return &msp.Error{
 			Identifier:      msp.SlaveGetMongodStatusError,
 			Description:     fmt.Sprintf("Getting master information from mongod instance on port %d failed", ctx.Port),
