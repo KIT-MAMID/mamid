@@ -116,6 +116,19 @@ func (ctx *mgoContext) ParseCmdLineShardingRole() (role string, err *msp.Error) 
 	return
 }
 
+func (ctx *mgoContext) ShutdownWithTimeout(seconds int64) *msp.Error {
+	var result interface{}
+	err := ctx.Session.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", seconds}}, result)
+	if err != nil {
+		return &msp.Error{
+			Identifier:      msp.SlaveShutdownError,
+			Description:     fmt.Sprintf("Could not shutdown Mongod with timeout `%d` on port `%d` (mongodb returned error)", seconds, ctx.Port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with: %s", err),
+		}
+	}
+	return nil
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)

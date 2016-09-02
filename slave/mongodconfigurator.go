@@ -202,17 +202,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		if err != nil {
 			if replSetState == replSetRemoved {
 				//Mongod was removed by the primary so it can be shut down
-				var result interface{}
-				err := ctx.Session.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
-				if err != nil {
-					log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
-					return &msp.Error{
-						Identifier:      msp.SlaveShutdownError,
-						Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
-						LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
-					}
-				}
-				return nil
+				err = ctx.ShutdownWithTimeout(int64(c.MongodSoftShutdownTimeout.Seconds()))
 			}
 			return err
 		} else {
@@ -238,19 +228,11 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		}
 
 	} else if m.State == msp.MongodStateNotRunning {
+
 		//Temporary maintenance - just shut down without removing from replica set
 		log.Debugf("shutting down Mongod: %f", m)
-		var result interface{}
-		err := ctx.Session.Run(bson.D{{"shutdown", 1}, {"timeoutSecs", int64(c.MongodSoftShutdownTimeout.Seconds())}}, result)
-		if err != nil {
-			log.WithError(err).Errorf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port)
-			return &msp.Error{
-				Identifier:      msp.SlaveShutdownError,
-				Description:     fmt.Sprintf("could not soft shutdown mongod on port %d (mongodb returned error)", m.Port),
-				LongDescription: fmt.Sprintf("mgo/Session.Run(\"shutdown\") failed with\n%s", err.Error()),
-			}
-		}
-		return nil
+		return ctx.ShutdownWithTimeout(int64(c.MongodSoftShutdownTimeout.Seconds()))
+
 	} else if m.State == msp.MongodStateRunning {
 		if isMaster {
 
