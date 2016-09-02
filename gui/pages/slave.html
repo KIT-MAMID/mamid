@@ -4,7 +4,7 @@
 </h1>
 <h1 class="page-header" ng-if="is_create_view">New Slave</h1>
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problemsBySlave[slave.id]" ng-if="!is_create_view">
-    <h4>{{problem.description}}
+    <h4><span ng-bind-html="problem.description"></span>
         <small>Known since {{formatDate(problem.first_occurred)}}</small>
     </h4>
     <p>{{problem.long_description}}</p>

@@ -1,4 +1,4 @@
-var mamidApp = angular.module('mamidApp', ['ngRoute', 'ngResource']);
+var mamidApp = angular.module('mamidApp', ['ngRoute', 'ngResource', 'ngSanitize']);
 
 
 // http://www.codelord.net/2014/06/25/generic-error-handling-in-angularjs/
@@ -35,7 +35,7 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 h4.innerHTML = 'Houps! An error occurred.';
                 ediv.appendChild(h4);
                 var p = document.createElement('p');
-                if(rejection.data != null)
+                if (rejection.data != null)
                     p.innerHTML = rejection.data;
                 else
                     p.innerHTML = "A fatal application error occurred (maybe connection to the server lost?).";
@@ -204,6 +204,10 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
                     $scope.problemsBySlave = {};
                     $scope.problemsByReplicaSet = {};
                     for (var i = 0; i < $scope.problems.length; i++) {
+                        $scope.problems[i].description = $scope.problems[i].description.replace(
+                            /`(\w*)`/gi,
+                            '<code>$1</code>'
+                        );
                         if ($scope.problems[i].replica_set_id != null) {
                             if (!($scope.problems[i].replica_set_id + "" in $scope.problemsByReplicaSet)) {
                                 $scope.problemsByReplicaSet[$scope.problems[i].replica_set_id + ""] = [];
@@ -348,7 +352,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 });
             });
             var finished = 0;
-            if(mongods.length == 0) {
+            if (mongods.length == 0) {
                 $scope.mongods = mongods;
             }
             for (var i = 0; i < mongods.length; i++) {
@@ -356,7 +360,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                     ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
                         mongods[i].replicaset = repli;
                         finished++;
-                        if(finished == mongods.length) {
+                        if (finished == mongods.length) {
                             $scope.mongods = mongods;
                         }
                     });

@@ -17,7 +17,7 @@
                 <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                 <code>{{ slave.hostname }}</code> - <b>Problems</b>
                 <ul>
-                    <li ng-repeat="p in problemsBySlave[slave.id]">{{p.description}}</li>
+                    <li ng-repeat="p in problemsBySlave[slave.id]" ng-bind-html="p.description"></li>
                 </ul>
 
             </a>

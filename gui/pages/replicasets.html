@@ -15,7 +15,7 @@
             <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
             <code>{{ replicaset.name }}</code> - <b>Problems</b>
             <ul>
-                <li ng-repeat="p in problemsByReplicaSet[replicaset.id]">{{p.description}}</li>
+                <li ng-repeat="p in problemsByReplicaSet[replicaset.id]" ng-bind-html="p.description"></li>
             </ul>
 
         </a>

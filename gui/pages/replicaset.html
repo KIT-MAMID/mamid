@@ -3,7 +3,7 @@
 
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problemsByReplicaSet[replicaset.id]"
      ng-if="!is_create_view">
-    <h4>{{problem.description}}
+    <h4><span ng-bind-html="problem.description"></span>
         <small>Known since {{formatDate(problem.first_occurred)}}</small>
     </h4>
     <p>{{problem.long_description}}</p>
