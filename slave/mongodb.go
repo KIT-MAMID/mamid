@@ -64,6 +64,20 @@ func (ctx *mgoContext) ReplSetGetStatus(status *bson.M) (replSetMemberState repl
 	return
 }
 
+func (ctx *mgoContext) ReplSetGetConfig() (bson.M, *msp.Error) {
+
+	configResult := bson.M{}
+	if err := ctx.Session.Run("replSetGetConfig", &configResult); err != nil {
+		return bson.M{}, &msp.Error{
+			Identifier:      msp.SlaveGetMongodStatusError,
+			Description:     fmt.Sprintf("Getting Replica Set config information from Mongod instance on port `%d` failed", ctx.Port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", configResult),
+		}
+	}
+	return configResult["config"].(bson.M), nil
+
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)

@@ -5,12 +5,9 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"time"
-	//"sort"
-	golog "log"
-	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -64,16 +61,10 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 		return msp.Mongod{}, err, replSetUnknown
 	}
 
-	configResult := bson.M{}
-	if err := ctx.Session.Run("replSetGetConfig", &configResult); err != nil {
-		log.Debugf("replSetGetConfig result %#v, err %#v", status, err)
-		return msp.Mongod{}, &msp.Error{
-			Identifier:      msp.SlaveGetMongodStatusError,
-			Description:     fmt.Sprintf("Getting Replica Set config information from Mongod instance on port `%d` failed", ctx.Port),
-			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") result was %#v", configResult),
-		}, replSetUnknown
+	config, err := ctx.ReplSetGetConfig()
+	if err != nil {
+		return msp.Mongod{}, err, replSetUnknown
 	}
-	config := configResult["config"].(bson.M)
 
 	mongod.ReplicaSetConfig.ReplicaSetName = status["set"].(string)
 
@@ -278,15 +269,11 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 		return nil
 	} else if m.State == msp.MongodStateRunning {
 		if isMaster {
-			var getConfigRes bson.M
-			if err := ctx.Session.Run("replSetGetConfig", &getConfigRes); err != nil {
-				return &msp.Error{
-					Identifier:      msp.SlaveGetMongodStatusError,
-					Description:     fmt.Sprintf("Getting replica set config from mongod instance on port %d failed", m.Port),
-					LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetGetConfig\") failed with\n%s", err.Error()),
-				}
+
+			config, err := ctx.ReplSetGetConfig()
+			if err != nil {
+				return err
 			}
-			var config bson.M = getConfigRes["config"].(bson.M)
 
 			config, updateErr := updateConfig(config, m)
 			if updateErr != nil {
@@ -298,12 +285,12 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 			var result interface{}
 			cmd := bson.D{{"replSetReconfig", config}}
-			err := ctx.Session.Run(cmd, &result)
-			if err != nil {
+			reconfigErr := ctx.Session.Run(cmd, &result)
+			if reconfigErr != nil {
 				return &msp.Error{
 					Identifier:      msp.SlaveReplicaSetConfigError,
 					Description:     fmt.Sprintf("Replica Set %s could not be reconfigured with ReplicaSetMembers on instance on port %d", m.ReplicaSetConfig.ReplicaSetName, m.Port),
-					LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, err.Error()),
+					LongDescription: fmt.Sprintf("Command %v failed with\n%s", cmd, reconfigErr),
 				}
 			}
 		}
