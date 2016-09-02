@@ -234,9 +234,14 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 				return modelToObservedMap, fmt.Errorf("monitor: could not create database representation for unknown observed Mongod `%s`: %s",
 					mongodTuple(slave, observedMongod), err)
 			}
+			shardingRole, err := ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
+			if err != nil {
+				shardingRole = model.ShardingRoleNone // We don't really care about the sharding role as we want do destroy the mongod anyway
+			}
 			desiredState := model.MongodState{
 				ParentMongodID: dbMongod.ID,
 				ExecutionState: model.MongodExecutionStateForceDestroyed,
+				ShardingRole:   shardingRole,
 			}
 			if err := tx.Create(&desiredState).Error; err != nil {
 				return modelToObservedMap, fmt.Errorf("monitor: could not create desired MongodState for unknown observed Mongod `%s`: %s",
