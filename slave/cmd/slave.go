@@ -38,9 +38,9 @@ func main() {
 		"Duration to wait after issuing a shutdown call before the Mongod is killed (SIGKILL). Specify with suffix [ms,s,min,...]")
 
 	flag.StringVar(&listenString, "listen", ":8081", "net.Listen() string, e.g. addr:port")
-	flag.StringVar(&x509CertFile, "serverCertFile", "", "The x509 cert file for the slave server")
-	flag.StringVar(&x509KeyFile, "serverKeyFile", "", "The x509 key file for x509 cert the slave server")
-	flag.StringVar(&caCert, "cacert", "", "The x509 ca that signed the certificates and to authenticate the master against")
+	flag.StringVar(&x509CertFile, "slave.auth.cert", "", "The x509 cert file for the slave server")
+	flag.StringVar(&x509KeyFile, "slave.auth.key", "", "The x509 key file for x509 cert the slave server")
+	flag.StringVar(&caCert, "master.verifyCA", "", "The x509 ca that signed the certificates and to authenticate the master against")
 	flag.Parse()
 
 	// Assert dataDir is valid. TODO should we do this lazyly?
@@ -49,10 +49,13 @@ func main() {
 		log.Fatal("No root data directory passed; specify with -data=/path/to/root/dir")
 	}
 	if x509CertFile == "" {
-		log.Fatal("No server cert file passed; specify with -serverCertFile=/path/to/cert")
+		log.Fatal("No server cert file passed; specify with -slave.auth.cert=/path/to/cert")
 	}
 	if x509KeyFile == "" {
-		log.Fatal("No server cert key file passed; specify with -serverKeyFile=/path/to/cert")
+		log.Fatal("No server cert key file passed; specify with -slave.auth.key=/path/to/cert")
+	}
+	if caCert == "" {
+		log.Fatal("No master verification ca passen; specify with -master.verifyCA=/path/to/cert")
 	}
 	if err := unix.Access(dataDir, unix.W_OK); err != nil {
 		log.Fatal(fmt.Sprintf("Root data directory %s does not exist or is not writable", dataDir))

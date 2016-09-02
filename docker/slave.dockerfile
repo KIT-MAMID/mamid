@@ -4,4 +4,4 @@ WORKDIR /mamid
 ADD build/slave_docker /mamid/slave
 RUN mkdir /slave
 
-CMD ["/mamid/slave", "-data=/slave", "-serverCertFile=/mamid/cert.pem", "-serverKeyFile=/mamid/key.pem", "-cacert=/mamid/ca.pem"]
+CMD ["/mamid/slave", "-data=/slave", "-slave.auth.cert=/mamid/cert.pem", "-slave.auth.key=/mamid/key.pem", "-master.verifyCA=/mamid/ca.pem"]
