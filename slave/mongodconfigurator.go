@@ -21,7 +21,7 @@ const (
 type replSetState int
 
 type MongodConfigurator interface {
-	MongodConfiguration(p msp.PortNumber) (msp.Mongod, *msp.Error)
+	MongodConfiguration(p msp.PortNumber, cred msp.MongodCredential) (msp.Mongod, *msp.Error)
 	ApplyMongodConfiguration(m msp.Mongod) *msp.Error
 	InitiateReplicaSet(m msp.RsInitiateMessage) *msp.Error
 }
@@ -123,11 +123,9 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 	return mongod, nil
 }
 
-func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber) (msp.Mongod, *msp.Error) {
+func (c *ConcreteMongodConfigurator) MongodConfiguration(port msp.PortNumber, cred msp.MongodCredential) (msp.Mongod, *msp.Error) {
 
-	// TODO get credential from store filled by EstablishState
-	// connect unauthenticated in case the replica set is not initialized
-	ctx, err := c.connect(port, "r1", msp.MongodCredential{"mamid", "mamid"})
+	ctx, err := c.connect(port, "", cred)
 	if err != nil {
 		return msp.Mongod{}, err
 	}

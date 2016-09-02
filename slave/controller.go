@@ -7,17 +7,19 @@ import (
 )
 
 type Controller struct {
-	procManager               *ProcessManager
-	configurator              MongodConfigurator
 	busyTable                 *busyTable
+	procManager               *ProcessManager                         // individual processes (identified by port numbers) protected by busyTable
+	configurator              MongodConfigurator                      // exclusive configuration of a Mongod (identified by port number) protected by busyTable
+	mongodCredentials         map[msp.PortNumber]msp.MongodCredential // protected by busyTable
 	mongodHardShutdownTimeout time.Duration
 }
 
 func NewController(processManager *ProcessManager, configurator MongodConfigurator, mongodHardShutdownTimeout time.Duration) *Controller {
 	return &Controller{
+		busyTable:                 NewBusyTable(),
 		procManager:               processManager,
 		configurator:              configurator,
-		busyTable:                 NewBusyTable(),
+		mongodCredentials:         make(map[msp.PortNumber]msp.MongodCredential),
 		mongodHardShutdownTimeout: mongodHardShutdownTimeout,
 	}
 }
@@ -39,7 +41,21 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 	for port, replSetName := range replSetNameByPortNumber {
 		go func(resultsChan chan<- msp.Mongod, port msp.PortNumber, replSetName string) {
 			if c.procManager.HasProcess(port) {
-				mongod, err := c.configurator.MongodConfiguration(port)
+
+				cred, hasCred := c.mongodCredentials[port]
+				if !hasCred {
+					resultsChan <- msp.Mongod{Port: port,
+						StatusError: &msp.Error{
+							Identifier:      msp.SlaveGetMongodStatusError,
+							Description:     "Consistency problem in Slave",
+							LongDescription: "MongodConfigurator cannot query MongodConfiguration without credentials",
+						},
+						State: msp.MongodStateNotRunning,
+					}
+					return
+				}
+
+				mongod, err := c.configurator.MongodConfiguration(port, cred)
 				if err != nil {
 					//Process is running but we cant get the state
 					log.Errorf("controller: error querying Mongod configuration: %s", err)
@@ -81,6 +97,8 @@ func (c *Controller) RequestStatus() ([]msp.Mongod, *msp.Error) {
 func (c *Controller) EstablishMongodState(m msp.Mongod) *msp.Error {
 
 	defer c.busyTable.AcquireLock(m.Port).Unlock()
+
+	c.mongodCredentials[m.Port] = m.ReplicaSetConfig.RootCredential
 
 	switch m.State {
 
