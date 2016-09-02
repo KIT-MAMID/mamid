@@ -111,7 +111,7 @@ func (c MSPClientImpl) InitiateReplicaSet(target HostPort, msg RsInitiateMessage
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/msp/rsInitiate", target.Hostname, target.Port), buffer)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%smsp/rsInitiate", constructBaseUrl(target)), buffer)
 	if err != nil {
 		mspLog.Errorf("msp: error creating request object for rsInitiate: %s", err)
 		panic(err)
