@@ -3,7 +3,6 @@ package slave
 import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"os/exec"
-	"time"
 )
 
 type ProcessManager struct {
@@ -42,13 +41,20 @@ func (p *ProcessManager) SpawnProcess(m msp.Mongod) (err error) {
 		return
 	}
 
-	cmd := exec.Command(p.command, p.buildMongodCommandLine(m)...)
+	args := p.buildMongodCommandLine(m)
+	log.Debugf("spwaning Mongod with arguments: %v", args)
+	cmd := exec.Command(p.command, args...)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
 	go func() {
-		cmd.Process.Wait()
+		processState, err := cmd.Process.Wait()
+		if err != nil {
+			log.Errorf("error waiting for process `%v`: %s", cmd, err)
+		} else if !processState.Success() {
+			log.Errorf("Mongod exited unsuccessfully: %v", processState)
+		}
 		p.killChan <- m.Port
 	}()
 
@@ -68,24 +74,6 @@ func (p *ProcessManager) RunningProcesses() []msp.PortNumber {
 func (p *ProcessManager) KillProcess(port msp.PortNumber) error {
 	if cmd, exists := p.runningProcesses[port]; exists {
 		return cmd.Process.Kill()
-	}
-	return nil
-}
-
-func (p *ProcessManager) KillAfterTimeout(port msp.PortNumber, timeout time.Duration) error {
-	if cmd, exists := p.runningProcesses[port]; exists {
-		done := make(chan struct{})
-		go func() {
-			cmd.Process.Wait()
-			close(done)
-		}()
-
-		select {
-		case <-done:
-			return nil
-		case <-time.After(timeout):
-			return cmd.Process.Kill()
-		}
 	}
 	return nil
 }
