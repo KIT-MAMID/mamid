@@ -12,6 +12,7 @@
 
 <div class="bs-callout bs-callout-{{ slave.configured_state }}" ng-if="!is_create_view && !problemsBySlave[slave.id]">
     <h4><span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+        <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
         {{ slave.hostname }} is in
         <b>{{ slave.configured_state }}</b>
         state.</h4>

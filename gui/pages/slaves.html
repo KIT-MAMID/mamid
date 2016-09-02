@@ -14,6 +14,7 @@
                ng-if="problemsBySlave[slave.id].length > 0">
 
                 <span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                 <code>{{ slave.hostname }}</code> - <b>Problems</b>
                 <ul>
                     <li ng-repeat="p in problemsBySlave[slave.id]">{{p.description}}</li>
@@ -32,6 +33,7 @@
                ng-if="slave.configured_state == 'maintenance' && !problemsBySlave[slave.id]">
                 <td>
                     <span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                     <code>{{ slave.hostname }}</code>
                 </td>
             </a>
@@ -47,6 +49,7 @@
                ng-if="slave.configured_state == 'disabled' && !problemsBySlave[slave.id]">
                 <td>
                     <span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                     <code>{{ slave.hostname }}</code>
                 </td>
             </a>
@@ -62,6 +65,7 @@
                ng-if="slave.configured_state == 'active' && !problemsBySlave[slave.id]">
                 <td>
                     <span class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                     <code>{{ slave.hostname }}</code>
                 </td>
             </a>

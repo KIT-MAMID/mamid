@@ -32,6 +32,7 @@
             <ul class="list-group">
                 <li ng-repeat="slave in unassigned_slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
                         class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                     <code>{{slave.hostname}}</code></a>
                     <span class="pull-right">Assign to
                             <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave)">
@@ -62,6 +63,7 @@
             <ul class="list-group">
                 <li ng-repeat="slave in riskgroup.slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
                         class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
                     <code>{{slave.hostname}}</code></a>
                     <span class="pull-right">Assign to
                         <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave, riskgroup)">
