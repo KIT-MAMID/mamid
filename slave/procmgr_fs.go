@@ -79,12 +79,12 @@ func (p *ProcessManager) parseProcessDirTree() (replSetNameByPortNumber map[msp.
 		if entry.IsDir() {
 			port, replSet, err := p.parseProcessRootDirentry(entry)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("error parsing process root directory entry: %s", err)
 			} else {
 				replSetNameByPortNumber[port] = replSet
 			}
 		} else {
-			log.Errorf("unexpected directory entry in `%s`: `%s` (not a directory)", entry.Name())
+			log.Errorf("unexpected directory entry in `%s` (not a directory)", entry.Name())
 			continue
 		}
 	}
