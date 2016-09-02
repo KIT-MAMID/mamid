@@ -17,7 +17,12 @@
         <b>{{ slave.configured_state }}</b>
         state.</h4>
 </div>
-
+<div class="progress" ng-if="!is_create_view">
+    <div class="progress-bar" ng-class="{ 'progress-bar-danger': !(!problemsBySlave[slave.id]) && problemsBySlave[slave.id].length > 0, 'progress-bar-success': (!problemsBySlave['slave.id']) && slave.configured_state == 'active' }"
+         style="width: {{100*mongods.length/(slave.mongod_port_range_end-slave.mongod_port_range_begin)}}%">
+        <span>{{mongods.length}} of {{(slave.mongod_port_range_end-slave.mongod_port_range_begin)}} possible Mongods deployed</span>
+    </div>
+</div>
 <div class="panel panel-default" ng-if="!is_create_view">
     <div class="panel-heading">
         <h3 class="panel-title">Deployed Mongods on Slave</h3>
