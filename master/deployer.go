@@ -72,6 +72,7 @@ func (d *Deployer) handleReplicaSetInitiationStatus(s ReplicaSetInitiationStatus
 
 	if mspErr != nil {
 		deployerLog.Errorf("error initializing Replica Set `%s` from `%s`: %s", s.ReplicaSet.Name, slave.Hostname, mspErr)
+		goto rollbackAndReturn
 	} else {
 
 		if err = tx.Model(&s.ReplicaSet).Update("Initiated", true).Error; err != nil {
@@ -119,6 +120,7 @@ func (d *Deployer) pushMongodState(mongod Mongod) {
 	deployerLog.Debugf("fetch Mongod state representation: `%d` on slave `%d`", mongod.ID, mongod.ParentSlaveID)
 	// Readonly tx
 	tx := d.DB.Begin()
+	defer tx.Rollback()
 
 	hostPort, mspMongod, err := d.mspMongodStateRepresentation(tx, mongod)
 	if err != nil {
