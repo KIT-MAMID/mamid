@@ -129,6 +129,19 @@ func (ctx *mgoContext) ShutdownWithTimeout(seconds int64) *msp.Error {
 	return nil
 }
 
+func (ctx *mgoContext) ReplSetStepDown(stepDownSec int64) *msp.Error {
+	var stepDownRes interface{}
+	stepDownErr := ctx.Session.Run(bson.D{{"replSetStepDown", stepDownSec}}, stepDownRes)
+	if stepDownErr != nil {
+		return &msp.Error{
+			Identifier:      msp.SlaveShutdownError,
+			Description:     fmt.Sprintf("could not step down Mongod on port `%d` (mongodb returned error)", ctx.Port),
+			LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetStepDown\") failed: %s", stepDownErr),
+		}
+	}
+	return nil
+}
+
 func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName string, credential msp.MongodCredential) (ctx *mgoContext, err *msp.Error) {
 
 	mgo.SetDebug(false)

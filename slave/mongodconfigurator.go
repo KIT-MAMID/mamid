@@ -209,17 +209,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			if isMaster {
 				//Cant remove ourselves so somebody else has to become master and remove us
 				log.Debugf("Letting Mongod on port `%d` step down to have it be removed by the new PRIMARY", m.Port)
-				var stepDownRes interface{}
-				stepDownErr := ctx.Session.Run(bson.D{{"replSetStepDown", 120}}, stepDownRes)
-				log.WithError(stepDownErr).Errorf("could not step down mongod on port %d (mongodb returned error)", m.Port)
-				if stepDownErr != nil {
-					return &msp.Error{
-						Identifier:      msp.SlaveShutdownError,
-						Description:     fmt.Sprintf("could not step down mongod on port %d (mongodb returned error)", m.Port),
-						LongDescription: fmt.Sprintf("mgo/Session.Run(\"replSetStepDown\") failed with\n%s", stepDownErr.Error()),
-					}
-				}
-				return nil
+				return ctx.ReplSetStepDown(120)
 			} else {
 				//Wait for this Mongod to be removed by the primary
 				log.Debugf("Waiting for Mongod on port `%d` to be removed by the PRIMARY")
