@@ -201,7 +201,7 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName
 		return nil, &msp.Error{
 			Identifier:      msp.SlaveConnectMongodError,
 			Description:     fmt.Sprintf("Establishing a connection to mongod instance on port %d failed", port),
-			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.connect() failed with: %s", err),
+			LongDescription: fmt.Sprintf("ConcreteMongodConfigurator.connect() failed with: %s", dialErr),
 		}
 	}
 
