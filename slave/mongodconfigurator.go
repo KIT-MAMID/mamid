@@ -172,7 +172,8 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 			[]string{"root"},
 		)
 		if err != nil {
-			// TODO
+			// TODO detect if already created?
+			log.Errorf("Error creating MAMID administrative user: %s", err)
 		}
 
 	}
