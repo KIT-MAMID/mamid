@@ -544,5 +544,22 @@ mamidApp.controller('replicasetByIdController',
     });
 
 mamidApp.controller('systemController', function ($scope, $http) {
+    var c = 0;
+    $scope.e = function () {
+        console.log("c");
+        if (c == 5) {
+            console.log("anim");
+            var l = $('.mamid-logo');
+            var co = $('.content');
+            co.attr("style", "overflow-x: hidden;");
+            l.animate({
+                "padding-left": "+=80vw",
+            }, 500, "swing", function () {
+                l.attr("style", "display: none;");
+                co.attr("style", "");
+            });
+        }
+        c++;
+    }
 
 });
