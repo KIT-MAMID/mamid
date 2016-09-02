@@ -1,6 +1,7 @@
 package master
 
 import (
+	"encoding/base64"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
@@ -191,6 +192,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 			ShardingRole:      shardingRole,
 			RootCredential:    msp.MongodCredential{"mamid", "mamid"},
 		},
+		KeyfileContentsBase64: base64.StdEncoding.EncodeToString([]byte("mysecretmongodbkey")),
 		State: mspMongodState,
 	}
 

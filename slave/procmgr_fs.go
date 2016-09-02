@@ -1,6 +1,8 @@
 package slave
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"golang.org/x/sys/unix"
@@ -12,6 +14,7 @@ import (
 )
 
 const skeletonDirPermissions = 0700
+const KeyfilePermissions = 0600
 
 // Create directories managed by ProcessManager
 // returns nil if already exists and permissions are suitable
@@ -126,4 +129,46 @@ func (p *ProcessManager) processConfDir(m msp.Mongod) string {
 
 func (p *ProcessManager) processKeyfilePath(m msp.Mongod) string {
 	return filepath.Join(p.processConfDir(m), "keyfile")
+}
+
+// Update or create the keyfile of a Mongod
+func (p *ProcessManager) UpdateKeyfile(m msp.Mongod) (err error) {
+
+	var keyFilePath = p.processKeyfilePath(m)
+
+	expectedContents, err := base64.StdEncoding.DecodeString(m.KeyfileContentsBase64)
+	if err != nil {
+		return err
+	}
+
+	equal, err := fileContentEqualToBytes(keyFilePath, expectedContents)
+	switch {
+	case equal:
+		return nil
+	case err != nil:
+		return err
+	}
+
+	err = ioutil.WriteFile(keyFilePath, expectedContents, KeyfilePermissions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func fileContentEqualToBytes(path string, content []byte) (equal bool, err error) {
+
+	fileContent, err := ioutil.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) { // nonexistent equivalent to unequal
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	return bytes.Equal(fileContent, content), nil
+
 }

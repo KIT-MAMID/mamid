@@ -35,9 +35,15 @@ func (p *ProcessManager) HasProcess(port msp.PortNumber) bool {
 	return exists
 }
 
+// Spawn a new Mongod process
+//   The Mongod's `--keyfile` is only updated when it is spawned
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) (err error) {
 
 	if err = p.createDirSkeleton(m); err != nil {
+		return
+	}
+
+	if err = p.UpdateKeyfile(m); err != nil {
 		return
 	}
 
