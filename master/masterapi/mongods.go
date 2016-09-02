@@ -5,15 +5,24 @@ import (
 	"fmt"
 	"github.com/KIT-MAMID/mamid/model"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 	"net/http"
 	"strconv"
 )
 
 type Mongod struct {
-	ID            int64 `json:"id"`
-	Port          uint  `json:"slave_port"`
-	ReplicaSetID  int64 `json:"replica_set_id"`
-	ParentSlaveID int64 `json:"parent_slave_id"`
+	ID                     int64  `json:"id"`
+	Port                   uint   `json:"slave_port"`
+	ReplicaSetID           int64  `json:"replica_set_id"`
+	ParentSlaveID          int64  `json:"parent_slave_id"`
+	ObservedExecutionState string `json:"observed_execution_state"`
+}
+
+func mongodToApiMongod(tx *gorm.DB, m *model.Mongod) (*Mongod, error) {
+	if res := tx.Model(&m).Related(&m.ObservedState, "ObservedState"); res.Error != nil && !res.RecordNotFound() {
+		return &Mongod{}, res.Error
+	}
+	return ProjectModelMongodToMongod(m), nil
 }
 
 func (m *MasterAPI) MongodsBySlave(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +55,14 @@ func (m *MasterAPI) MongodsBySlave(w http.ResponseWriter, r *http.Request) {
 
 	out := make([]*Mongod, len(slave.Mongods))
 	for i, v := range slave.Mongods {
-		out[i] = ProjectModelMongodToMongod(v)
+		mongod, err := mongodToApiMongod(tx, v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
+			return
+		} else {
+			out[i] = mongod
+		}
 	}
 	json.NewEncoder(w).Encode(out)
 }
@@ -81,7 +97,14 @@ func (m *MasterAPI) MongodsByReplicaSet(w http.ResponseWriter, r *http.Request) 
 
 	out := make([]*Mongod, len(replicaSet.Mongods))
 	for i, v := range replicaSet.Mongods {
-		out[i] = ProjectModelMongodToMongod(v)
+		mongod, err := mongodToApiMongod(tx, v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
+			return
+		} else {
+			out[i] = mongod
+		}
 	}
 	json.NewEncoder(w).Encode(out)
 }

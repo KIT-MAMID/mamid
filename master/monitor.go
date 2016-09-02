@@ -302,7 +302,7 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 // Update the ObservedState of a Mongod, including ReplicaSetMembers
 func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, observedState *model.MongodState) (err error) {
 
-	observedState.ExecutionState = mspMongodStateToModelExecutionState(observedMongod.State)
+	observedState.ExecutionState = MspMongodStateToModelExecutionState(observedMongod.State)
 	observedState.ShardingRole, err = ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
 
 	return err
@@ -454,7 +454,7 @@ func ReplicaSetMembersEquivalent(a, b msp.ReplicaSetMember) bool {
 	return a.HostPort == b.HostPort && a.Priority == b.Priority
 }
 
-func mspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutionState {
+func MspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutionState {
 	switch e {
 	case msp.MongodStateDestroyed:
 		return model.MongodExecutionStateDestroyed
@@ -468,6 +468,24 @@ func mspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutio
 		return model.MongodExecutionStateForceDestroyed
 	default:
 		return 0 // Invalid
+		//TODO New states
+	}
+}
+
+func ModelExecutionStateToMspMongodState(e model.MongodExecutionState) msp.MongodState {
+	switch e {
+	case model.MongodExecutionStateDestroyed:
+		return msp.MongodStateDestroyed
+	case model.MongodExecutionStateNotRunning:
+		return msp.MongodStateNotRunning
+	case model.MongodExecutionStateRecovering:
+		return msp.MongodStateRecovering
+	case model.MongodExecutionStateRunning:
+		return msp.MongodStateRunning
+	case model.MongodExecutionStateForceDestroyed:
+		return msp.MongodStateForceDestroyed
+	default:
+		return "invalid" // Invalid
 		//TODO New states
 	}
 }
