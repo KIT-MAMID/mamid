@@ -153,10 +153,10 @@ func (ctx *mgoContext) ReplSetStepDown(stepDownSec int64) *msp.Error {
 // See https://docs.mongodb.com/manual/core/security-built-in-roles/
 func (ctx *mgoContext) CreateUser(user, password, purpose string, roles []string) *msp.Error {
 	var result interface{}
-	cmd := bson.M{
-		"createUser": user,
-		"pwd":        password,
-		"roles":      roles,
+	cmd := bson.D{
+		{"createUser", user},
+		{"pwd", password},
+		{"roles", roles},
 	}
 	err := ctx.Session.Run(cmd, &result)
 	log.Debugf("error creating user: %#v", err)
