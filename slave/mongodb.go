@@ -165,7 +165,7 @@ func (ctx *mgoContext) CreateUser(user, password, purpose string, roles []string
 func (ctx *mgoContext) ReplSetInitiate(config bson.M, force bool) (alreadyInitialized bool, mspErr *msp.Error) {
 
 	var result interface{}
-	cmd := bson.D{{"replSetInitiate", config}, {"force", true}}
+	cmd := bson.D{{"replSetInitiate", config}, {"force", force}}
 
 	err := ctx.Session.Run(cmd, &result)
 
