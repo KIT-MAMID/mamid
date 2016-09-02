@@ -196,6 +196,12 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
     $scope.slaves = SlaveService.query(function (slaves) {
         $scope.genChart();
     });
+    $scope.codeReplace = function (string) {
+        return string.replace(
+            /`(\w*)`/gi,
+            '<code>$1</code>'
+        );
+    };
     if (!problemPolling) {
         (function tick() {
             problemPolling = true;
@@ -204,10 +210,8 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
                     $scope.problemsBySlave = {};
                     $scope.problemsByReplicaSet = {};
                     for (var i = 0; i < $scope.problems.length; i++) {
-                        $scope.problems[i].description = $scope.problems[i].description.replace(
-                            /`(\w*)`/gi,
-                            '<code>$1</code>'
-                        );
+                        $scope.problems[i].description = $scope.codeReplace($scope.problems[i].description);
+                        $scope.problems[i].long_description = $scope.codeReplace($scope.problems[i].long_description);
                         if ($scope.problems[i].replica_set_id != null) {
                             if (!($scope.problems[i].replica_set_id + "" in $scope.problemsByReplicaSet)) {
                                 $scope.problemsByReplicaSet[$scope.problems[i].replica_set_id + ""] = [];

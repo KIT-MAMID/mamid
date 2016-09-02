@@ -6,7 +6,7 @@
     <h4><span ng-bind-html="problem.description"></span>
         <small>Known since {{formatDate(problem.first_occurred)}}</small>
     </h4>
-    <p>{{problem.long_description}}</p>
+    <p ng-bind-html="problem.long_description"></p>
 </div>
 
 <div class="bs-callout bs-callout-active" ng-if="!is_create_view && !problemsByReplicaSet[replicaset.id]">

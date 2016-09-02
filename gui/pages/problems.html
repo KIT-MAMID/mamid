@@ -5,7 +5,7 @@
 </div>
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems | orderBy:problem.first_occurred:true">
     <h4><span ng-bind-html="problem.description"></span><small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
-    <p>{{problem.long_description}}</p>
+    <p ng-bind-html="problem.long_description"></p>
     <ul>
         <li ng-if="problem.slave_id!=null"><a href="#/slaves/{{problem.slave_id}}">Inspect affected Slave</a></li>
         <li ng-if="problem.replica_set_id!=null"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected Replica Set</a></li>
