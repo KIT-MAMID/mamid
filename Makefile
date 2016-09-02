@@ -171,7 +171,7 @@ docker/testbed_images.depend: dockerbuild | \
 
 TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 
-testbed_up: testbed_down testbed_net docker/testbed_images.depend ca/mamid.pem ca/slaves/master $(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD)))
+testbed_up: testbed_down testbed_net ca/mamid.pem ca/slaves/master $(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD))) docker/testbed_images.depend
 
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.3" --name=mamid-postgres -e POSTGRES_PASSWORD=postgres -d postgres
 	sleep 5 ## prevent race, yes, this is ugly
@@ -210,6 +210,20 @@ testbed_slave: docker/testbed_images.depend ca/
 		$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" --name=slave$$i mamid/slave; \
 	done
 
+
+########################################################################################################################
+
+# Certificates
+
+$(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD))), ca/mamid.pem, ca/slaves/master:
+	@echo "==============================="
+	@echo "Certificates are missing"
+	@echo "Generate a CA and certificates for master and slaves"
+	@echo "run './scripts/generateCA.sh' to generate the CA"
+	@echo "run './scripts/generateAndSignSlaveCert.sh master' to create the master certificate"
+	@echo "run './scripts/generateAndSignSlaveCert.sh slave0<1,2,3> 10.101.202.10<1,2,3>' to create the slave certificates"
+	@echo "==============================="
+	@false
 
 ########################################################################################################################
 
