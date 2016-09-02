@@ -19,7 +19,7 @@
     <table class="table" width="100%">
         <tr ng-repeat="mongo in replicaset.mongods">
             <td ng-class="{ 'bs-callout-unknown': problemsBySlave[mongo.slave.id].length > 0 }">
-                <a href="/#/slaves/{{mongo.slave.id}}">Mongod on <code>{{ mongo.slave.hostname
+                <a href="/#/slaves/{{mongo.slave.id}}">Mongod (<b>{{mongo.observed_execution_state}}</b>) on <code>{{ mongo.slave.hostname
                     }}:{{mongo.slave_port}}</code></a> -
                 <b ng-if="!problemsBySlave[mongo.slave.id]"> Slave is in
                     {{ mongo.slave.configured_state }} mode.</b>
