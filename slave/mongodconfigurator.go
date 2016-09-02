@@ -171,6 +171,21 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 	}
 	defer ctx.Close()
 
+	if !ctx.LoginSuccessful {
+
+		// Create root user on admin database
+		err = ctx.CreateUser(
+			m.ReplicaSetConfig.RootCredential.Username,
+			m.ReplicaSetConfig.RootCredential.Password,
+			"MAMID administrative user",
+			[]string{"root"},
+		)
+		if err != nil {
+			// TODO
+		}
+
+	}
+
 	//current, err, state := c.fetchConfiguration(sess, m.Port) TODO What is this for?
 	//if err != nil {
 	//	return err
@@ -183,6 +198,7 @@ func (c *ConcreteMongodConfigurator) ApplyMongodConfiguration(m msp.Mongod) *msp
 
 	var isMasterRes bson.M
 	if err = ctx.IsMaster(&isMasterRes); err != nil {
+		log.Debugf("isMaster failed with error: %#v", err)
 		return err
 	}
 	isMaster := isMasterRes["ismaster"] == true
@@ -354,20 +370,13 @@ func (c *ConcreteMongodConfigurator) InitiateReplicaSet(m msp.RsInitiateMessage)
 
 	alreadyInitialized, err := ctx.ReplSetInitiate(config, true)
 	if err != nil {
+		log.Errorf("Error intializing replica set on port `%d`: %#v", m.Port, err)
 		return err
-	} else if alreadyInitialized {
-		return nil
 	}
 
-	// Create root user on admin database
-	// TODO make this idempotent
-	err = ctx.CreateUser(
-		m.ReplicaSetConfig.RootCredential.Username,
-		m.ReplicaSetConfig.RootCredential.Password,
-		"MAMID administrative user",
-		[]string{"root"},
-	)
+	if alreadyInitialized {
+		log.Infof("Replica Set on port `%d` already initialized", m.Port)
+	}
 
-	return err
-
+	return nil
 }

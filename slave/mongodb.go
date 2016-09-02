@@ -9,8 +9,9 @@ import (
 )
 
 type mgoContext struct {
-	Session *mgo.Session
-	Port    msp.PortNumber
+	Session         *mgo.Session
+	Port            msp.PortNumber
+	LoginSuccessful bool
 }
 
 func (ctx *mgoContext) Close() {
@@ -152,6 +153,7 @@ func (ctx *mgoContext) CreateUser(user, password, purpose string, roles []string
 		"roles":      roles,
 	}
 	err := ctx.Session.Run(cmd, &result)
+	log.Debugf("error creating user: %#v", err)
 	if err != nil {
 		return &msp.Error{
 			Identifier:      msp.SlaveReplicaSetCreateRootUserError,
@@ -216,8 +218,9 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName
 	}
 
 	ctx = &mgoContext{
-		Session: sess,
-		Port:    port,
+		Session:         sess,
+		Port:            port,
+		LoginSuccessful: loginError == nil,
 	}
 
 	return ctx, nil
