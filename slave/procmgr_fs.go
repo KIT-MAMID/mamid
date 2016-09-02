@@ -11,8 +11,7 @@ import (
 	"strings"
 )
 
-// TODO make all these constants defaults for CLI parameters.
-const DataDBDir = "db"
+const skeletonDirPermissions = 0700
 
 // Create directories managed by ProcessManager
 // returns nil if already exists and permissions are suitable
@@ -23,7 +22,7 @@ func (p *ProcessManager) CreateManagedDirs() (err error) {
 	}
 
 	if err = unix.Access(p.dataDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := os.Mkdir(p.dataDir, os.ModeDir|0700); err != nil {
+		if err := os.Mkdir(p.managedDirMongods(), os.ModeDir|0700); err != nil {
 			return err
 		}
 	}
@@ -32,12 +31,15 @@ func (p *ProcessManager) CreateManagedDirs() (err error) {
 
 }
 
+// directory for mongod process root dirs
+func (p *ProcessManager) managedDirMongods() string {
+	return filepath.Join(p.dataDir, "mongods")
+}
+
 // Create root directory for a process in a subdirectory of
 // a directory created by CreateManagedDirs()
 // returns nil if already exists and permissions are suitable
 func (p *ProcessManager) createDirSkeleton(m msp.Mongod) (err error) {
-
-	const skeletonDirPermissions = 0700
 
 	if err = os.MkdirAll(p.processRootDir(m), os.ModeDir|skeletonDirPermissions); err != nil {
 		goto wrapError
@@ -65,7 +67,7 @@ func (p *ProcessManager) destroyDataDirectory(m msp.Mongod) error {
 // Generate list of process root directories in process root directory tree
 func (p *ProcessManager) parseProcessDirTree() (replSetNameByPortNumber map[msp.PortNumber]string, err error) {
 
-	entries, err := ioutil.ReadDir(p.dataDir)
+	entries, err := ioutil.ReadDir(p.managedDirMongods())
 	if err != nil {
 		return
 	}
@@ -92,7 +94,7 @@ func (p *ProcessManager) parseProcessDirTree() (replSetNameByPortNumber map[msp.
 // Root directory of a process
 // process data should not be directly stored there
 func (p *ProcessManager) processRootDir(m msp.Mongod) string {
-	return filepath.Join(p.dataDir, DataDBDir, fmt.Sprintf("%d:%s", m.Port, m.ReplicaSetConfig.ReplicaSetName))
+	return filepath.Join(p.managedDirMongods(), fmt.Sprintf("%d:%s", m.Port, m.ReplicaSetConfig.ReplicaSetName))
 }
 
 // Given a direntry (no prefix!), extract the data encoded in the direntry
