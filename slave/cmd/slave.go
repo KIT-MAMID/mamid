@@ -14,6 +14,7 @@ var log = logrus.WithField("module", "slave")
 
 const MongodExecutableDefaultName = "mongod"
 
+var DefaultMongodResponseTimeout, _ = time.ParseDuration("3s")     // seconds
 var DefaultMongodSoftShutdownTimeout, _ = time.ParseDuration("3s") // seconds
 var DefaultMongodHardShutdownTimeout, _ = time.ParseDuration("5s") // seconds
 
@@ -22,14 +23,16 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	var (
-		mongodExecutable, dataDir, listenString, x509CertFile, x509KeyFile, caCert string
-		mongodSoftShutdownTimeout, mongodHardShutdownTimeout                       time.Duration
+		mongodExecutable, dataDir, listenString, x509CertFile, x509KeyFile, caCert  string
+		mongodResponseTimeout, mongodSoftShutdownTimeout, mongodHardShutdownTimeout time.Duration
 	)
 
 	flag.StringVar(&dataDir, "data", "", "Persistent data and slave configuration directory")
 	mongodExecutableLookupPath, _ := exec.LookPath(MongodExecutableDefaultName)
 	flag.StringVar(&mongodExecutable, "mongodExecutable", mongodExecutableLookupPath, "Path to or name of Mongod binary")
 
+	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.responseTimeout", DefaultMongodResponseTimeout,
+		"Timeout for responses from a Mongod after issuing a command. Specify with suffix [ms,s,min,...]")
 	flag.DurationVar(&mongodSoftShutdownTimeout, "mongod.shutdownTimeout.soft", DefaultMongodSoftShutdownTimeout,
 		"Duration to wait for regular Mongod shutdown call to return. Specify with suffix [ms,s,min,...]")
 	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.shutdownTimeout.hard", DefaultMongodHardShutdownTimeout,
@@ -66,6 +69,7 @@ func main() {
 
 	configurator := &ConcreteMongodConfigurator{
 		MongodSoftShutdownTimeout: mongodSoftShutdownTimeout,
+		MongodResponseTimeout:     mongodResponseTimeout,
 	}
 
 	controller := NewController(processManager, configurator, mongodHardShutdownTimeout)

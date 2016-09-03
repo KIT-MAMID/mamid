@@ -28,6 +28,7 @@ type MongodConfigurator interface {
 
 type ConcreteMongodConfigurator struct {
 	MongodSoftShutdownTimeout time.Duration
+	MongodResponseTimeout     time.Duration
 }
 
 const mongodbAdminDatabase string = "admin"

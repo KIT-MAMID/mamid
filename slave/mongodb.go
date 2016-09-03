@@ -5,7 +5,6 @@ import (
 	"github.com/KIT-MAMID/mamid/msp"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"time"
 )
 
 type mgoContext struct {
@@ -202,7 +201,7 @@ func (c *ConcreteMongodConfigurator) connect(port msp.PortNumber, replicaSetName
 	sess, dialErr := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs:    []string{fmt.Sprintf("127.0.0.1:%d", port)}, // TODO shouldn't we use localhost instead? otherwise, this will break the day IPv4 is dropped
 		Direct:   true,
-		Timeout:  4 * time.Second,
+		Timeout:  c.MongodResponseTimeout,
 		Database: mongodbAdminDatabase,
 	})
 
