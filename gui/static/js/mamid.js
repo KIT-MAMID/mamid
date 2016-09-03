@@ -32,13 +32,13 @@ mamidApp.factory('RequestsErrorHandler', ['$q', function ($q) {
                 button.innerHTML = '<span aria-hidden="true">&times;</span>';
                 ediv.appendChild(button);
                 var h4 = document.createElement('h4');
-                h4.innerHTML = 'Houps! An error occurred.';
+                h4.innerHTML = '<span class="glyphicon glyphicon-warning-sign"></span> An error occurred.';
                 ediv.appendChild(h4);
                 var p = document.createElement('p');
                 if (rejection.data != null)
                     p.innerHTML = rejection.data;
                 else
-                    p.innerHTML = "A fatal application error occurred (maybe connection to the server lost?).";
+                    p.innerHTML = "A fatal application error occurred (maybe connection to the server lost?). You may reload the page.";
                 ediv.appendChild(p);
                 $(ediv).hide();
                 root.insertBefore(ediv, root.firstChild);
