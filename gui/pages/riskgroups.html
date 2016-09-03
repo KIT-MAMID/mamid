@@ -4,15 +4,33 @@
     downtimes in case of a fault.
 </p>
 <form ng-submit="createRiskGroup()">
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="input-group">
-                <input type="text" ng-model="new_riskgroup.name" placeholder="New Risk Group Name" class="form-control">
-                <span class="input-group-btn"><button class="btn btn-success" type="button">Create</button></span>
-            </div><!-- /input-group -->
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Create a new Risk Group</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="input-group">
+                        <input type="text" ng-model="new_riskgroup.name" placeholder="New Risk Group Name"
+                               class="form-control">
+                        <span class="input-group-btn"><button class="btn btn-success"
+                                                              type="button">Create</button></span>
+                    </div><!-- /input-group -->
+                </div>
+            </div>
         </div>
     </div>
 </form>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="input-group">
+            <input placeholder="Filter Slaves" ng-model="search" type="text" class="form-control">
+            <span class="input-group-addon"><span class="glyphicon glyphicon-search"
+                                                  aria-hidden="true"></span></span>
+        </div>
+    </div>
+</div>
 <br/>
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
     <div class="panel panel-default">
@@ -30,9 +48,10 @@
         </div>
         <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
             <ul class="list-group">
-                <li ng-repeat="slave in unassigned_slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
+                <li ng-repeat="slave in unassigned_slaves | filter:search" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
                         class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
-                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true"
+                          ng-if="!slave.persistent_storage"></span>
                     <code>{{slave.hostname}}</code></a>
                     <span class="pull-right">Assign to
                             <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave)">
@@ -61,9 +80,10 @@
         <div id="collapse{{riskgroup.id}}" class="panel-collapse collapse" role="tabpanel"
              aria-labelledby="heading{{riskgroup.id}}">
             <ul class="list-group">
-                <li ng-repeat="slave in riskgroup.slaves" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
+                <li ng-repeat="slave in riskgroup.slaves | filter:search" class="list-group-item"><a href="#/slaves/{{slave.id}}"><span
                         class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="slave.persistent_storage"></span>
-                    <span class="glyphicon glyphicon-transfer" aria-hidden="true" ng-if="!slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true"
+                          ng-if="!slave.persistent_storage"></span>
                     <code>{{slave.hostname}}</code></a>
                     <span class="pull-right">Assign to
                         <select ng-model="slave.riskgroup" ng-change="assignToRiskGroup(slave, riskgroup)">
