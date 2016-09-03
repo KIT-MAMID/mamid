@@ -308,11 +308,8 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, $timeout, S
         $(function () {
             $.each($('.mamid-collapse'), function (index, value) {
                 value = $(value);
-                console.log(value.find('.caret'));
                 value.click(function () {
-                    console.log("clikc");
                     $.each( value.find('.caret'), function (index, value) {
-                        console.log("anim");
                         value = $(value);
                         if(value.hasClass('rotatecaret')) {
                             value.addClass('rotatecaret-up');
@@ -600,9 +597,7 @@ mamidApp.controller('replicasetByIdController',
 mamidApp.controller('systemController', function ($scope, $http, KeyFileService, MgmtUserService) {
     var c = 0;
     $scope.e = function () {
-        console.log("c");
         if (c == 5) {
-            console.log("anim");
             var l = $('.mamid-logo');
             var co = $('.content');
             co.attr("style", "overflow-x: hidden;");
