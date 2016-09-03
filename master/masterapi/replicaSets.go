@@ -341,13 +341,6 @@ func changeToReplicaSetAllowed(tx *gorm.DB, current *model.ReplicaSet, new *mode
 
 	}
 
-	if (new.VolatileMemberCount+new.PersistentMemberCount)%2 == 0 {
-		// TODO remove this once deployment of arbiters is enabled
-		// TODO the above sum assumes all members are eligible to vote. This may not be true, because #voting_members must be < 7
-		// 	https://docs.mongodb.com/manual/core/replica-set-architectures/
-		return false, "sum of persistent and volatile member counts must be odd", nil
-	}
-
 	return true, "", nil
 
 }
