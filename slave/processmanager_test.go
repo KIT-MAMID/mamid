@@ -1,12 +1,12 @@
 package slave
 
 import (
-	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/sys/unix"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
@@ -16,23 +16,21 @@ func (p *ProcessManager) GetProcess(port msp.PortNumber) *exec.Cmd {
 	return p.runningProcesses[port]
 }
 
-const dataDir = "/tmp/testdir"
+var dataDir string = "/tmp/mamid_slave-test-" // Set to a temporary directory during setup.
 
 func TestMain(m *testing.M) {
-	if err := unix.Access(dataDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := unix.Mkdir(dataDir, 0700); err != nil {
-			log.Printf("Could not create a readable and writable directory at %s: %s", dataDir, err)
-			return
-		}
+
+	var err error
+	dataDir, err = ioutil.TempDir(os.TempDir(), "mamid_slave-test-")
+	if err != nil {
+		log.Errorf("Could not create TempDir for slave test: %s", err)
+		return
 	}
 
-	dbDir := fmt.Sprintf("%s/%s", dataDir, DataDBDir)
-	if err := unix.Access(dbDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := unix.Mkdir(dbDir, 0700); err != nil {
-			log.Printf("Could not create a readable and writable directory at %s: %s", dbDir, err)
-			return
-		}
-	}
+	log.Infof("Created TempDir for slave test: %s", dataDir)
+
+	processManager := &ProcessManager{dataDir: dataDir}
+	processManager.CreateManagedDirs()
 
 	//If the killing does not work this test would run forever otherwise
 	go func() {
@@ -73,11 +71,13 @@ func TestProcessManager_SpawnProcess(t *testing.T) {
 	assert.Equal(t, []string{
 		"./fakemongod.sh",
 		"--dbpath",
-		"/tmp/testdir/db/10:replSet",
+		filepath.Join(dataDir, "mongods", "10:replSet", "dbpath"),
 		"--port",
 		"10",
 		"--replSet",
 		"replSet",
+		"--keyFile",
+		filepath.Join(dataDir, "mongods", "10:replSet", "conf", "keyfile"),
 	}, cmd.Args)
 
 	// cleanup
