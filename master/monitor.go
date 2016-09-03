@@ -303,8 +303,10 @@ func (m *Monitor) updateOrCreateObservedMongodStates(tx *gorm.DB, slave model.Sl
 func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, observedState *model.MongodState) (err error) {
 
 	observedState.ExecutionState = MspMongodStateToModelExecutionState(observedMongod.State)
-	observedState.ShardingRole, err = ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
 
+	if observedMongod.State.IsProcessExecuting() {
+		observedState.ShardingRole, err = ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
+	}
 	return err
 }
 
