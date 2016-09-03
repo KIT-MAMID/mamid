@@ -33,7 +33,7 @@ func (p *ProcessManager) buildMongodCommandLine(m msp.Mongod) (args []string) {
 
 func (p *ProcessManager) checkMongoDVersion() (bool, error) {
 	version := ""
-	cmd := exec.Command("mongod", "--version")
+	cmd := exec.Command(p.command, "--version")
 	stdOut, err := cmd.StdoutPipe()
 	defer stdOut.Close()
 	if err != nil {
