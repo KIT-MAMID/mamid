@@ -23,10 +23,8 @@ func (p *ProcessManager) CreateManagedDirs() (err error) {
 		return fmt.Errorf("`%s` does not exist or is not writable", p.dataDir)
 	}
 
-	if err = unix.Access(p.dataDir, unix.R_OK|unix.W_OK|unix.X_OK); err != nil {
-		if err := os.Mkdir(p.managedDirMongods(), os.ModeDir|0700); err != nil {
-			return err
-		}
+	if err := os.Mkdir(p.managedDirMongods(), os.ModeDir|0700); err != nil {
+		return err
 	}
 
 	return nil
