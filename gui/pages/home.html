@@ -1,8 +1,19 @@
 <h1 class="page-header">Your MongoDB Cluster</h1>
 <h2 class="sub-header">Recent problems</h2>
 <div ng-if="problems.length == 0" class="jumbotron">
-    <h1><span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> Everything is ok</h1>
-    <p>There are currently no known problems.</p>
+    <div class="row">
+        <div class="col-lg-1"><h1 style="text-align: center; transform: translateY(25%);"><span
+                class="glyphicon glyphicon-thumbs-up"></span></h1>
+        </div>
+        <div class="col-lg-11">
+            <div class="row">
+                <div class="col-lg-12"><h1>Everything is fine.</h1></div>
+            </div>
+            <div class="row">
+                <div class="col-lg-11"><p>There are currently no known problems.</p></div>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="bs-callout bs-callout-unknown"
      ng-repeat="problem in problems | orderBy:problem.first_occurred:true | limitTo:3">
@@ -20,6 +31,6 @@
     Problems <span aria-hidden="true">&rarr;</span></a>
 <br/>
 <div>
-<h2 class="sub-header">Slave Health</h2>
-<div id="slaves"></div>
+    <h2 class="sub-header">Slave Health</h2>
+    <div id="slaves"></div>
 </div>
