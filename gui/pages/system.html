@@ -2,24 +2,19 @@
 
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3 class="panel-title">Shared Secret</h3>
+        <h3 class="panel-title">Key file</h3>
     </div>
     <div class="panel-body">
         <p>The shared secret for the Mongods in the cluster.</p>
         <div class="row">
             <div class="col-lg-6">
                 <form>
-                    <div class="input-group">
-                        <input minlength="6" maxlength="1024" required type="text" class="form-control">
-                        <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary" type="button">Save</button>
-                        </span>
-                    </div><!-- /input-group -->
+                    <input minlength="6" onClick="this.select();" maxlength="1024" ng-model="keyFile.content" required type="text" readonly style="width: 100%" class="form-control">
                 </form>
             </div>
         </div>
     </div>
 </div>
 <hr/>
-    <h3 class="text-center" style="color: #858585">Powered by <span class="mamid"></span></h3>
-    <img class="center-block mamid-logo" style="max-height: 200px;" src="/static/img/mamid.png" ng-click="e()"/>
+<h3 class="text-center" style="color: #858585">Powered by <span class="mamid"></span></h3>
+<img class="center-block mamid-logo" style="max-height: 200px;" src="/static/img/mamid.png" ng-click="e()"/>
