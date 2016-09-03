@@ -1,6 +1,8 @@
 User Guide for MAMID
 (monitor and manger for in memory databases)
 
+
+
 Content:
 1. General Infromation
 2. Overview view
@@ -13,7 +15,17 @@ Content:
 
 Overview:
 
+The overview shows any problems that recetnly occured, as well as the  general states of the slaves. 
 
+ - Problems:
+	Problems can occur in slaves and replica sets. Every problem 		shown will have a shortcut to the affected slave/replicaset.
+	Problems are ordered chronological.
+ - Slave State:
+	A pie diagram of the slaves states. Slaves can have one of four 	states:
+		1. Active (green)
+		2. Maintenance mode (blue)
+		3. Disabled (grey)
+		4. Problematic (red)
 ---
 
 Problems:
