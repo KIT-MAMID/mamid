@@ -24,7 +24,9 @@ func (p *ProcessManager) CreateManagedDirs() (err error) {
 	}
 
 	if err := os.Mkdir(p.managedDirMongods(), os.ModeDir|0700); err != nil {
-		return err
+		if !os.IsExist(err) {
+			return err
+		}
 	}
 
 	return nil
