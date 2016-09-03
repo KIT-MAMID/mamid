@@ -252,7 +252,7 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
             }
             ,
             color: {
-                pattern: ['#22aa22', '#0af', '#c0c0c0', '#d43f3a']
+                pattern: ['#22aa22', '#0af', '#f0ad4e', '#d43f3a']
             }
             ,
         })

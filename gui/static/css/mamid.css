@@ -145,12 +145,12 @@ body {
     text-transform: uppercase;
 }
 
-.bs-callout-warning {
+.bs-callout-warning, .bs-callout-disabled {
     background-color: #fefbed;
-    border-color: #f1e7bc;
+    border-color: #f0ad4e;
 }
 
-.bs-callout-disabled, .bs-callout-maintenance {
+.bs-callout-maintenance {
     background-color: #f0f7fd;
     border-color: #d0e3f0;
 }
