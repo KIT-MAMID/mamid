@@ -1,3 +1,7 @@
 #!/bin/sh
 echo "db version v3.2"
-sleep infinity
+if [ $# -gt 0 ]; then
+    if [ $1 != "--version" ]; then
+        sleep infinity;
+    fi
+fi
