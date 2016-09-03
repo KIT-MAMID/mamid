@@ -42,6 +42,10 @@ type MongodCredential struct {
 	Username, Password string
 }
 
+func (m MongodCredential) GoStringer() string {
+	return fmt.Sprintf("msp.MongodCredential{Username:\"%s\", Password:\"<redacted>\"}", m.Username)
+}
+
 type ReplicaSetMember struct {
 	HostPort HostPort
 	Priority float64
@@ -55,6 +59,11 @@ type Mongod struct {
 	StatusError             *Error
 	LastEstablishStateError *Error
 	State                   MongodState
+}
+
+func (m Mongod) GoString() string {
+	return fmt.Sprintf("msp.Mongod{Port: %d, KeyfileContent:\"<redacted>\", ReplicaSetConfig:%#v, StatusError:%#v, LastEstablishStateError:%#v, State:%#v}",
+		m.Port, m.ReplicaSetConfig, m.StatusError, m.LastEstablishStateError, m.State)
 }
 
 type RsInitiateMessage struct {
