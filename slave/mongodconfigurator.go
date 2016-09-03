@@ -89,9 +89,11 @@ func (c *ConcreteMongodConfigurator) fetchConfiguration(ctx *mgoContext) (mongod
 			pair := strings.Split(member.(bson.M)["host"].(string), ":")
 			remotePort, _ := strconv.Atoi(pair[1])
 			priority := member.(bson.M)["priority"].(float64)
+			votes := member.(bson.M)["votes"].(int)
 			members[k] = msp.ReplicaSetMember{
 				HostPort: msp.HostPort{Hostname: pair[0], Port: msp.PortNumber(remotePort)},
 				Priority: priority,
+				Votes:    votes,
 			}
 		}
 	} else {
@@ -330,6 +332,7 @@ func updateMembersList(currentConfig bson.M, desiredMembers []msp.ReplicaSetMemb
 
 		member["host"] = hostPortString
 		member["priority"] = desiredMember.Priority
+		member["votes"] = desiredMember.Votes
 
 		resultingMembers = append(resultingMembers, member)
 

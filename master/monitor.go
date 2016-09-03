@@ -411,7 +411,7 @@ func (m *Monitor) compareStates(tx *gorm.DB, mongod model.Mongod, observedMongod
 
 	var replicaSetMembersEquivalent = false
 	if mongod.ReplicaSetID.Valid {
-		desiredMembers, err := DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64)
+		desiredMembers, _, err := DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64)
 		if err != nil {
 			return s, fmt.Errorf("error computing ReplicaSetMembers: %s", err)
 		}
@@ -454,7 +454,7 @@ func MSPReplicaSetMembersDeepEqualsIgnoringOrder(a, b []msp.ReplicaSetMember) (e
 }
 
 func ReplicaSetMembersEquivalent(a, b msp.ReplicaSetMember) bool {
-	return a.HostPort == b.HostPort && a.Priority == b.Priority
+	return a.HostPort == b.HostPort && a.Priority == b.Priority && a.Votes == b.Votes
 }
 
 func MspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutionState {

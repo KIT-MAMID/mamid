@@ -198,6 +198,8 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	replSet.Initiated = modelReplSet.Initiated
+
 	if allowed, msg, err := changeToReplicaSetAllowed(tx, &modelReplSet, replSet); !allowed || err != nil {
 		tx.Rollback()
 		if err != nil {
@@ -339,6 +341,19 @@ func changeToReplicaSetAllowed(tx *gorm.DB, current *model.ReplicaSet, new *mode
 			return false, "cannot change name of a Replica Set after creation", nil
 		}
 
+		if current.Initiated != new.Initiated {
+			return false, "Replica Set initiation status may not be changed - Internal error", nil
+		}
+	} else {
+		if new.Initiated != false {
+			return false, "Replica Set initiation status of new Replica Set must be false - Internal error", nil
+		}
+	}
+
+	newMemberCount := new.VolatileMemberCount + new.PersistentMemberCount
+
+	if newMemberCount < 1 {
+		return false, "Replica Set must have at least one member", nil
 	}
 
 	return true, "", nil

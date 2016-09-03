@@ -69,7 +69,8 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 			ShardingRole:   msp.ShardingRole(dbMongod.DesiredState.ShardingRole),
 			ReplicaSetMembers: []msp.ReplicaSetMember{msp.ReplicaSetMember{
 				HostPort: msp.HostPort{Hostname: "host1", Port: 2000},
-				Priority: ReplicaSetMemberPriorityLow,
+				Priority: ReplicaSetMemberPriorityPersistent,
+				Votes:    1,
 			}},
 			RootCredential: msp.MongodCredential{Username: "user", Password: "pass"},
 		},
@@ -104,15 +105,15 @@ func TestDeployer_mspDesiredReplicaSetMembersForMongod(t *testing.T) {
 	var members []msp.ReplicaSetMember
 
 	// Test for one slave in DB
-	members, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
+	members, _, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(members))
-	assert.EqualValues(t, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: parentSlave.Hostname, Port: msp.PortNumber(dbMongod.Port)}, Priority: ReplicaSetMemberPriorityLow}, members[0],
+	assert.EqualValues(t, msp.ReplicaSetMember{HostPort: msp.HostPort{Hostname: parentSlave.Hostname, Port: msp.PortNumber(dbMongod.Port)}, Priority: ReplicaSetMemberPriorityPersistent, Votes: 1}, members[0],
 		"the list of replica set members of mongod m should include mongod m") // TODO do we actually want this?
 
 	// Set the desired state to not running
 	assert.EqualValues(t, 1, tx.Model(&desiredState).Update("ExecutionState", model.MongodExecutionStateNotRunning).RowsAffected)
-	members, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
+	members, _, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, *model.NullIntToPtr(dbMongod.ReplicaSetID))
 	assert.Nil(t, err)
 	assert.EqualValues(t, 0, len(members),
 		"a mongod with desired execution state != running should have no replica set members")

@@ -45,6 +45,7 @@ type MongodCredential struct {
 type ReplicaSetMember struct {
 	HostPort HostPort
 	Priority float64
+	Votes    int
 }
 
 type Mongod struct {

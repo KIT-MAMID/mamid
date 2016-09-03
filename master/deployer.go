@@ -1,6 +1,7 @@
 package master
 
 import (
+	"fmt"
 	. "github.com/KIT-MAMID/mamid/model"
 	"github.com/KIT-MAMID/mamid/msp"
 	"github.com/Sirupsen/logrus"
@@ -91,28 +92,23 @@ rollbackAndReturn:
 }
 
 // Find a Mongod of ReplicaSet r for `initiiating` the ReplicaSet
-func (d *Deployer) findInitiatorForReplicaSet(tx *gorm.DB, r ReplicaSet) (s Slave, m Mongod, err error) {
-
-	err = tx.Raw(`
-		SELECT m.*
-		FROM mongods m
-		JOIN replica_sets r ON m.replica_set_id = r.id
-		WHERE
-			r.initiated = false
-			AND
-			m.replica_set_id = ?
-		LIMIT 1
-			`, r.ID).Scan(&m).Error
+func (d *Deployer) findInitiatorForReplicaSet(tx *gorm.DB, r ReplicaSet) (Slave, Mongod, error) {
+	_, initiator, err := DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)
 	if err != nil {
-		return
+		return Slave{}, Mongod{}, err
+	}
+	if initiator.ID == 0 {
+		return Slave{}, Mongod{}, fmt.Errorf("Could not find initiator - Is replica set empty?")
 	}
 
-	if err = tx.Model(&m).Related(&s, "ParentSlaveID").Error; err != nil {
-		return
+	var s Slave
+	if err := tx.Model(&initiator).Related(&s, "ParentSlaveID").Error; err != nil {
+		return Slave{}, Mongod{}, err
 	}
 
-	return
+	deployerLog.Debugf("Found initiator for Replica Set %s: %#v", r, initiator)
 
+	return s, initiator, nil
 }
 
 func (d *Deployer) pushMongodState(mongod Mongod) {
@@ -168,7 +164,7 @@ func (d *Deployer) mspMongodStateRepresentation(tx *gorm.DB, mongod Mongod) (hos
 	if !mongod.ReplicaSetID.Valid {
 		replicaSetMembers = make([]msp.ReplicaSetMember, 0, 0)
 	} else {
-		if replicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64); err != nil {
+		if replicaSetMembers, _, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, mongod.ReplicaSetID.Int64); err != nil {
 			return
 		}
 	}
@@ -232,7 +228,7 @@ func (d *Deployer) replicaSetConfig(tx *gorm.DB, r ReplicaSet) (config msp.Repli
 		RootCredential:    managementCredential,
 	}
 
-	config.ReplicaSetMembers, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)
+	config.ReplicaSetMembers, _, err = DesiredMSPReplicaSetMembersForReplicaSetID(tx, r.ID)
 	if err != nil {
 		return config, err
 	}

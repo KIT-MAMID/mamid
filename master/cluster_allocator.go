@@ -593,46 +593,77 @@ func slaveBusyRate(s *Slave) float64 {
 }
 
 const ( // between 0 and 1000
-	ReplicaSetMemberPriorityHigh float64 = 500
-	ReplicaSetMemberPriorityLow  float64 = 1
-	ReplicaSetMemberPriorityNone float64 = 0
+	ReplicaSetMemberPriorityVolatile    float64 = 500
+	ReplicaSetMemberPriorityPersistent  float64 = 10
+	ReplicaSetMemberPriorityToBeRemoved float64 = 1
+	ReplicaSetMemberPriorityNone        float64 = 0
 )
 
 // Return the list of msp.HostPort a model.ReplicaSet should have as members
-func DesiredMSPReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64) (replicaSetMembers []msp.ReplicaSetMember, err error) {
+// Calculates priorities and selects voting members
+func DesiredMSPReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64) (replicaSetMembers []msp.ReplicaSetMember, initiator Mongod, err error) {
 
 	rows, err := tx.Raw(`
 		SELECT
+			m.id,
 			s.hostname,
 			m.port,
-			CASE s.persistent_storage
-				WHEN false THEN ? -- prioritize volatile members
-				ELSE ?
-			END
+			CASE s.configured_state
+				WHEN ? THEN ? -- prioritize members to be removed lower
+				ELSE
+					CASE s.persistent_storage
+						WHEN false THEN ? -- prioritize volatile members higher
+						ELSE ?
+					END
+			END as priority
 		FROM mongods m
 		JOIN replica_sets r ON m.replica_set_id = r.id
 		JOIN mongod_states desired_state ON m.desired_state_id = desired_state.id
 		JOIN slaves s ON m.parent_slave_id = s.id
 		WHERE r.id = ?
 		      AND desired_state.execution_state = ?
-		`, ReplicaSetMemberPriorityHigh, ReplicaSetMemberPriorityLow, replicaSetID, MongodExecutionStateRunning,
+		ORDER BY
+			s.configured_state DESC, -- ordered by slave configured_state so that mongods on running slaves become voting first
+			m.id ASC
+		`, SlaveStateDisabled, ReplicaSetMemberPriorityToBeRemoved, ReplicaSetMemberPriorityVolatile, ReplicaSetMemberPriorityPersistent, replicaSetID, MongodExecutionStateRunning,
 	).Rows()
 	defer rows.Close()
 
 	if err != nil {
-		return []msp.ReplicaSetMember{}, fmt.Errorf("could not fetch ReplicaSetMembers for ReplicaSet.ID `%v`: %s", replicaSetID, err)
+		return []msp.ReplicaSetMember{}, Mongod{}, fmt.Errorf("could not fetch ReplicaSetMembers for ReplicaSet.ID `%v`: %s", replicaSetID, err)
 	}
 
-	for rows.Next() {
+	var initiatorId int64
+	for i := 0; rows.Next(); i++ {
 
 		member := msp.ReplicaSetMember{}
+		var mongodId int64
 
-		err = rows.Scan(&member.HostPort.Hostname, &member.HostPort.Port, &member.Priority)
+		err = rows.Scan(&mongodId, &member.HostPort.Hostname, &member.HostPort.Port, &member.Priority)
 		if err != nil {
 			return
 		}
 
+		if i == 0 {
+			//Use first mongod as initiator as it can vote.
+			initiatorId = mongodId
+		}
+
+		// A replica set may have at most 7 voting members
+		// The query is ordered by slave configured_state so that mongods on running slaves become voting first
+		if i < 7 {
+			member.Votes = 1
+		} else {
+			member.Votes = 0
+			member.Priority = 0 //Mongodb says: priority must be 0 when non-voting
+		}
+
 		replicaSetMembers = append(replicaSetMembers, member)
+	}
+	rows.Close()
+
+	if res := tx.First(&initiator, initiatorId); res.Error != nil && !res.RecordNotFound() {
+		return []msp.ReplicaSetMember{}, Mongod{}, res.Error
 	}
 
 	return
