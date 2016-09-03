@@ -248,7 +248,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 					r.id = ?
 					AND s.persistent_storage = ?
 					AND s.configured_state != ?
-				ORDER BY (CASE WHEN s.configured_state = ? THEN 1 ELSE 2 END) ASC, su.utilization DESC
+				ORDER BY (CASE WHEN s.configured_state = ? THEN 1 ELSE 2 END) ASC,
+				(CASE WHEN s.observation_error_id IS NULL THEN 0 ELSE 1 END) DESC, -- prioritize slaves with observation error
+				su.utilization DESC
 				LIMIT ?`, r.replicaSetID, p.PersistentStorage(), SlaveStateMaintenance, SlaveStateDisabled, deletable_count,
 			).Find(&deletableMongds).Error
 			if err != nil {
