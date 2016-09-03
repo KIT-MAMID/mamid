@@ -52,3 +52,6 @@
 [submodule "vendor/github.com/lib/pq"]
 	path = vendor/github.com/lib/pq
 	url = https://github.com/lib/pq.git
+[submodule "vendor/github.com/Masterminds/semver"]
+	path = vendor/github.com/Masterminds/semver
+	url = https://github.com/Masterminds/semver.git

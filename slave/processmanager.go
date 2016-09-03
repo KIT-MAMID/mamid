@@ -1,6 +1,7 @@
 package slave
 
 import (
+	"fmt"
 	"github.com/KIT-MAMID/mamid/msp"
 	"os/exec"
 )
@@ -38,7 +39,12 @@ func (p *ProcessManager) HasProcess(port msp.PortNumber) bool {
 // Spawn a new Mongod process
 //   The Mongod's `--keyfile` is only updated when it is spawned
 func (p *ProcessManager) SpawnProcess(m msp.Mongod) (err error) {
-
+	if ok, err := p.checkMongoDVersion(); err != nil || !ok {
+		if err != nil {
+			return fmt.Errorf("processmanager.checkMongoDVersion() failed with: %s", err)
+		}
+		return fmt.Errorf("processmanager.checkMongoDVersion() failed. mongod's version must be %s", mongodMinRequiredVersion)
+	}
 	if err = p.createDirSkeleton(m); err != nil {
 		return
 	}
