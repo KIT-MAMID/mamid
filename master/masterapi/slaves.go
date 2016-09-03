@@ -328,12 +328,12 @@ func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *
 	if len(currentSlave.Mongods) != 0 {
 		//The port range of a slave with mongods may not be reduced because the mongods may be using the ports
 		if updatedSlave.MongodPortRangeBegin > currentSlave.MongodPortRangeBegin || updatedSlave.MongodPortRangeEnd < currentSlave.MongodPortRangeEnd {
-			return fmt.Errorf("The port range may not be reduced since the slave still has Mongods"), nil
+			return fmt.Errorf("Cannot reduce port range to a subinterval while this Slave has Mongods"), nil
 		}
 
 		//The persistence of slaves with mongods may not be changed because the mongods depend on the persistence
 		if updatedSlave.PersistentStorage != currentSlave.PersistentStorage {
-			return fmt.Errorf("The persistence may not be changed since the slave still has Mongods"), nil
+			return fmt.Errorf("Cannot change persistence attribute while this Slave has Mongods"), nil
 		}
 	}
 
