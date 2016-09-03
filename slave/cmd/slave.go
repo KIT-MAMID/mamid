@@ -53,7 +53,7 @@ func main() {
 		log.Fatal("No server cert key file passed; specify with -slave.auth.key=/path/to/cert")
 	}
 	if caCert == "" {
-		log.Fatal("No master verification ca passen; specify with -master.verifyCA=/path/to/cert")
+		log.Fatal("No master verification ca passed; specify with -master.verifyCA=/path/to/cert")
 	}
 
 	// Application setup
