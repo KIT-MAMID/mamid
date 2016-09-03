@@ -42,7 +42,8 @@ func main() {
 		listenString                                                             string
 		slaveVerifyCA, slaveAuthCert, slaveAuthKey, apiCert, apiKey, apiVerifyCA string
 		dbDriver, dbDSN                                                          string
-		monitorInterval                                                          time.Duration
+		monitorInterval                                                          = 10 * time.Second
+		slaveTimeout                                                             = 5 * time.Second
 	)
 
 	flag.Var(&logLevel, "log.level", "possible values: debug, info, warning, error, fatal, panic")
@@ -52,12 +53,15 @@ func main() {
 	flag.StringVar(&slaveVerifyCA, "slave.verifyCA", "", "The CA certificate to verify slaves against")
 	flag.StringVar(&slaveAuthCert, "slave.auth.cert", "", "The client certificate for authentication against the slave")
 	flag.StringVar(&slaveAuthKey, "slave.auth.key", "", "The key for the client certificate for authentication against the slave")
+	flag.DurationVar(&slaveTimeout, "slave.timeout", slaveTimeout,
+		"Timeout for requests from master to slave. Specify with suffix [ms,s,min,...]")
 	flag.StringVar(&apiCert, "api.cert", "", "Optional: a certificate for the api/webinterface")
 	flag.StringVar(&apiKey, "api.key", "", "Optional: the key for the certificate for the api/webinterface")
 	flag.StringVar(&apiVerifyCA, "api.verifyCA", "", "Optional: a ca to check client certs of webinterface/api users. Implies authentication")
 
-	flag.DurationVar(&monitorInterval, "monitor.interval", time.Duration(10*time.Second),
-		"Interval in which the monitoring component should poll slaves for status updates. Specify with suffix [ms,s,min,...]")
+	flag.DurationVar(&monitorInterval, "monitor.interval", monitorInterval,
+		"Interval in which the monitoring component should poll slaves for status updates."+
+			"Note that the monitor waits for the slowest slave before a new monitor run starts (-slave.timeout). Specify with suffix [ms,s,min,...]")
 	flag.Parse()
 
 	if dbDriver != "postgres" {
@@ -130,7 +134,12 @@ func main() {
 			Certificates: []tls.Certificate{clientAuthCert},
 		},
 	}
-	mspClient := msp.MSPClientImpl{HttpClient: http.Client{Transport: httpTransport}}
+	mspClient := msp.MSPClientImpl{
+		HttpClient: http.Client{
+			Transport: httpTransport,
+			Timeout:   slaveTimeout,
+		},
+	}
 
 	monitor := master.Monitor{
 		DB:              db,
