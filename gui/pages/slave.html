@@ -97,13 +97,29 @@
         <h3 class="panel-title">Slave Control</h3>
     </div>
     <div class="panel-body">
+	Change the state to control the deployment of Mongods on this Slave.
         <ul>
-            <li><b>Active</b> This Slave eligible to host Mongods.</li>
-            <li><b>Maintenance mode</b> No new Mongods will be spawned on this Slave. Existing Mongods will be left
-                untouched. Monitoring is disabled.
+		<li><b>Active</b>
+			<ul>
+				<li>Slave is eligible to host Mongods</li>
+				<li>Attributes are immutable</li>
+			</ul>
+		</li>
+		<li><b>Maintenance mode</b> Slave is temporarily unavailable. Use this option ahead of scheduled downtimes.<br/>
+			<ul>
+				<li>No new Mongods will be spawned on this Slave.</li>
+				<li>Existing Mongods will be left untouched.</li>
+				<li>Problem reports are disabled.</li>
+				<li>Attributes can be changed to fix problems.</li>
+			</ul>
             </li>
-            <li><b>Disabled</b> This Slave should not host Mongods. Existing Mongods are attempted to be migrated to
-                eligible Slaves.
+	    <li><b>Disabled</b> Slave should not host Mongods.<br>
+		    <ul>
+			    <li>MAMID attempts to migrate Mongods to eligible Slaves.<br/>If there are no eligible slaves, the Mongds stay active on the disabled Slave.</li>
+			    <li>Slave attributes can be changed to fix problems.</li>
+			    <li>The Slave can be deleted.</li>
+		    </ul>
+		    Important: if you delete an unreachable Slave, MAMID will loose track of the Mongods it spawned on that Slave. Re-adding such Slave to MAMID will cause force-deletion of these Mongods and their data.
             </li>
         </ul>
         <div class="btn-group btn-group-justified pull-right" role="group">
