@@ -18,7 +18,8 @@
         state.</h4>
 </div>
 <div class="progress" ng-if="!is_create_view">
-    <div class="progress-bar" ng-class="{ 'progress-bar-danger': !(!problemsBySlave[slave.id]) && problemsBySlave[slave.id].length > 0, 'progress-bar-success': (!problemsBySlave['slave.id']) && slave.configured_state == 'active' }"
+    <div class="progress-bar"
+         ng-class="{ 'progress-bar-danger': !(!problemsBySlave[slave.id]) && problemsBySlave[slave.id].length > 0, 'progress-bar-success': (!problemsBySlave['slave.id']) && slave.configured_state == 'active' }"
          style="width: {{100*mongods.length/(slave.mongod_port_range_end-slave.mongod_port_range_begin)}}%">
         <span>{{mongods.length}} of {{(slave.mongod_port_range_end-slave.mongod_port_range_begin)}} possible Mongods deployed</span>
     </div>
@@ -29,8 +30,13 @@
     </div>
     <table class="table">
         <tr ng-repeat="mongod in mongods">
-            <td>Mongod (<b>{{mongod.observed_execution_state}}</b>) <sapan ng-if="mongod.replica_set_id == 0">- not assigned</sapan><sapan ng-if="mongod.replica_set_id != 0">at <code>{{slave.hostname}}:{{mongod.slave_port}}</code> on Replica Set <a
-                    href="/#/replicasets/{{mongod.replica_set_id}}"><code>{{mongod.replicaset.name}}</code></a></sapan></td>
+            <td>Mongod (<b>{{mongod.observed_execution_state}}</b>)
+                <sapan ng-if="mongod.replica_set_id == 0">- not assigned</sapan>
+                <sapan ng-if="mongod.replica_set_id != 0">at <code>{{slave.hostname}}:{{mongod.slave_port}}</code> on
+                    Replica Set <a
+                            href="/#/replicasets/{{mongod.replica_set_id}}"><code>{{mongod.replicaset.name}}</code></a>
+                </sapan>
+            </td>
         </tr>
     </table>
 </div>
@@ -97,32 +103,8 @@
         <h3 class="panel-title">Slave Control</h3>
     </div>
     <div class="panel-body">
-	Change the state to control the deployment of Mongods on this Slave.
-        <ul>
-		<li><b>Active</b>
-			<ul>
-				<li>Slave is eligible to host Mongods</li>
-				<li>Attributes are immutable</li>
-			</ul>
-		</li>
-		<li><b>Maintenance mode</b> Slave is temporarily unavailable. Use this option ahead of scheduled downtimes.<br/>
-			<ul>
-				<li>No new Mongods will be spawned on this Slave.</li>
-				<li>Existing Mongods will be left untouched.</li>
-				<li>Problem reports are disabled.</li>
-				<li>Attributes can be changed to fix problems.</li>
-			</ul>
-            </li>
-	    <li><b>Disabled</b> Slave should not host Mongods.<br>
-		    <ul>
-			    <li>MAMID attempts to migrate Mongods to eligible Slaves.<br/>If there are no eligible slaves, the Mongds stay active on the disabled Slave.</li>
-			    <li>Slave attributes can be changed to fix problems.</li>
-			    <li>The Slave can be deleted.</li>
-		    </ul>
-		    Important: if you delete an unreachable Slave, MAMID will loose track of the Mongods it spawned on that Slave. Re-adding such Slave to MAMID will cause force-deletion of these Mongods and their data.
-            </li>
-        </ul>
-        <div class="btn-group btn-group-justified pull-right" role="group">
+        <p>Change the state to control the deployment of Mongods on this Slave.</p>
+        <div class="btn-group btn-group-justified" role="group">
             <div class="btn-group" role="group">
                 <button ng-disabled="slave.configured_state == 'unknown'"
                         ng-class="{active: slave.configured_state == 'active'}"
@@ -141,6 +123,37 @@
                         data-target="#confirm_disable">
                     Disabled
                 </button>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 15px;">
+            <div class="col-lg-4">
+                <label class="visible-md">Active</label>
+                <ul>
+                    <li>Slave is eligible to host Mongods</li>
+                    <li>Attributes are immutable</li>
+                </ul>
+            </div>
+            <div class="col-lg-4">
+                <label class="visible-md">Maintenance mode</label>
+                <ul>
+                    <li>No new Mongods will be spawned on this Slave.</li>
+                    <li>Existing Mongods will be left untouched.</li>
+                    <li>Problem reports are disabled.</li>
+                    <li>Attributes can be changed to fix problems.</li>
+                </ul>
+            </div>
+            <div class="col-lg-4">
+                <label class="visible-md">Disabled</label>
+                <ul>
+                    <li>MAMID attempts to migrate Mongods to eligible Slaves.<br/>If there are no eligible slaves, the
+                        Mongds stay active on the disabled Slave.
+                    </li>
+                    <li>Slave attributes can be changed to fix problems.</li>
+                    <li>The Slave can be deleted.</li>
+                </ul>
+                <p><b><span class="glyphicon glyphicon-warning-sign"></span> Important</b>: if you delete an unreachable
+                    Slave, MAMID will loose track of the Mongods it spawned on that
+                    Slave. Re-adding such Slave to MAMID will cause force-deletion of these Mongods and their data.</p>
             </div>
         </div>
         <br/>
@@ -198,8 +211,10 @@
             </div>
             <div class="modal-body">
                 <p>You are about to disable the slave <code>{{ slave.hostname }}</code>.</p>
-                <p>This indicates to <span class="mamid"></span> that slave <code>{{ slave.hostname }}</code> should not host Mongods.
-                <span class="mamid"></span> will attempt to migrate this Slave's Mongods to other eligible Slaves.</p>
+                <p>This indicates to <span class="mamid"></span> that slave <code>{{ slave.hostname }}</code> should not
+                    host Mongods.
+                    <span class="mamid"></span> will attempt to migrate this Slave's Mongods to other eligible Slaves.
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger" ng-click="setSlaveState('disabled')">Disable slave</button>
