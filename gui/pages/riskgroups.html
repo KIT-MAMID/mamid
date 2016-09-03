@@ -1,8 +1,7 @@
 <h1 class="page-header">Risk Groups</h1>
-<p>
-    Group your slaves into groups which share an common (physical) fault source to reduce replica set
-    downtimes in case of a fault.
-</p>
+<p>Assign your Slaves to groups which share a common risk of failure, e.g. a shared power supply.</p>
+<p>MAMID spreads Replica Set members over Slaves in different Risk Groups to minimize downtime &amp; maximize availibility.</p>
+<p>Slaves not assigned to a Risk Group will be used for Replica Sets regardless of their physical interdependencies with remaining Replica Set members.</p>
 <form ng-submit="createRiskGroup()">
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -39,7 +38,7 @@
                 <a role="button" data-toggle="collapse" data-parent="#accordion" data-target="#collapseOne" href=""
                    aria-expanded="true"
                    aria-controls="collapseOne">
-                    Unassigned slaves
+                    Unassigned Slaves
                 </a> <span class="label label-primary">{{unassigned_slaves.length}}</span> <span data-toggle="tooltip"
                                                                                                  data-placement="right"
                                                                                                  title="Slaves need to be in 'disabled' state to be assignable to a risk group."><span
