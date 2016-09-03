@@ -94,7 +94,14 @@
                             </li>
                             <li><b>None</b>: Mongod is started without CLI flags regarding Sharding</li>
                         </ul>
-
+                        <div class="row" ng-if="!is_create_view && edit_replicaset.sharding_role == 'configsvr'">
+                            <div class="col-lg-2">
+                                <label>Command line to start mongos:</label>
+                            </div>
+                            <div class="col-lg-10">
+                                <textarea onClick="this.select();" class="form-control"style="width: 100%" readonly>mongos --configdb {{edit_replicaset.name}}/{{generateMongoCLIString()}} --clusterAuthMode keyFile --keyFile [your keyfile]</textarea>
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 <tr>

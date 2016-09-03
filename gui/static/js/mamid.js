@@ -564,6 +564,16 @@ mamidApp.controller('replicasetByIdController',
                 $scope.edit_replicaset.sharding_role = role;
             }
         }
+        $scope.generateMongoCLIString = function () {
+            if(!('mongods' in $scope.replicaset))
+                return "";
+            var res = "";
+            for(var i = 0;i<$scope.replicaset.mongods.length;i++) {
+                res += $scope.replicaset.mongods[i].slave.hostname + ':' + $scope.replicaset.mongods[i].slave_port + ","
+            }
+            res = res.substr(0, res.length-1);
+            return res;
+        }
     });
 
 mamidApp.controller('systemController', function ($scope, $http, KeyFileService, MgmtUserService) {
