@@ -512,9 +512,9 @@ func (m *Monitor) observeReplicaSets() {
 					AS configured_persistent_members,
 				(SELECT COUNT(*) FROM replica_set_configured_members WHERE replica_set_id = r.id AND persistent_storage = ?)
 					AS configured_volatile_members,
-				(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				(SELECT COUNT(*) FROM replica_set_effective_members_for_monitoring WHERE replica_set_id = r.id AND persistent_storage = ?)
 					AS actual_persistent_members,
-				(SELECT COUNT(*) FROM replica_set_effective_members WHERE replica_set_id = r.id AND persistent_storage = ?)
+				(SELECT COUNT(*) FROM replica_set_effective_members_for_monitoring WHERE replica_set_id = r.id AND persistent_storage = ?)
 					AS actual_volatile_members
 				FROM replica_sets r
 				`, true, false, true, false).Rows()
