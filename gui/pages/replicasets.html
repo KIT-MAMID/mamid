@@ -5,33 +5,43 @@
     <p><br/><a class="btn btn-success btn-lg" href="/#/replicasets/new" role="button">Create one</a></p>
 </div>
 <div ng-if="replicasets.length > 0">
-<div class="panel panel-danger">
-    <div class="panel-heading">
-        <h3 class="panel-title">Replica Sets with Problems</h3>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="input-group">
+                <input placeholder="Filter Replica Sets" ng-model="search" type="text" class="form-control" aria-label="Amount (to the nearest dollar)">
+                <span class="input-group-addon"><span class="glyphicon glyphicon-search"
+                                                      aria-hidden="true"></span></span>
+            </div>
+        </div>
     </div>
-    <div class="list-group">
-        <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
-           ng-if="problemsByReplicaSet[replicaset.id].length > 0">
-            <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
-            <code>{{ replicaset.name }}</code> - <b>Problems</b>
-            <ul>
-                <li ng-repeat="p in problemsByReplicaSet[replicaset.id]" ng-bind-html="p.description"></li>
-            </ul>
+    <br/>
+    <div class="panel panel-danger">
+        <div class="panel-heading">
+            <h3 class="panel-title">Replica Sets with Problems</h3>
+        </div>
+        <div class="list-group">
+            <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets | filter:search"
+               ng-if="problemsByReplicaSet[replicaset.id].length > 0">
+                <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+                <code>{{ replicaset.name }}</code> - <b>Problems</b>
+                <ul>
+                    <li ng-repeat="p in problemsByReplicaSet[replicaset.id]" ng-bind-html="p.description"></li>
+                </ul>
 
-        </a>
+            </a>
+        </div>
     </div>
-</div>
 
-<div class="panel panel-success">
-    <div class="panel-heading">
-        <h3 class="panel-title">Working Replica Sets</h3>
+    <div class="panel panel-success">
+        <div class="panel-heading">
+            <h3 class="panel-title">Working Replica Sets</h3>
+        </div>
+        <div class="list-group">
+            <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets | filter:search"
+               ng-if="!problemsByReplicaSet[replicaset.id]">
+                <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
+                <code>{{ replicaset.name }}</code>
+            </a>
+        </div>
     </div>
-    <div class="list-group">
-        <a href="#/replicasets/{{replicaset.id}}" class="list-group-item" ng-repeat="replicaset in replicasets"
-           ng-if="!problemsByReplicaSet[replicaset.id]">
-            <span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>
-            <code>{{ replicaset.name }}</code>
-        </a>
-    </div>
-</div>
 </div>
