@@ -42,7 +42,7 @@ type MongodCredential struct {
 	Username, Password string
 }
 
-func (m MongodCredential) GoStringer() string {
+func (m MongodCredential) GoString() string {
 	return fmt.Sprintf("msp.MongodCredential{Username:\"%s\", Password:\"<redacted>\"}", m.Username)
 }
 
