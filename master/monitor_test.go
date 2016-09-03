@@ -15,6 +15,17 @@ func createDB(t *testing.T) (db *model.DB, err error) {
 
 	tx := db.Begin()
 
+	keyfile := model.MongodKeyfile{
+		Content: "keyfile",
+	}
+	assert.NoError(t, tx.Create(&keyfile).Error)
+
+	rootCredential := model.MongodbCredential{
+		Username: "user",
+		Password: "pass",
+	}
+	assert.NoError(t, tx.Table("mongodb_root_credentials").Create(&rootCredential).Error)
+
 	dbSlave := model.Slave{
 		Hostname:             "host1",
 		Port:                 1,

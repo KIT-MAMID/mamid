@@ -71,7 +71,9 @@ func TestDeployer_mspMongodStateRepresentation(t *testing.T) {
 				HostPort: msp.HostPort{Hostname: "host1", Port: 2000},
 				Priority: ReplicaSetMemberPriorityLow,
 			}},
+			RootCredential: msp.MongodCredential{Username: "user", Password: "pass"},
 		},
+		KeyfileContent: "keyfile",
 
 		// TODO: this is hardcoded knowlege about the contents of the test database.
 		// Use something auto-generated instead.
