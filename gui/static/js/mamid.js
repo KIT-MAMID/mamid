@@ -362,7 +362,7 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
 var slaveMongoPoll = false;
 mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams, $location, $timeout, SlaveService, RiskGroupService, ReplicaSetService) {
     var slaveId = $routeParams['slaveId'];
-    slaveMongoPoll = true;
+    slaveMongoPoll = !$scope.is_create_view;
     var pollMongo = function () {
         if (!slaveMongoPoll) {
             return;
@@ -434,8 +434,8 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $scope.edit_slave.mongod_port_range_end = 18081;
             }
             angular.copy($scope.edit_slave, $scope.slave);
-            $scope.slave.$create(function () {
-                $location.path("/slaves");
+            $scope.slave.$create(function (res) {
+                $location.path("/slaves/"+res.id);
             });
         } else {
             $scope.edit_slave.$save(function (slave) {
@@ -501,7 +501,7 @@ var replicaSetMongoPoll = false;
 mamidApp.controller('replicasetByIdController',
     function ($scope, $http, $routeParams, $location, $timeout, SlaveService, ReplicaSetService) {
         var replicasetId = $routeParams['replicasetId'];
-        replicaSetMongoPoll = true;
+        replicaSetMongoPoll = !$scope.is_create_view;
         var mongoPoll = function () {
             if (!replicaSetMongoPoll) {
                 return;
@@ -545,8 +545,8 @@ mamidApp.controller('replicasetByIdController',
         $scope.updateReplicaSet = function () {
             angular.copy($scope.edit_replicaset, $scope.replicaset);
             if ($scope.is_create_view) {
-                $scope.replicaset.$create(function () {
-                    $location.path("/replicasets");
+                $scope.replicaset.$create(function (res) {
+                    $location.path("/replicasets/"+res.id);
                 });
             } else {
                 $scope.replicaset.$save();
