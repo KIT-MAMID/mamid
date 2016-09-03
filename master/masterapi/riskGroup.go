@@ -117,7 +117,7 @@ func (m *MasterAPI) RiskGroupPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 	// Return created risk group
 
@@ -193,7 +193,7 @@ func (m *MasterAPI) RiskGroupUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 }
 
@@ -255,7 +255,7 @@ func (m *MasterAPI) RiskGroupDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 }
 
@@ -396,7 +396,7 @@ func (m *MasterAPI) RiskGroupAssignSlave(w http.ResponseWriter, r *http.Request)
 		fmt.Fprint(w, err.Error())
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 }
 
 func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request) {
@@ -487,5 +487,5 @@ func (m *MasterAPI) RiskGroupRemoveSlave(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 }

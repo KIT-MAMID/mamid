@@ -140,7 +140,7 @@ func (m *MasterAPI) ReplicaSetPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 	// Return created slave
 
@@ -229,7 +229,7 @@ func (m *MasterAPI) ReplicaSetUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 }
 
 func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +271,7 @@ func (m *MasterAPI) ReplicaSetDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 }
 

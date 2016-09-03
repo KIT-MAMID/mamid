@@ -66,3 +66,11 @@ func (m *MasterAPI) attemptClusterAllocator(tx *gorm.DB, w http.ResponseWriter) 
 	}
 	return err
 }
+
+func (m *MasterAPI) attemptCommit(tx *gorm.DB, w http.ResponseWriter) (err error) {
+	err = tx.Commit().Error
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	return err
+}

@@ -149,7 +149,7 @@ func (m *MasterAPI) SlavePut(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(apiSlave)
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 	return
 }
@@ -246,7 +246,7 @@ func (m *MasterAPI) SlaveUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 
 }
 
@@ -302,7 +302,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx.Commit()
+	m.attemptCommit(tx, w)
 }
 
 func changeToSlaveAllowed(tx *gorm.DB, currentSlave *model.Slave, updatedSlave *model.Slave) (permissionError, dbError error) {
