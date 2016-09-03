@@ -300,11 +300,32 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
 
 });
 
-mamidApp.controller('slaveIndexController', function ($scope, $http, SlaveService) {
+mamidApp.controller('slaveIndexController', function ($scope, $http, $timeout, SlaveService) {
     $scope.loading = true;
     SlaveService.query(function (slaves) {
         $scope.slaves = slaves;
         $scope.loading = false;
+        $(function () {
+            $.each($('.mamid-collapse'), function (index, value) {
+                value = $(value);
+                console.log(value.find('.caret'));
+                value.click(function () {
+                    console.log("clikc");
+                    $.each( value.find('.caret'), function (index, value) {
+                        console.log("anim");
+                        value = $(value);
+                        if(value.hasClass('rotatecaret')) {
+                            value.addClass('rotatecaret-up');
+                            value.removeClass('rotatecaret');
+                        } else {
+                            value.addClass('rotatecaret');
+                            value.removeClass('rotatecaret-up');
+                        }
+                    });
+                });
+
+            });
+        });
     });
 
 });
@@ -435,7 +456,7 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             }
             angular.copy($scope.edit_slave, $scope.slave);
             $scope.slave.$create(function (res) {
-                $location.path("/slaves/"+res.id);
+                $location.path("/slaves/" + res.id);
             });
         } else {
             $scope.edit_slave.$save(function (slave) {
@@ -546,7 +567,7 @@ mamidApp.controller('replicasetByIdController',
             angular.copy($scope.edit_replicaset, $scope.replicaset);
             if ($scope.is_create_view) {
                 $scope.replicaset.$create(function (res) {
-                    $location.path("/replicasets/"+res.id);
+                    $location.path("/replicasets/" + res.id);
                 });
             } else {
                 $scope.replicaset.$save();
@@ -565,13 +586,13 @@ mamidApp.controller('replicasetByIdController',
             }
         }
         $scope.generateMongoCLIString = function () {
-            if(!('mongods' in $scope.replicaset))
+            if (!('mongods' in $scope.replicaset))
                 return "[mongo1:port,mongo2:port,...]";
             var res = "";
-            for(var i = 0;i<$scope.replicaset.mongods.length;i++) {
+            for (var i = 0; i < $scope.replicaset.mongods.length; i++) {
                 res += $scope.replicaset.mongods[i].slave.hostname + ':' + $scope.replicaset.mongods[i].slave_port + ","
             }
-            res = res.substr(0, res.length-1);
+            res = res.substr(0, res.length - 1);
             return res;
         }
     });
