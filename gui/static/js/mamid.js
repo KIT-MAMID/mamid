@@ -566,7 +566,7 @@ mamidApp.controller('replicasetByIdController',
         }
         $scope.generateMongoCLIString = function () {
             if(!('mongods' in $scope.replicaset))
-                return "";
+                return "[mongo1:port,mongo2:port,...]";
             var res = "";
             for(var i = 0;i<$scope.replicaset.mongods.length;i++) {
                 res += $scope.replicaset.mongods[i].slave.hostname + ':' + $scope.replicaset.mongods[i].slave_port + ","
