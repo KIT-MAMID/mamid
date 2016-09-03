@@ -36,9 +36,15 @@
             <td ng-class="{ 'bs-callout-unknown': problemsBySlave[mongo.slave.id].length > 0 }">
                 Mongod (<b>{{mongo.observed_execution_state}}</b>) on <code>{{ mongo.slave.hostname
                 }}:{{mongo.slave_port}}</code> -
-                <a href="/#/slaves/{{mongo.slave.id}}"><b ng-if="!problemsBySlave[mongo.slave.id]"> Slave is in
+                <a href="/#/slaves/{{mongo.slave.id}}"><b ng-if="!problemsBySlave[mongo.slave.id]"><span
+                        class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="mongo.slave.persistent_storage"></span>
+                    <span class="glyphicon glyphicon-transfer" aria-hidden="true"
+                          ng-if="!mongo.slave.persistent_storage"></span> Slave is in
                     {{ mongo.slave.configured_state }} mode.</b>
-                    <b ng-if="problemsBySlave[mongo.slave.id].length > 0"> Slave has problems.</b></a>
+                    <b ng-if="problemsBySlave[mongo.slave.id].length > 0"> <span
+                            class="glyphicon glyphicon-hdd" aria-hidden="true" ng-if="mongo.slave.persistent_storage"></span>
+                        <span class="glyphicon glyphicon-transfer" aria-hidden="true"
+                              ng-if="!mongo.slave.persistent_storage"></span> Slave has problems.</b></a>
 
             </td>
         </tr>
