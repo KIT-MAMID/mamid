@@ -16,6 +16,15 @@ const (
 	MongodStateRemoved        = "removed"
 )
 
+func (s MongodState) IsProcessExecuting() bool {
+	switch s {
+	case MongodStateForceDestroyed, MongodStateDestroyed, MongodStateNotRunning:
+		return false
+	default:
+		return true
+	}
+}
+
 type PortNumber uint16
 
 type HostPort struct {
