@@ -168,6 +168,10 @@ mamidApp.factory('KeyFileService', function ($resource) {
     return $resource('/api/system/keyfile', {}, {});
 });
 
+mamidApp.factory('MgmtUserService', function ($resource) {
+    return $resource('/api/system/managementuser', {}, {});
+});
+
 mamidApp.factory('ReplicaSetService', function ($resource) {
     return $resource('/api/replicasets/:replicaset', {replicaset: "@id"}, {
         create: {method: 'put'},
@@ -556,7 +560,7 @@ mamidApp.controller('replicasetByIdController',
         }
     });
 
-mamidApp.controller('systemController', function ($scope, $http, KeyFileService) {
+mamidApp.controller('systemController', function ($scope, $http, KeyFileService, MgmtUserService) {
     var c = 0;
     $scope.e = function () {
         console.log("c");
@@ -575,5 +579,6 @@ mamidApp.controller('systemController', function ($scope, $http, KeyFileService)
         c++;
     }
     $scope.keyFile = KeyFileService.get();
+    $scope.mgmtUser = MgmtUserService.get();
 
 });
