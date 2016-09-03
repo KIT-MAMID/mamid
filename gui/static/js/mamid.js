@@ -224,15 +224,16 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
     var genChart = function () {
         if (chart != null) {
             var probs = $scope.getProblemCount();
-            (function(probs)
-            {chart.load({
-                columns: [
-                    ['Active', $scope.getStateCount('active')],
-                    ['Maintenance', $scope.getStateCount('maintenance')],
-                    ['Disabled', $scope.getStateCount('disabled')],
-                    ['Problematic', probs]
-                ]
-            })})(probs);
+            (function (probs) {
+                chart.load({
+                    columns: [
+                        ['Active', $scope.getStateCount('active')],
+                        ['Maintenance', $scope.getStateCount('maintenance')],
+                        ['Disabled', $scope.getStateCount('disabled')],
+                        ['Problematic', probs]
+                    ]
+                })
+            })(probs);
             return;
         }
         chart = c3.generate({
@@ -377,16 +378,21 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
                 $scope.mongods = mongods;
             }
             for (var i = 0; i < mongods.length; i++) {
-                (function (i) {
-                    ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
-                        mongods[i].replicaset = repli;
-                        finished++;
-                        if (finished == mongods.length) {
-                            $scope.mongods = mongods;
-                        }
-                    });
-                })(i);
+                if (mongods[i].replica_set_id != 0) {
+                    (function (i) {
+                        ReplicaSetService.get({replicaset: mongods[i].replica_set_id}, function (repli) {
+                            mongods[i].replicaset = repli;
+                            finished++;
+                            if (finished == mongods.length) {
+                                $scope.mongods = mongods;
+                            }
+                        });
+                    })(i);
+                } else {
+                    finished++;
+                }
             }
+
             $timeout(pollMongo, 2000);
         });
     };

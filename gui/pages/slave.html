@@ -29,8 +29,8 @@
     </div>
     <table class="table">
         <tr ng-repeat="mongod in mongods">
-            <td>Mongod (<b>{{mongod.observed_execution_state}}</b>) at <code>{{slave.hostname}}:{{mongod.slave_port}}</code> on Replica Set <a
-                    href="/#/replicasets/{{mongod.replica_set_id}}"><code>{{mongod.replicaset.name}}</code></a></td>
+            <td>Mongod (<b>{{mongod.observed_execution_state}}</b>) <sapan ng-if="mongod.replica_set_id == 0">- not assigned</sapan><sapan ng-if="mongod.replica_set_id != 0">at <code>{{slave.hostname}}:{{mongod.slave_port}}</code> on Replica Set <a
+                    href="/#/replicasets/{{mongod.replica_set_id}}"><code>{{mongod.replicaset.name}}</code></a></sapan></td>
         </tr>
     </table>
 </div>
