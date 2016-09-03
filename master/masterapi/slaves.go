@@ -261,6 +261,7 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 	tx := m.DB.Begin()
 
 	// Can only delete disabled slaves
+
 	var currentSlave model.Slave
 	if err = tx.First(&currentSlave, id).Related(&currentSlave.Mongods, "Mongods").Error; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -269,9 +270,9 @@ func (m *MasterAPI) SlaveDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(currentSlave.Mongods) != 0 {
+	if len(currentSlave.Mongods) != 0 && currentSlave.ConfiguredState != model.SlaveStateDisabled {
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, "slave with id %d has active Mongods", currentSlave.ID)
+		fmt.Fprintf(w, "slave `%d` is not disabled and has active Mongods", currentSlave.Hostname)
 		tx.Rollback()
 		return
 	}

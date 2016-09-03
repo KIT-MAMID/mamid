@@ -652,31 +652,6 @@ func TestMasterAPI_ReplicaSetUpdate_not_existing(t *testing.T) {
 	assert.Equal(t, 404, resp.Code)
 }
 
-func TestMasterAPI_ReplicaSetUpdate_oddMemberCounts(t *testing.T) {
-	db, mainRouter, err := createDBAndMasterAPI(t)
-	defer db.CloseAndDrop()
-	assert.NoError(t, err)
-
-	testRequest := func(persistent, volatile, expectedResponseCode int, msg ...interface{}) {
-		resp := httptest.NewRecorder()
-
-		req_body := fmt.Sprintf("{\"id\":1,\"name\":\"repl1\",\"persistent_node_count\":%d,"+
-			"\"volatile_node_count\":%d,\"sharding_role\":\"none\"}",
-			persistent, volatile)
-		req, err := http.NewRequest("POST", "/api/replicasets/1", strings.NewReader(req_body))
-		assert.NoError(t, err)
-		mainRouter.ServeHTTP(resp, req)
-
-		assert.Equal(t, expectedResponseCode, resp.Code, msg...)
-	}
-
-	testRequest(0, 1, 200, "odd volatile-only replica set member count should be allowed")
-	testRequest(0, 2, 400, "even volatile-only replica set member count should be forbidden")
-	testRequest(1, 1, 400, "even mixed replica set member count should be forbidden")
-	testRequest(1, 0, 200, "odd persistent-only replica set member count should be allowed")
-
-}
-
 func TestMasterAPI_ReplicaSetDelete(t *testing.T) {
 	db, mainRouter, err := createDBAndMasterAPI(t)
 	defer db.CloseAndDrop()

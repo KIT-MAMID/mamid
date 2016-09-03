@@ -54,7 +54,7 @@ CREATE TABLE "mongods" (
 	"repl_set_name" varchar(255),
 	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED, -- error encountered when observing this specific Mongod
 	"last_establish_state_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
-	"parent_slave_id" integer REFERENCES slaves(id) DEFERRABLE INITIALLY DEFERRED,
+	"parent_slave_id" integer REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
 	"replica_set_id" integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
 	"desired_state_id" integer NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
 	"observed_state_id" integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
