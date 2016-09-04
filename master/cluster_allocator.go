@@ -623,6 +623,7 @@ func DesiredMSPReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64)
 		WHERE r.id = ?
 		      AND desired_state.execution_state = ?
 		ORDER BY
+			CASE WHEN s.observation_error_id IS NULL THEN 0 ELSE 1 END ASC,
 			s.configured_state ASC, -- ordered by slave configured_state so that mongods on running slaves become voting first
 			m.id ASC
 		`, SlaveStateDisabled, ReplicaSetMemberPriorityToBeRemoved, ReplicaSetMemberPriorityVolatile, ReplicaSetMemberPriorityPersistent, replicaSetID, MongodExecutionStateRunning,
