@@ -11,6 +11,18 @@ You might want to put this into your .bashrc
     git submodules update --init
 
 # Create Testbed
+# Unit Tests
+
+Running tests requires a PostgreSQL instance with permission to `CREATE DATABASE` and `DESTROY DATABASE`
+
+ Running the test instance in a docker container different than the one used for `make testbed_*` builds is recommended
+
+    docker run --name mamid-postgres-tests -p 5432:5432 -e POSTGRES_PASSWORD=foo1 -d postgres
+    # You should now be able to connect to the container using the password above
+    psql -h localhost -U postgres
+    # You can run tests by setting the appropriate DSN environment variable
+    MAMID_TESTDB_DSN="host=localhost port=5432 user=postgres password=foo1 sslmode=disable dbname=postgres" make test-verbose
+
 The Makefile includes targets to create a cluster test environment in docker.
 
 It spawns the master, postgres, the notifier and three slaves.
