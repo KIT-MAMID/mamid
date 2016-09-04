@@ -487,24 +487,6 @@ func MspMongodStateToModelExecutionState(e msp.MongodState) model.MongodExecutio
 	}
 }
 
-func ModelExecutionStateToMspMongodState(e model.MongodExecutionState) msp.MongodState {
-	switch e {
-	case model.MongodExecutionStateDestroyed:
-		return msp.MongodStateDestroyed
-	case model.MongodExecutionStateNotRunning:
-		return msp.MongodStateNotRunning
-	case model.MongodExecutionStateRecovering:
-		return msp.MongodStateRecovering
-	case model.MongodExecutionStateRunning:
-		return msp.MongodStateRunning
-	case model.MongodExecutionStateForceDestroyed:
-		return msp.MongodStateForceDestroyed
-	default:
-		return "invalid" // Invalid
-		//TODO New states
-	}
-}
-
 func mspErrorToModelMSPError(mspError *msp.Error) model.MSPError {
 	return model.MSPError{
 		Identifier:      mspError.Identifier,
