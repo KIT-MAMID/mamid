@@ -8,7 +8,7 @@ Explicit support for volatile storage on primary Replica Set members with lower-
 
 ## System Components:
 
-![Possible cluster layout for a single application built on MongoDB](doc/cluster_layout.svg)
+![Possible cluster layout for a single application built on MongoDB](https://cdn.rawgit.com/KIT-MAMID/mamid/doc/doc/cluster_layout.svg)
 
 ### Master
 * Monitors the Slaves
