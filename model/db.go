@@ -155,6 +155,7 @@ const (
 	MongodExecutionStateForceDestroyed MongodExecutionState = iota
 	MongodExecutionStateDestroyed
 	MongodExecutionStateNotRunning
+	MongodExecutionStateUninitiated
 	MongodExecutionStateRecovering // invalid for a desired MongodState
 	MongodExecutionStateRunning
 )

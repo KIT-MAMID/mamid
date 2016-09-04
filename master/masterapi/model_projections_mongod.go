@@ -33,6 +33,8 @@ func ModelExecutionStateToApiMongodState(e model.MongodExecutionState) msp.Mongo
 		return msp.MongodStateRunning
 	case model.MongodExecutionStateForceDestroyed:
 		return msp.MongodStateForceDestroyed
+	case model.MongodExecutionStateUninitiated:
+		return msp.MongodStateUninitialized
 	default:
 		return "invalid" // Invalid
 		//TODO New states
