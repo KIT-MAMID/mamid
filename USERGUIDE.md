@@ -44,6 +44,7 @@ A button to access the help function can be found at the top right corner.
 	- Maintenance (blue)
 	- Disabled (grey)
 	- Problematic (red)
+
 ---
 
 **Problems**
@@ -101,6 +102,7 @@ Slaves are ordered by their state.
     2. Change the state of the slave to [Maintenance] (s. Change slave state)
     3. In Slave Settings, the parameters of the slave can be modified.
     4. Choose [Apply].
+
 ---
 
 **Risk Groups**
