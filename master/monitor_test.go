@@ -198,8 +198,9 @@ func TestMonitor_observeSlave(t *testing.T) {
 		tx := db.Begin()
 		assert.NoError(t, tx.First(&mongod).Error)
 
-		//Mongod should not have observed state anymore
-		assert.True(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").RecordNotFound())
+		//Mongods observed state should be destroyed
+		assert.NoError(t, tx.Model(&mongod).Related(&mongod.ObservedState, "ObservedState").Error)
+		assert.EqualValues(t, model.MongodExecutionStateDestroyed, mongod.ObservedState.ExecutionState)
 		tx.Rollback()
 	}
 
