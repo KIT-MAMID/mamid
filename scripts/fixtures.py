@@ -15,10 +15,14 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--https", action="store_const", const="https", default="http", help="Use https")
     actions = parser.add_mutually_exclusive_group(required=True)
     actions.add_argument("-c", "--createSlaves", action="store_true", help="creates slaves for docker slaves and activates them")
+    parser.add_argument("-n", "--number", type=int, default=3, help="number of slaves to create")
     args = parser.parse_args()
 
     api = "{}://{}:8080/api".format(args.https, args.master)
 
     if args.createSlaves:
-        for i in range(1, 4):
-            createSlave(api, "10.101.202.1{:02d}".format(i))
+        for i in range(1, args.number + 1):
+            try:
+                createSlave(api, "10.101.202.1{:02d}".format(i))
+            except:
+                print("Could not create slave")
