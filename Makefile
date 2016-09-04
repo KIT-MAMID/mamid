@@ -174,7 +174,7 @@ TESTBED_SLAVENAME_CMD := seq -f '%02g' 1 $(TESTBED_SLAVE_COUNT)
 testbed_up: testbed_down testbed_net ca/mamid.pem ca/slaves/master $(addprefix ca/slaves/slave,$(shell $(TESTBED_SLAVENAME_CMD))) docker/testbed_images.depend
 
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.3" --name=mamid-postgres -e POSTGRES_PASSWORD=postgres -d postgres
-	sleep 5 ## prevent race, yes, this is ugly
+	sleep 5 ## Wait for postgres to be running
 	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1" --name=master --volume=$(shell pwd)/ca/mamid.pem:/mamid/ca.pem \
 		--volume=$(shell pwd)/gui:/mamid/gui \
 		--volume=$(shell pwd)/ca/slaves/master/master.pem:/mamid/master.pem \
