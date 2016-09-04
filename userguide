@@ -1,10 +1,10 @@
 User Guide for MAMID
-(monitor and manger for in memory databases)
+(monitor and manager for in memory databases)
 
 
 
 Content:
-1. General Infromation
+1. General Information
 2. Overview view
 3. Problems view
 4. Slaves view
@@ -14,30 +14,21 @@ Content:
 ---
 
 Overview:
-
-The overview shows any problems that recetnly occured, as well as the general states of the slaves. 
+- General information: The overview shows any problems that recently occurred, as well as the  general status of the slaves. 
 
  - Problems:
-	The three most recent problems will appear in the overview. 
-	
-	
+        The three most recent problems will appear in the overview. 
+          
  - Slave State:
-	A pie diagram of the slaves states. Slaves can have one of four states:
-		1. Active (green)
-			Slaves can be set to active (Slaves view).
-			A slave working as planned. Active slaves will 				be monitored. If a problem occures in an active  				slave, it will be set to problematic.
-		2. Maintenance(blue)
-			Slaves can be set to maintenance mode (Slaves view).
-			A slave in maintenance mode will not be monitored and no new mogod 				instances will be spawned. Existing mogods will be left untouched.
-		3. Disabled (grey)
-			Slaves can be set to disabled (Slaves view).
-		4. Problematic (red)
-			If a proplem occures in a slave, it will be set to problematic. This 				happens automaticly.
-			
-	
+        A pie diagram of the slaves states. Slaves can have one of four states: Active, Maintenance, Disabled, Problematic
+               
+                        
+        
 ---
 
 Problems:
+
+- General information
 
 Problems can occur in slaves and replica sets. Every problem shown will have a shortcut to the affected slave/replicaset.
 Problems are ordered chronological.
@@ -48,20 +39,75 @@ Slaves:
 
 Slaves are ordered by their state.
 
+- General information:
+	Slaves have four parameters and four states, of which three can be set:
+	Parameters:
+		1. Hostname: a name to identify the slave
+        	2. Slave port: The port on the machine that should be used by the slave.
+        	3. Mongod port range: the ports to be used by spawned instances of mongod
+        	4. Persistent storage: Choose this option if the machine has and the slave is meant to use persistent storage
+	States:
+		1. Active (green)
+                        Slaves can be set to active.
+                        A slave working as planned. Active slaves will be monitored. If a problem occurs in an active slave, it will be set to problematic.
+                2. Maintenance(blue)
+                        Slaves can be set to maintenance mode.
+                        A slave in maintenance mode will not be monitored and no new mongod instances will be spawned. Existing mongods will be left untouched.
+                3. Disabled (grey)
+                       Slaves can be set to disabled state.
+                4. Problematic (red)
+                        If a proplem occures in a slave, it will be set to problematic. This happens automatically.
+		
  - Creating a slave:
-	1. Click the Button in the top right corner.
-	2. Hostname: a name to identify the slave
-	3. Slave port
-	4. Mongod port range
-	5. Persistent storage: Choose this option if the ... has and the slave is meant to 		   use persistent storage
-	
+        1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
+	2. Set the parameters of the slave.
+	3. Choose [Apply]. 
+         
+        After creation, a slave is in disabled state.
+ 
+ - Change slave state:
+        1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
+	2. In [Slave Control], one of three states can be set.
+		a. Disabled: 
+		b. Maintenace: 
+		c. Active:
+
+ - Modify slave settings:
+        1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
+	2. Change the state of the slave to [Maintenance] (s. Change slave state)
+	3. In Slave Settings, the parameters of the slave can be modified.
+	4. Choose [Apply]. 
+
 
 ---
 
 Riskgroups:
+ - General information:
+	Risk groups are sorted by their time of creation.
+	To show the slaves in a risk group, click on the risk groups title.
+ - How to choose a risk group: 
+	
+ - Create Riskgroup:
+        1. Type in a name for the risk group.
+	2. Choose [Create]
+	It takes a few seconds until the the new risk group is shown.
 
+ - Assign slaves to a Risk group:
+	1. Choose a slave from the list of unassigned slaves or another risk group.
+	2. In the drop-down menu on the right side of the slaves field, choose the desired risk group.
 
+ - Remove slave from a Risk Group:
+	1. Open the Risk Group.
+	2. Find the slave to be removed.
+	3. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
+ 
+ - Remove a Risk Group: 
+	1. Remove all slaves from the risk group
+	2. Click on the red bin icon at the right side of the risk groups title field.
+	3. In the pop-up window, choose [Remove Risk Group]
 
 ---
 
 Replica Sets:
+ - Create replica set:
+ - Modify replica set:
