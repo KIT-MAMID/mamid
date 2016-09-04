@@ -26,8 +26,8 @@ func (t *busyTable) AcquireLock(port msp.PortNumber) (mutex *sync.Mutex) {
 		t.mutexes[port] = &sync.Mutex{}
 	}
 	mutex = t.mutexes[port]
-	mutex.Lock()
 	t.mutexesLock.Unlock()
+	mutex.Lock()
 
 	return mutex
 
