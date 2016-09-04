@@ -31,7 +31,7 @@ func main() {
 	mongodExecutableLookupPath, _ := exec.LookPath(MongodExecutableDefaultName)
 	flag.StringVar(&mongodExecutable, "mongodExecutable", mongodExecutableLookupPath, "Path to or name of Mongod binary")
 
-	flag.DurationVar(&mongodHardShutdownTimeout, "mongod.responseTimeout", DefaultMongodResponseTimeout,
+	flag.DurationVar(&mongodResponseTimeout, "mongod.responseTimeout", DefaultMongodResponseTimeout,
 		"Timeout for responses from a Mongod after issuing a command. Specify with suffix [ms,s,min,...]")
 	flag.DurationVar(&mongodSoftShutdownTimeout, "mongod.shutdownTimeout.soft", DefaultMongodSoftShutdownTimeout,
 		"Duration to wait for regular Mongod shutdown call to return. Specify with suffix [ms,s,min,...]")
