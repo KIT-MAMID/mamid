@@ -34,7 +34,7 @@ Overview:
  - General information: The overview shows the three most recent problems, as well as the  general status of the slaves.
 
  - Problems:
-        The three most recent problems will appear in the overview. Problems can occur in slaves or replica sets. 
+        The three most recent problems will appear in the overview. Problems can occure in slaves or replica sets. 
          
  - Slave State:
         A pie diagram of the slaves states. Slaves can have one of four states: 
@@ -80,7 +80,7 @@ Slaves are ordered by their state.
  - Possible Problems:
  	1. Slave is unreachable: Occurs when a slave does not respond. 
 	   Check if a slave instance of mamid is running at the specified port.
-	   Check if the associated
+	   Check if the associated host is running as planned.
  - Create slave:
     1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
     2. Set the parameters of the slave.
@@ -134,7 +134,7 @@ Risk Groups:
 Replica Sets:
 
  - General information:
-    A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set hast four parameters.
+    A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set has four parameters.
 
     Replica set overview:
         The replica set overview shows all replica sets; one list of working sets, one of sets with problems.
