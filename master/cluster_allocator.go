@@ -627,11 +627,11 @@ func DesiredMSPReplicaSetMembersForReplicaSetID(tx *gorm.DB, replicaSetID int64)
 			m.id ASC
 		`, SlaveStateDisabled, ReplicaSetMemberPriorityToBeRemoved, ReplicaSetMemberPriorityVolatile, ReplicaSetMemberPriorityPersistent, replicaSetID, MongodExecutionStateRunning,
 	).Rows()
-	defer rows.Close()
 
 	if err != nil {
 		return []msp.ReplicaSetMember{}, Mongod{}, fmt.Errorf("could not fetch ReplicaSetMembers for ReplicaSet.ID `%v`: %s", replicaSetID, err)
 	}
+	defer rows.Close()
 
 	var initiatorId int64
 	for i := 0; rows.Next(); i++ {
