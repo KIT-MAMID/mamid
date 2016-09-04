@@ -6,11 +6,11 @@ User Guide for MAMID
 Content:
 
 1. Introduction
-2. Overview view
-3. Problems view
-4. Slaves view
-5. Risk Groups view
-6. Replica Sets view
+2. Overview
+3. Problems
+4. Slaves
+5. Risk Groups
+6. Replica Sets
 
 ---
 
@@ -24,16 +24,17 @@ It enables the user to configure mamid:
  - create and modify slaves
  - create and modify replica sets
  - assign slaves into risk groups
-	
-	
+
+A button to access the help function can be found at the top right corner.
+		
 ---
 
 Overview:
 
- - General information: The overview shows any problems that recently occurred, as well as the  general status of the slaves.
+ - General information: The overview shows the three most recent problems, as well as the  general status of the slaves.
 
  - Problems:
-        The three most recent problems will appear in the overview. Problems can occur in slaves or replica sets.
+        The three most recent problems will appear in the overview. Problems can occur in slaves or replica sets. 
          
  - Slave State:
         A pie diagram of the slaves states. Slaves can have one of four states: 
