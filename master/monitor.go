@@ -306,6 +306,8 @@ func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, ob
 
 	if observedMongod.State.IsProcessExecuting() {
 		observedState.ShardingRole, err = ProjectMSPShardingRoleToModelShardingRole(observedMongod.ReplicaSetConfig.ShardingRole)
+	} else {
+		observedState.ShardingRole = model.ShardingRoleNone //TODO Make nullable and remove this but does not really matter
 	}
 	return err
 }
