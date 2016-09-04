@@ -4,16 +4,16 @@ CREATE DOMAIN sharding_role AS VARCHAR(255) CHECK( value IN ('none', 'shardsvr',
 
 CREATE TABLE "risk_groups" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"name" varchar(255) UNIQUE
+	"name" VARCHAR(255) UNIQUE
 );
 
 -- CREATE UNIQUE INDEX uix_risk_groups_name ON "risk_groups"("name");
 
 CREATE TABLE "replica_sets" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"name" varchar(255) UNIQUE,
-	"persistent_member_count" integer,
-	"volatile_member_count" integer,
+	"name" VARCHAR(255) UNIQUE,
+	"persistent_member_count" INTEGER,
+	"volatile_member_count" INTEGER,
 	"sharding_role" sharding_role NOT NULL,
 	"initiated" BOOLEAN NOT NULL
 );
@@ -22,42 +22,42 @@ CREATE TABLE "replica_sets" (
 
 CREATE TABLE "msp_errors" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"identifier" varchar(255),
+	"identifier" VARCHAR(255),
 	"description" TEXT,
 	"long_description" TEXT
 );
 
 CREATE TABLE slaves (
 	"id" BIGSERIAL PRIMARY KEY,
-	"hostname" varchar(255) UNIQUE,
-	"port" integer,
-	"mongod_port_range_begin" integer,
-	"mongod_port_range_end" integer,
+	"hostname" VARCHAR(255) UNIQUE,
+	"port" INTEGER,
+	"mongod_port_range_begin" INTEGER,
+	"mongod_port_range_end" INTEGER,
 	"persistent_storage" bool,
-	"configured_state" integer,
-	"risk_group_id" integer NULL REFERENCES risk_groups(id) DEFERRABLE INITIALLY DEFERRED,
-	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
+	"configured_state" INTEGER,
+	"risk_group_id" BIGINT NULL REFERENCES risk_groups(id) DEFERRABLE INITIALLY DEFERRED,
+	"observation_error_id" BIGINT NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
 );
 
 -- CREATE UNIQUE INDEX uix_slaves_hostname ON "slaves"("hostname")
 
 CREATE TABLE "mongod_states" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"parent_mongod_id" integer NOT NULL, -- foreign key constraint added below
+	"parent_mongod_id" BIGINT NOT NULL, -- foreign key constraint added below
 	"sharding_role" sharding_role,
-	"execution_state" integer
+	"execution_state" INTEGER
 );
 
 CREATE TABLE "mongods" (
 	"id" BIGSERIAL PRIMARY KEY,
-	"port" integer,
-	"repl_set_name" varchar(255),
-	"observation_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED, -- error encountered when observing this specific Mongod
-	"last_establish_state_error_id" integer NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
-	"parent_slave_id" integer REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-	"replica_set_id" integer NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
-	"desired_state_id" integer NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-	"observed_state_id" integer NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
+	"port" INTEGER,
+	"repl_set_name" VARCHAR(255),
+	"observation_error_id" BIGINT NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED, -- error encountered when observing this specific Mongod
+	"last_establish_state_error_id" BIGINT NULL REFERENCES msp_errors(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
+	"parent_slave_id" BIGINT REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+	"replica_set_id" BIGINT NULL REFERENCES replica_sets(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED,
+	"desired_state_id" BIGINT NOT NULL REFERENCES mongod_states(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+	"observed_state_id" BIGINT NULL REFERENCES mongod_states(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
     -- +-------------------+-----------------------------+---------------------+
     -- |                   | obs_state = NULL            | obs_state != NULL   |
     -- +-------------------+-----------------------------+---------------------+
@@ -74,12 +74,12 @@ CREATE TABLE "problems" (
 	"id" BIGSERIAL PRIMARY KEY,
 	"description" TEXT,
 	"long_description" TEXT,
-	"problem_type" integer,
+	"problem_type" INTEGER,
 	"first_occurred" TIMESTAMP,
 	"last_updated" TIMESTAMP,
-	"slave_id" integer NULL REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-	"replica_set_id" integer NULL REFERENCES replica_sets(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-	"mongod_id" integer NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+	"slave_id" BIGINT NULL REFERENCES slaves(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+	"replica_set_id" BIGINT NULL REFERENCES replica_sets(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+	"mongod_id" BIGINT NULL REFERENCES mongods(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE OR REPLACE VIEW replica_set_effective_members AS
@@ -141,7 +141,7 @@ CREATE OR REPLACE VIEW replica_set_configured_members AS
 	);
 
 CREATE TABLE "mamid_metadata" (
-	"key" varchar(255) PRIMARY KEY,
+	"key" VARCHAR(255) PRIMARY KEY,
 	"value" TEXT
 );
 
