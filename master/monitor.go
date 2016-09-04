@@ -123,11 +123,15 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 	if err := m.updateMongodStatesNotObservedOnSlave(tx, slave, observedMongods); err != nil {
 		monitorLog.Errorf("error deleting MongodStates that are present in the database but not reported by slave `%s`: %s", slave.Hostname, err)
+		tx.Rollback()
+		return
 	}
 
 	modelToObservedMap, err := m.updateOrCreateObservedMongodStates(tx, slave, observedMongods)
 	if err != nil {
 		monitorLog.Errorf("error updating or creating ObservedState of Mongods reported by slave `%s`: %s", slave.Hostname, err)
+		tx.Rollback()
+		return
 	}
 
 	if err := tx.Commit().Error; err != nil {
