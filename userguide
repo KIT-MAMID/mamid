@@ -8,35 +8,42 @@ Content:
 2. Overview view
 3. Problems view
 4. Slaves view
-5. Riskgroups view
+5. Risk Groups view
 6. Replica Sets view
 
 ---
 
 Web interface:
 
-
-
+The web interfaces of mamid gives information about the status of mamid:
+ - status of slaves and replica sets
+ - occuring problems
+It enables the user to configure mamid:
+ - create and modify slaves
+ - create and modify replica sets
+ - assign slaves into risk groups
+	
+	
 ---
 
 Overview:
-- General information: The overview shows any problems that recently occurred, as well as the  general status of the slaves. 
+- General information: The overview shows any problems that recently occurred, as well as the  general status of the slaves.
 
  - Problems:
-        The three most recent problems will appear in the overview. 
-          
+        The three most recent problems will appear in the overview. Problems can occur in slaves or replica sets.
+         
  - Slave State:
         A pie diagram of the slaves states. Slaves can have one of four states: Active, Maintenance, Disabled, Problematic
-               
-                        
-        
+              
+                       
+       
 ---
 
 Problems:
 
 - General information
 
-Problems can occur in slaves and replica sets. Every problem shown will have a shortcut to the affected slave/replicaset.
+Problems can occur in slaves and replica sets. Every problem shown will have a shortcut to the affected slave or replica set.
 Problems are ordered chronological.
 
 ---
@@ -45,15 +52,15 @@ Slaves:
 
 Slaves are ordered by their state.
 
-- General information:
-	Slaves have four parameters and four states, of which three can be set:
-	Parameters:
-		1. Hostname: a name to identify the slave
-        	2. Slave port: The port on the machine that should be used by the slave.
-        	3. Mongod port range: the ports to be used by spawned instances of mongod
-        	4. Persistent storage: Choose this option if the machine has and the slave is meant to use persistent storage
-	States:
-		1. Active (green)
+ - General information:
+    Slaves have four parameters and four states, of which three can be set:
+    Parameters:
+        1. Hostname: a name to identify the slave
+            2. Slave port: The port on the machine that should be used by the slave.
+            3. Mongod port range: the ports to be used by spawned instances of mongod
+            4. Persistent storage: Choose this option if the machine has and the slave is meant to use persistent storage
+    States:
+        1. Active (green)
                         Slaves can be set to active.
                         A slave working as planned. Active slaves will be monitored. If a problem occurs in an active slave, it will be set to problematic.
                 2. Maintenance(blue)
@@ -62,99 +69,107 @@ Slaves are ordered by their state.
                 3. Disabled (grey)
                        Slaves can be set to disabled state.
                 4. Problematic (red)
-                        If a proplem occures in a slave, it will be set to problematic. This happens automatically.
-		
+                        If a problem occurs in a slave, it will be set to problematic. This happens automatically.
+ - possible problems:
+	   
  - Creating a slave:
-        1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
-	2. Set the parameters of the slave.
-	3. Choose [Apply]. 
-         
+    1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
+    2. Set the parameters of the slave.
+    3. Choose [Apply].
+        
         After creation, a slave is in disabled state.
  
  - Change slave state:
         1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
-	2. In [Slave Control], one of three states can be set.
-		a. Disabled: 
-		b. Maintenace: 
-		c. Active:
+    2. In [Slave Control], one of three states can be set.
+        a. Disabled:
+        b. Maintenance:
+        c. Active:
 
  - Modify slave settings:
         1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
-	2. Change the state of the slave to [Maintenance] (s. Change slave state)
-	3. In Slave Settings, the parameters of the slave can be modified.
-	4. Choose [Apply]. 
+    2. Change the state of the slave to [Maintenance] (s. Change slave state)
+    3. In Slave Settings, the parameters of the slave can be modified.
+    4. Choose [Apply].
 
 
 ---
 
-Riskgroups:
+Risk Groups:
  - General information:
-	Risk groups are sorted by their time of creation.
-	To show the slaves in a risk group, click on the risk groups title.
- - How to choose a risk group: 
-	
- - Create Riskgroup:
+    Risk groups are sorted by their time of creation.
+    To show the slaves in a risk group, click on the risk groups title.
+ - How to choose a risk group:
+   
+ - Create Risk Group:
         1. Type in a name for the risk group.
-	2. Choose [Create]
-	It takes a few seconds until the the new risk group is shown.
+    2. Choose [Create]
+    It takes a few seconds until the new risk group is shown.
 
  - Assign slaves to a Risk group:
-	1. Choose a slave from the list of unassigned slaves or another risk group.
-	2. In the drop-down menu on the right side of the slaves field, choose the desired risk group.
+    1. Choose a slave from the list of unassigned slaves or another risk group.
+    2. In the drop-down menu on the right side of the slaves field, choose the desired risk group.
 
  - Remove slave from a Risk Group:
-	1. Open the Risk Group.
-	2. Find the slave to be removed.
-	3. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
+    1. Open the Risk Group.
+    2. Find the slave to be removed.
+    3. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
  
- - Remove a Risk Group: 
-	1. Remove all slaves from the risk group
-	2. Click on the red bin icon at the right side of the risk groups title field.
-	3. In the pop-up window, choose [Remove Risk Group]
+ - Remove a Risk Group:
+    1. Remove all slaves from the risk group
+    2. Click on the red bin icon at the right side of the risk groups title field.
+    3. In the pop-up window, choose [Remove Risk Group]
 
 ---
 
 Replica Sets:
- - General information:
-		
-	Parameters:
-		1. Replica Set name: A name to identify the replica set.
-		2. Persistent nodes: The number of persistent nodes in the replica set. 
-		Needs to be zero or a positve integer.
-		3. Volatile nodes: The number of volatile nodes in the replica set. 
-		Needs to be zero or a positve integer.
-		The sum of persistent and volatile nodes needs to be odd. 
-		4. Sharding configuration server:  
-		
- - Possible problems:
-	- Degraded Replica Set: Occurs when one or more instances of mongod from the slaves in the replica set are not running. 
-	Check the status of the assigned slaves.
-	- Unsatisfied constraints: Occurs when there are not enough ports to spawn the specified number of mongods for the replica set.
-	Check if there are enough free ports in assigned slaves.
-	Check if there are disabled slaves assigned to the replica set.
-	
- - Create replica set:
-	1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
-	2. Fill in the risk groups parameters.
-	3. Click [Create]
-		
- - Modify replica set:
-	Only the number of persistent and volatile nodes can be changed.
 
-	1. Choose the replica set from the list in the Replica Sets view.
-	2. Find [Replica Set Settings]
-	3. Change the number of volatile and persitent nodes. 
-	They need to be zero or a positve integer.
-	The sum of persistent and volatile nodes needs to be odd. 
+ - General information:
+    A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set hast four parameters.
+
+    Replica set overview:
+        The replica set overview shows all replica sets; one list of working sets, one of sets with problems.
+        To get more information about each replica set, click on its entry in the list.
+
+    Parameters:
+        1. Replica Set name: A name to identify the replica set.
+        2. Persistent nodes: The number of persistent nodes in the replica set.
+        Needs to be zero or a positive integer.
+        3. Volatile nodes: The number of volatile nodes in the replica set.
+        Needs to be zero or a positive integer.
+        The sum of persistent and volatile nodes needs to be odd.
+        4. Sharding configuration server: 
+ -        
+ - Possible problems:
+    - Degraded Replica Set: Occurs when one or more instances of mongod from the slaves in the replica set are not running.
+    Check the status of the assigned slaves.
+    - Unsatisfied constraints: Occurs when there are not enough ports to spawn the specified number of mongods for the replica set.
+    Check if there are enough free ports in assigned slaves.
+    Check if there are disabled slaves assigned to the replica set.
+   
+ - Create replica set:
+    1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
+    2. Fill in the risk groups parameters.
+    3. Click [Create]
+       
+ - Modify replica set:
+    Only the number of persistent and volatile nodes can be changed.
+
+    1. Choose the replica set from the list in the Replica Sets view.
+    2. Find [Replica Set Settings]
+    3. Change the number of volatile and persistent nodes.
+    They need to be zero or a positive integer.
+    The sum of persistent and volatile nodes needs to be odd.
  
  - Remove replica set:
-	Attention: Removing a replica set will delete all data stored in it. 
-	Recovering the data is not possible.
-	
-	After removing a replica set, all slaves assigned to it are free to be used by other replica sets.
-	1. Choose the replica set from the list in the Replica Sets view.
-	2. Click [Remove Replica Set from system].  
-	3. In the pop-up window, choose [Remove Replica Set]
+    Attention: Removing a replica set will drop all data stored in it.
+    Recovering the data is not possible.
+   
+    After removing a replica set, all slaves assigned to it are free to be used by other replica sets.
+
+    1. Choose the replica set from the list in the Replica Sets view.
+    2. Click [Remove Replica Set from system]. 
+    3. In the pop-up window, choose [Remove Replica Set]
 
 
 
