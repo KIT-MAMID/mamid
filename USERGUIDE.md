@@ -50,8 +50,9 @@ A button to access the help function can be found at the top right corner.
 **Problems**
 
 - General information
-    - Problems can occur in slaves and replica sets. Every problem shown will have a link to the affected slave or replica set. 
-     - Problems are ordered chronological.
+    - Problems can occur in slaves and replica sets. 
+    - Every problem shown will have a link to the affected slave or replica set.
+    - Problems are ordered chronological.
 
 ---
 
