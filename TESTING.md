@@ -1,3 +1,11 @@
+# Requirements
+
+* Assert `openssl` installed
+* Assert `go version` >= 1.6
+* Assert `go env`
+  * contains `GO15VENDOREXPERIMENT="1"` (dependencies are tracked using [vendoring](https://golang.org/cmd/go/#hdr-Vendor_Directories))
+
+
 # Create Gospace
     cd ~
     mkdir gospace
