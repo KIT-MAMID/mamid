@@ -121,7 +121,7 @@ func (m *Monitor) handleObservation(observedMongods []msp.Mongod, mspError *msp.
 
 	// NOTE: we assume observedMonogds to be valid from this point on (caught by early return in case of slave observation error)
 
-	if err := m.deleteMongodStatesNotObservedOnSlave(tx, slave, observedMongods); err != nil {
+	if err := m.updateMongodStatesNotObservedOnSlave(tx, slave, observedMongods); err != nil {
 		monitorLog.Errorf("error deleting MongodStates that are present in the database but not reported by slave `%s`: %s", slave.Hostname, err)
 	}
 
@@ -314,7 +314,7 @@ func (m *Monitor) updateObservedState(tx *gorm.DB, observedMongod msp.Mongod, ob
 
 // Remove observed state of mongods the slave does not report
 // Errors returned by this method should be handled by aborting the transaction tx
-func (m *Monitor) deleteMongodStatesNotObservedOnSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
+func (m *Monitor) updateMongodStatesNotObservedOnSlave(tx *gorm.DB, slave model.Slave, observedMongods []msp.Mongod) (err error) {
 
 	monitorLog.Debugf("monitor: handling unobserved Mongods of slave `%s`", slave.Hostname)
 
@@ -335,12 +335,20 @@ outer:
 		}
 		// We didn't find the expected modelMongod on the slave
 		// => delete observation
-		monitorLog.Infof("removing observed state of Mongod `%s:%d` as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
+		monitorLog.Infof("setting observed state of Mongod `%s:%d` to destroyed as it was not reported by slave `%s`", slave.Hostname, modelMongod.Port, slave.Hostname)
 		if modelMongod.ObservedStateID.Valid {
-			deleteErr := tx.Delete(&model.MongodState{ID: modelMongod.ObservedStateID.Int64}).Error
-			if deleteErr != nil {
-				monitorLog.Errorf("error removing observed state of Mongod `%s:%d`: %s", slave.Hostname, modelMongod.Port, deleteErr)
-				return deleteErr
+			tx.Model(&model.MongodState{ID: modelMongod.ObservedStateID.Int64}).Update("ExecutionState", model.MongodExecutionStateDestroyed)
+		} else {
+			observedState := model.MongodState{
+				ParentMongodID: modelMongod.ID,
+				ExecutionState: model.MongodExecutionStateDestroyed,
+				ShardingRole:   model.ShardingRoleNone, //Does not matter but we have to set one
+			}
+			if err := tx.Create(&observedState).Error; err != nil {
+				return fmt.Errorf("monitor: could not create observed MongodState for observed destroyed Mongod `%s`: %s", modelMongod.ID, err)
+			}
+			if err := tx.Model(&modelMongod).Update("ObservedStateID", observedState.ID).Error; err != nil {
+				return fmt.Errorf("monitor: could not create observed MongodState backreference for observed destroyed Mongod `%s`: %s", modelMongod.ID, err)
 			}
 		}
 		if modelMongod.ObservationErrorID.Valid {

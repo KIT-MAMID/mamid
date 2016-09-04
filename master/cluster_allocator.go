@@ -169,11 +169,9 @@ func (c *ClusterAllocator) CompileMongodLayout(tx *gorm.DB) (err error) {
 				(desired_state.execution_state = ? OR desired_state.execution_state = ?)
 				AND
 				(
-					observed_state.execution_state = ?
-					OR
-					(m.observed_state_id IS NULL --we know mongod does not exist on slave
+					observed_state.execution_state = ? -- is valid observation, see state table
 					 AND
-					 m.observation_error_id IS NULL)
+					 m.observation_error_id IS NULL
 				)
 		)
 	`, MongodExecutionStateDestroyed, MongodExecutionStateForceDestroyed, MongodExecutionStateDestroyed)
