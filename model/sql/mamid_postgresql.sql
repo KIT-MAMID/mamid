@@ -136,8 +136,9 @@ CREATE OR REPLACE VIEW replica_set_configured_members AS
 		s.configured_state != 3 -- disabled
 		AND
 		desired_state.execution_state NOT IN (
-		2 -- not running
-		,1 -- destroyed
+		3, -- not running
+		2, -- destroyed
+		1 -- force destroyed
 	);
 
 CREATE TABLE "mamid_metadata" (
