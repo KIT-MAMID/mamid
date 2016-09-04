@@ -1,16 +1,15 @@
-#Create Gospace
+# Create Gospace
     mkdir gospace
     cd gospace
     export GOPATH=`pwd`/gospace
 
 You might want to put this into your .bashrc
 
-#Get MAMID
+# Get MAMID
     go get github.com/KIT-MAMID/mamid
     go get -u github.com/jteeuwen/go-bindata/...
     git submodules update --init
 
-# Create Testbed
 # Unit Tests
 
 Running tests requires a PostgreSQL instance with permission to `CREATE DATABASE` and `DESTROY DATABASE`
@@ -23,11 +22,13 @@ Running tests requires a PostgreSQL instance with permission to `CREATE DATABASE
     # You can run tests by setting the appropriate DSN environment variable
     MAMID_TESTDB_DSN="host=localhost port=5432 user=postgres password=foo1 sslmode=disable dbname=postgres" make test-verbose
 
+# Docker Test Cluster
+
 The Makefile includes targets to create a cluster test environment in docker.
 
 It spawns the master, postgres, the notifier and three slaves.
 
-If you want to spawn more then three slaves you can adjust the `TESTBED_SLAVE_COUNT` variable in the Makefile
+If you want to spawn more than three slaves you can adjust the `TESTBED_SLAVE_COUNT` variable in the Makefile
 
 ## Generate Certificates
 For communication between master and slaves certificates are needed for encryption and authentication.
@@ -50,10 +51,6 @@ You can generate multiple certificates for the slaves at once using:
     export CA_PASS
     for i in $(seq -f %02g 1 20); do ./scripts/generateAndSignSlaveCert.sh slave${i} 10.101.202.1${i}; done
 
-You can now start the testbed using `make testbed_up`.
-This will build MAMID inside a docker container and then start all components.
-You should now have a running instance of the master at `10.101.202.1:8080`
-
 ## Configuring the Notifier
 
 This is optional. If this step is skipped the notifier will exit immediately.
@@ -74,7 +71,17 @@ and a contacts.ini file
 
 You should then receive an Email for every problem.
 
-# Basic Usage / Testing Procedure
+## Starting the Cluster
+
+You can now start the testbed using `make testbed_up`.
+
+This will build MAMID inside a docker container and then start all components.
+Containers from previous testbed runs will be deleted.
+
+You should now have a running instance of the master at `10.101.202.1:8080`
+
+
+# Testing Procedure / Basic Usage
 
 ## Adding Slaves
 
