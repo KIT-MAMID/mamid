@@ -4,12 +4,18 @@ User Guide for MAMID
 
 
 Content:
-1. General Information
+1. Web interface
 2. Overview view
 3. Problems view
 4. Slaves view
 5. Riskgroups view
 6. Replica Sets view
+
+---
+
+Web interface:
+
+
 
 ---
 
@@ -109,5 +115,49 @@ Riskgroups:
 ---
 
 Replica Sets:
+ - General information:
+		
+	Parameters:
+		1. Replica Set name: A name to identify the replica set.
+		2. Persistent nodes: The number of persistent nodes in the replica set. 
+		Needs to be zero or a positve integer.
+		3. Volatile nodes: The number of volatile nodes in the replica set. 
+		Needs to be zero or a positve integer.
+		The sum of persistent and volatile nodes needs to be odd. 
+		4. Sharding configuration server:  
+		
+ - Possible problems:
+	- Degraded Replica Set: Occurs when one or more instances of mongod from the slaves in the replica set are not running. 
+	Check the status of the assigned slaves.
+	- Unsatisfied constraints: Occurs when there are not enough ports to spawn the specified number of mongods for the replica set.
+	Check if there are enough free ports in assigned slaves.
+	Check if there are disabled slaves assigned to the replica set.
+	
  - Create replica set:
+	1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
+	2. Fill in the risk groups parameters.
+	3. Click [Create]
+		
  - Modify replica set:
+	Only the number of persistent and volatile nodes can be changed.
+
+	1. Choose the replica set from the list in the Replica Sets view.
+	2. Find [Replica Set Settings]
+	3. Change the number of volatile and persitent nodes. 
+	They need to be zero or a positve integer.
+	The sum of persistent and volatile nodes needs to be odd. 
+ 
+ - Remove replica set:
+	Attention: Removing a replica set will delete all data stored in it. 
+	Recovering the data is not possible.
+	
+	After removing a replica set, all slaves assigned to it are free to be used by other replica sets.
+	1. Choose the replica set from the list in the Replica Sets view.
+	2. Click [Remove Replica Set from system].  
+	3. In the pop-up window, choose [Remove Replica Set]
+
+
+
+
+
+
