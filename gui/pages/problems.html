@@ -1,13 +1,27 @@
 <h1 class="page-header">Problems</h1>
 <div ng-if="problems.length == 0" class="jumbotron">
-    <h1><span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> Everything is ok</h1>
-    <p>There are currently no known problems.</p>
+    <div class="row">
+        <div class="col-lg-1"><h1 style="text-align: center; transform: translateY(30%);"><span
+                class="glyphicon glyphicon-thumbs-up"></span></h1>
+        </div>
+        <div class="col-lg-11">
+            <div class="row">
+                <div class="col-lg-12"><h1>Everything is fine.</h1></div>
+            </div>
+            <div class="row">
+                <div class="col-lg-11"><p>&nbsp;There are currently no known problems.</p></div>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="bs-callout bs-callout-unknown" ng-repeat="problem in problems | orderBy:problem.first_occurred:true">
-    <h4><span ng-bind-html="problem.description"></span> <small>Known since {{formatDate(problem.first_occurred)}}</small></h4>
+    <h4><span ng-bind-html="problem.description"></span>
+        <small>Known since {{formatDate(problem.first_occurred)}}</small>
+    </h4>
     <p ng-bind-html="problem.long_description"></p>
     <ul>
         <li ng-if="problem.slave_id!=null"><a href="#/slaves/{{problem.slave_id}}">Inspect affected Slave</a></li>
-        <li ng-if="problem.replica_set_id!=null"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected Replica Set</a></li>
+        <li ng-if="problem.replica_set_id!=null"><a href="#/replicasets/{{problem.replica_set_id}}">Inspect affected
+            Replica Set</a></li>
     </ul>
 </div>
