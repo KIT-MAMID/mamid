@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"github.com/Sirupsen/logrus"
 	"os"
 	"os/signal"
 	"time"
@@ -10,7 +10,11 @@ import (
 var lastProblems map[uint]Problem
 var notifiers []Notifier
 
+var log = logrus.WithField("module", "slave")
+
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
+
 	var p Parser
 	var email EmailNotifier
 	// Load contacts from ini file
@@ -20,15 +24,12 @@ func main() {
 	}
 	relay, apiHost, contactsFile, configError := p.ParseConfig(os.Args[1])
 	if configError != nil {
-		log.Println("Error loading config:", configError)
-		return
+		log.Fatalf("Error loading config: %#v", configError)
 	}
 	contacts, contactsParseErr := p.Parse(contactsFile)
 
 	if contactsParseErr != nil {
-		log.Println("Error loading contacts file ", contactsFile)
-		log.Println(contactsParseErr)
-		return
+		log.Fatalf("Error loading contacts file `%s`: %#v", contactsFile, contactsParseErr)
 	}
 
 	emailContacts := make([]*EmailContact, 0)
@@ -54,7 +55,7 @@ func main() {
 		//receive Problems through API
 		currentProblems, err := apiClient.Receive(apiHost)
 		if err != nil {
-			log.Println("Error querying API:", err)
+			log.Errorf("Error querying API: %#v", err)
 		}
 		currentProblems = diffProblems(currentProblems)
 		for i := 0; i < len(currentProblems); i++ {
@@ -94,7 +95,7 @@ func notify(problem Problem) {
 	for i := 0; i < len(notifiers); i++ {
 		err := notifiers[i].SendProblem(problem)
 		if err != nil {
-			log.Println("Error sending notification:", err)
+			log.Errorf("Error sending notification: %#v", err)
 		}
 	}
 }

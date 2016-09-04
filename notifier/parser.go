@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/vaughan0/go-ini"
-	"log"
 )
 
 type Parser struct {
@@ -24,7 +23,7 @@ func (p *Parser) Parse(path string) ([]Contact, error) {
 				newContact.Name = name
 				contacts = append(contacts, newContact)
 			default:
-				log.Println("Ignoring unknown notifier", key)
+				log.Infof("Ignoring unknown notifier `%s`", key)
 			}
 		}
 	}
