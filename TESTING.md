@@ -1,14 +1,16 @@
 # Create Gospace
+    cd ~
     mkdir gospace
     cd gospace
-    export GOPATH=`pwd`/gospace
+    export GOPATH=~/gospace
 
 You might want to put this into your .bashrc
 
 # Get MAMID
     go get github.com/KIT-MAMID/mamid
     go get -u github.com/jteeuwen/go-bindata/...
-    git submodules update --init
+    cd $GOPATH/src/github.com/KIT-MAMID/mamid
+    git submodule update --init
 
 # Unit Tests
 
