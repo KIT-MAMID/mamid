@@ -3,7 +3,7 @@ User Guide for MAMID
 
 
 
-Content:
+**Content**
 
 1. Introduction
 2. Overview
@@ -12,9 +12,11 @@ Content:
 5. Risk Groups
 6. Replica Sets
 
+
 ---
 
-Introduction:
+
+**Introduction**
 
 The web interfaces of mamid gives information about the status of mamid:
  - status of slaves and replica sets
@@ -29,7 +31,7 @@ A button to access the help function can be found at the top right corner.
 		
 ---
 
-Overview:
+**Overview**
 
  - General information: The overview shows the three most recent problems, as well as the  general status of the slaves.
 
@@ -44,49 +46,48 @@ Overview:
 	- Problematic (red)
 ---
 
-Problems:
+**Problems**
 
 - General information
-
-Problems can occur in slaves and replica sets. Every problem shown will have a link to the affected slave or replica set. 
-Problems are ordered chronological.
+    - Problems can occur in slaves and replica sets. Every problem shown will have a link to the affected slave or replica set. 
+     - Problems are ordered chronological.
 
 ---
 
-Slaves:
+**Slaves**
 
 Slaves are ordered by their state.
 
  - General information:
-    Slaves have four parameters and four states:
-    Parameters:
+    - Slaves have four parameters and four states.
+    - Parameters:
        	 1. Hostname: a name to identify the slave
          2. Slave port: The port on the host that should be used by the slave.
          3. Mongod port range: the ports to be used by spawned instances of mongod
          4. Persistent storage: Choose this option if the host has and the slave is meant to use persistent storage
-    States:
-        1. Active
+    - States:
+        1. Active: 
         	Slaves can be set to active.
                 The slave is available to host mongod instances as part of replica sets. Active slaves will be monitored. If a problem occurs in an active slave, it will be set to problematic.
-        2. Maintenance
+        2. Maintenance: 
                 Slaves can be set to maintenance mode.
                 A slave in maintenance mode will not be monitored and no new mongod instances will be spawned. Existing mongods will be left untouched.
 		Slaves in maintenance mode can be reconfigured.
-        3. Disabled
+        3. Disabled: 
                 Slaves can be set to disabled state.
 		Marks the slave as not running any mongod instances. 
-        4. Problematic
+        4. Problematic: 
                 If a problem occurs in a slave, it will be set to problematic. This happens automatically.
  - Possible Problems:
- 	1. Slave is unreachable: Occurs when a slave does not respond. 
+    1. Slave is unreachable: Occurs when a slave does not respond. 
 	   Check if a slave instance of mamid is running at the specified port.
 	   Check if the associated host is running as planned.
  - Create slave:
     1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
     2. Set the parameters of the slave.
     3. Choose [Apply].
-        
-        After creation, a slave is in disabled state.
+    
+    *After creation, a slave is in disabled state.*
  
  - Change slave state:
     1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
@@ -100,10 +101,10 @@ Slaves are ordered by their state.
     2. Change the state of the slave to [Maintenance] (s. Change slave state)
     3. In Slave Settings, the parameters of the slave can be modified.
     4. Choose [Apply].
-
 ---
 
-Risk Groups:
+**Risk Groups**
+
  - General information:
     Risk groups are sorted by their time of creation.
     They reduce downtimes of replica sets.
@@ -131,7 +132,7 @@ Risk Groups:
 
 ---
 
-Replica Sets:
+**Replica Sets**
 
  - General information:
     A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set has four parameters.
