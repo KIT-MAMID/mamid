@@ -22,14 +22,14 @@ func main() {
 		log.Println("No config file supplied! Usage: notifier <config file>")
 		return
 	}
-	relay, apiHost, contactsFile, configError := p.ParseConfig(os.Args[1])
+	config, configError := p.ParseConfig(os.Args[1])
 	if configError != nil {
 		log.Fatalf("Error loading config: %#v", configError)
 	}
-	contacts, contactsParseErr := p.Parse(contactsFile)
+	contacts, contactsParseErr := p.Parse(config.contactsFile)
 
 	if contactsParseErr != nil {
-		log.Fatalf("Error loading contacts file `%s`: %#v", contactsFile, contactsParseErr)
+		log.Fatalf("Error loading contacts file `%s`: %#v", config.contactsFile, contactsParseErr)
 	}
 
 	emailContacts := make([]*EmailContact, 0)
@@ -40,8 +40,8 @@ func main() {
 		}
 	}
 	email.Contacts = emailContacts
-	email.Relay = relay
-	email.MamidHost = apiHost
+	email.Relay = config.relay
+	email.MamidHost = config.apiHost
 	lastProblems = make(map[uint]Problem)
 	notifiers = append(notifiers, &email)
 	c := make(chan os.Signal, 1)
@@ -53,7 +53,7 @@ func main() {
 	var apiClient APIClient
 	for {
 		//receive Problems through API
-		currentProblems, err := apiClient.Receive(apiHost)
+		currentProblems, err := apiClient.Receive(config.apiHost)
 		if err != nil {
 			log.Errorf("Error querying API: %#v", err)
 		}

@@ -26,12 +26,12 @@ func TestConfigFile(t *testing.T) {
 	tmpFile.Close()
 
 	var p Parser
-	relay, apiHost, contactsFile, err := p.ParseConfig(tmpFile.Name())
+	config, err := p.ParseConfig(tmpFile.Name())
 	assert.NoError(t, err)
-	assert.Equal(t, contactsFile, "contacts.ini")
-	assert.Equal(t, apiHost, "localhost:8080")
-	assert.Equal(t, relay.Hostname, "localhost:25")
-	assert.Equal(t, relay.MailFrom, "test@localhost")
+	assert.Equal(t, config.contactsFile, "contacts.ini")
+	assert.Equal(t, config.apiHost, "localhost:8080")
+	assert.Equal(t, config.relay.Hostname, "localhost:25")
+	assert.Equal(t, config.relay.MailFrom, "test@localhost")
 }
 
 func TestConfigFileMissingFile(t *testing.T) {
@@ -40,7 +40,7 @@ func TestConfigFileMissingFile(t *testing.T) {
 	os.Remove(tmpFile.Name())
 
 	var p Parser
-	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	_, err = p.ParseConfig(tmpFile.Name())
 	assert.Error(t, err)
 }
 
@@ -64,7 +64,7 @@ func TestConfigFileMissingConf(t *testing.T) {
 	tmpFile.Close()
 
 	var p Parser
-	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	_, err = p.ParseConfig(tmpFile.Name())
 	assert.Error(t, err)
 }
 
@@ -88,13 +88,13 @@ func TestConfigFileMissingSection(t *testing.T) {
 	tmpFile.Close()
 
 	var p Parser
-	_, _, _, err = p.ParseConfig(tmpFile.Name())
+	_, err = p.ParseConfig(tmpFile.Name())
 	assert.Error(t, err)
 }
 
 func TestConfigFileNoFile(t *testing.T) {
 	var p Parser
-	_, _, _, err := p.ParseConfig("")
+	_, err := p.ParseConfig("")
 	assert.Error(t, err)
 }
 
