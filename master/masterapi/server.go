@@ -71,6 +71,8 @@ func (m *MasterAPI) attemptCommit(tx *gorm.DB, w http.ResponseWriter) (err error
 	err = tx.Commit().Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "commit failed with error %s\n", err)
+		masterapiLog.WithError(err).Errorf("commit failed")
 	}
 	return err
 }
