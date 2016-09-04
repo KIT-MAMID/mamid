@@ -97,14 +97,14 @@ Slaves are ordered by their state.
     3. In Slave Settings, the parameters of the slave can be modified.
     4. Choose [Apply].
 
-
 ---
 
 Risk Groups:
  - General information:
     Risk groups are sorted by their time of creation.
+    They reduce donwtimes of replica sets.
     To show the slaves in a risk group, click on the risk groups title.
- - How to choose a risk group:
+ - How to choose a risk group: When ever slaves share a common fault source, they should be assigned to different risk groups. If this is not possible, the fault sources most likely to fail should e considered first. Possible fault sources are e.g. slaves running on the same blade or having the same power source. 
    
  - Create Risk Group:
     1. Type in a name for the risk group.
