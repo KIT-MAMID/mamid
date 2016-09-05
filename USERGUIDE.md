@@ -1,22 +1,6 @@
-User Guide for MAMID
-(monitor and manager for in memory databases)
+# User Guide for MAMID
 
-
-
-**Content**
-
-1. Introduction
-2. Overview
-3. Problems
-4. Slaves
-5. Risk Groups
-6. Replica Sets
-
-
----
-
-
-**Introduction**
+## Introduction
 
 The web interfaces of mamid gives information about the status of mamid:
  - status of slaves and replica sets
@@ -29,9 +13,7 @@ It enables the user to configure mamid:
 
 A button to access the help function can be found at the top right corner.
 		
----
-
-**Overview**
+## Overview
 
  - General information: The overview shows the three most recent problems, as well as the  general status of the slaves.
 
@@ -45,18 +27,15 @@ A button to access the help function can be found at the top right corner.
 	- Disabled (grey)
 	- Problematic (red)
 
----
 
-**Problems**
+## Problems
 
 - General information
     - Problems can occur in slaves and replica sets. 
     - Every problem shown will have a link to the affected slave or replica set.
     - Problems are ordered chronological.
 
----
-
-**Slaves**
+## Slaves
 
 Slaves are ordered by their state.
 
@@ -104,9 +83,7 @@ Slaves are ordered by their state.
     3. In Slave Settings, the parameters of the slave can be modified.
     4. Choose [Apply].
 
----
-
-**Risk Groups**
+## Risk Groups
 
  - General information:
     Risk groups are sorted by their time of creation.
@@ -133,9 +110,8 @@ Slaves are ordered by their state.
     2. Click on the red bin icon at the right side of the risk groups title field.
     3. In the pop-up window, choose [Remove Risk Group]
 
----
 
-**Replica Sets**
+## Replica Sets
 
  - General information:
     A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set has four parameters.
