@@ -46,7 +46,7 @@ tools like `pg_dump`,
 2. Deploy the master binary on the master.
 3. Generate and sign a key/cert pair using the above method for the master.
 As name `master` can safely choosen since the common name of this certificate doesn't matter in the verification process.
-4. Deploy a copy of the CA certificate, the master key and the master certificate on the master.
+4. Deploy a copy of the CA certificate (`mamid.pem`), the master key and the master certificate on the master.
 5. Deploy a X.509 certificate and key for the web interface (may be signed by your internal CA or an external Authority)
 6. Start the master:
 
