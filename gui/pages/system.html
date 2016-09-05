@@ -5,7 +5,7 @@
         <h3 class="panel-title">MongoDB Key File</h3>
     </div>
     <div class="panel-body">
-	    <p>All Mongod instances in the cluster are deployed with a key file for <a href="https://docs.mongodb.com/manual/core/security-internal-authentication/#keyfiles">Internal Authentication</a>. Its contents can be copied from the text field below.</p>
+	    <p>All Mongod instances in the cluster are deployed with a key file for <a target="_blank" href="https://docs.mongodb.com/manual/core/security-internal-authentication/#keyfiles">Internal Authentication</a>. Its contents can be copied from the text field below.</p>
         <div class="row">
             <div class="col-lg-12">
                     <input minlength="6" onClick="this.select();" maxlength="1024" ng-model="keyFile.content" required type="text" readonly style="width: 100%" class="form-control">
@@ -19,7 +19,7 @@
     </div>
     <div class="panel-body">
 
-	    <p>All Mongod instances deployed by MAMID have <a href="https://docs.mongodb.com/manual/core/authorization/">user access control</a> enabled. Replica Sets have an administrative user with the <a href="https://docs.mongodb.com/manual/reference/built-in-roles/#root"><code>root</code> role</a>.</p>
+	    <p>All Mongod instances deployed by MAMID have <a target="_blank" href="https://docs.mongodb.com/manual/core/authorization/">user access control</a> enabled. Replica Sets have an administrative user with the <a href="https://docs.mongodb.com/manual/reference/built-in-roles/#root"><code>root</code> role</a>.</p>
 	    <p>You may use this user for further configuration, e.g. adding additional users or configuring <code>mongos</code> instances.</p>
 	<p><b>Note</b>: you must not change this credential manually, otherwise MAMID will lose management access to the Mongods it deployed.</p>
         <hr/>
