@@ -1,7 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/Sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -50,7 +55,38 @@ func main() {
 		<-c
 		os.Exit(0)
 	}()
+	// Initiate api client and load certs
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		log.Fatalf("Error loading system keystore: %#v", err)
+	}
+	if config.masterCA != "" {
+		cert, err := loadCertificateFromFile(config.masterCA)
+		if err != nil {
+			log.Fatalf("Error loading matser CA file `%s`: %#v", config.masterCA, err)
+		}
+		certPool.AddCert(cert)
+	}
 	var apiClient APIClient
+	var httpTransport *http.Transport
+	httpTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: certPool,
+		},
+	}
+	if config.apiCert != "" {
+		clientAuthCert, err := tls.LoadX509KeyPair(config.apiCert, config.apiKey)
+		if err != nil {
+			log.Fatalf("Error loading keypair `%s`, `%s`: %#v", config.apiCert, config.apiKey, err)
+		}
+		httpTransport.TLSClientConfig.Certificates = []tls.Certificate{clientAuthCert}
+	}
+
+	apiClient = APIClient{
+		httpClient: http.Client{
+			Transport: httpTransport,
+		},
+	}
 	for {
 		//receive Problems through API
 		currentProblems, err := apiClient.Receive(config.apiHost)
@@ -98,4 +134,14 @@ func notify(problem Problem) {
 			log.Errorf("Error sending notification: %#v", err)
 		}
 	}
+}
+
+func loadCertificateFromFile(file string) (cert *x509.Certificate, err error) {
+	certFile, err := ioutil.ReadFile(file)
+	if err != nil {
+		return
+	}
+	block, _ := pem.Decode(certFile)
+	cert, err = x509.ParseCertificate(block.Bytes)
+	return
 }
