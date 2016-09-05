@@ -29,5 +29,5 @@ Explicit support for volatile storage on primary Replica Set members with lower-
 
 # [Installation on a Productive System](INSTALL.md)
 
-# [User Manual](MANUAL.md)
+# [User Manual](doc/USERMANUAL.md)
 
