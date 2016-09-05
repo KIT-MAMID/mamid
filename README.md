@@ -6,7 +6,7 @@ Explicit support for volatile storage on primary Replica Set members with lower-
 
 ![MAMID user interface](doc/screenshot_slave_detail.png)
 
-## System Components:
+## System Components
 
 ![Possible cluster layout for a single application built on MongoDB](https://cdn.rawgit.com/KIT-MAMID/mamid/doc/doc/cluster_layout.svg)
 
@@ -26,4 +26,6 @@ Explicit support for volatile storage on primary Replica Set members with lower-
 # [Development/Testing Setup](TESTING.md)
 
 # [Development Workflow](CONTRIBUTING.md)
+
+# [Installation on a Productive System](INSTALL.md)
 
