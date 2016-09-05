@@ -10,7 +10,7 @@ For the instructions in this manual, the following cluster layout is assumed:
 ### Generating the CA
 
 1. In a secure place, generate a folder for the internal pki of your cluster.
-2. Generate a folder for the pki managements scripts and config files, eg. `mkdir scripts`
+2. Generate a folder for the pki managements scripts and config files, e.g. `mkdir scripts`
 3. Download the contents of [the 'scripts' directory](https://github.com/KIT-MAMID/mamid/tree/master/scripts) into `scripts`
 4. Run `./scripts/generateCA.sh` to generate the CA.
 5. In the wizard, enter any name as common name and enter a secure password for the CA.
@@ -85,7 +85,7 @@ For more information about the specific slave command line options see `slave --
 ### Notifier
 
 1. Deploy the notifier software on a server that is able to reach master's web interface
-2. Configure the notifier with its config file. See [the smaple file](https://github.com/KIT-MAMID/mamid/blob/master/notifier/config.ini.sample).
+2. Configure the notifier with its config file. See [the sample file](https://github.com/KIT-MAMID/mamid/blob/master/notifier/config.ini.sample).
 E-mails are delivered using a smarthost.
 3. Configure contacts in the configured contacts file in the following format for e-mail notifications:
 
