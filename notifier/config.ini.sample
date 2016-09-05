@@ -2,6 +2,11 @@
 # The URL that you call in your browser, when you access the web interface
 api_host=http://localhost:8080
 contacts=contacts.ini
+# Optional parameters, if the master requires client cert authentiaction
+#api_cert=
+#api_key=
+# Optional parameter, if the master uses https with a certificates signed by a CA, that is not in the local system truststore
+#master_ca=
 [smtp]
 relay_host=
 mail_from=
