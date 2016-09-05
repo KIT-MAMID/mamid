@@ -61,6 +61,7 @@ func main() {
 		log.Fatalf("Error loading system keystore: %#v", err)
 	}
 	if config.masterCA != "" {
+		certPool = x509.NewCertPool()
 		cert, err := loadCertificateFromFile(config.masterCA)
 		if err != nil {
 			log.Fatalf("Error loading matser CA file `%s`: %#v", config.masterCA, err)
