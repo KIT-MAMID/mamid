@@ -72,7 +72,7 @@ For more information about the specific master command line options see `master 
 
 1. Install MongoDB on the slave.
 2. Deploy the slave certificate and key on each slave as well as the `mamid.pem`.
-3. Deploy the slave software on the slaves.
+3. Deploy the slave binary on the slaves.
 4. Run the slaves:
 
         /path/to/your/slave \
@@ -84,7 +84,7 @@ For more information about the specific slave command line options see `slave --
 
 ### Notifier
 
-1. Deploy the notifier software on a server that is able to reach master's web interface
+1. Deploy the notifier binary on a server that is able to reach master's web interface
 2. Configure the notifier with its config file. See [the sample file](https://github.com/KIT-MAMID/mamid/blob/master/notifier/config.ini.sample).
 E-mails are delivered using a smarthost.
 3. Configure contacts in the configured contacts file in the following format for e-mail notifications:
