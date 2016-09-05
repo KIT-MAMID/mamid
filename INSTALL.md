@@ -25,7 +25,7 @@ The CA certificate of your CA will be in `ca/mamid.pem` and its private key in `
 Keep this file secure. In case of a compromisation of the key, the CA and all signed certificates should be imidietly 
 removed and replaced by new ones signed by a new CA. Otherwise the cluster may be hijacked.
 
-### Generating the certificates for the slaves
+### Generating certificates for the slaves
 
 Assume the slave's _hostname_ at PSU1 is `slave01`.
 To generate its certificate and key, run `./scripts/generateAndSignSlaveCert.sh slave01`.
@@ -48,12 +48,13 @@ The master can run in different modes. This manual assumes the most secure opera
 1. Install the postgresql and make it acessible for a user.
 2. Create a database for the configuration. It will be used as configuration store of mamid and can be backuped with 
 tools like `pg_dump`,
-2. Deploy the master binary on the master.
-3. Generate and sign a key/cert pair using the above method for the master.
+3. Deploy the master binary on the master.
+4. Download and extract gui.tar.gz next to the master binary. 
+5. Generate and sign a key/cert pair using the above method for the master.
 As name `master` can safely choosen since the common name of this certificate doesn't matter in the verification process.
-4. Deploy a copy of the CA certificate (`mamid.pem`), the master key and the master certificate on the master.
-5. Deploy a X.509 certificate and key for the web interface (may be signed by your internal CA or an external Authority)
-6. Start the master:
+6. Deploy a copy of the CA certificate (`mamid.pem`), the master key and the master certificate on the master.
+7. Deploy a X.509 certificate and key for the web interface (may be signed by your internal CA or an external Authority)
+8. Start the master:
 
         /path/to/your/master \
                -db.dsn "host=localhost port=5433 sslmode=disable dbname=<database> user=<user> password=<password>" \
