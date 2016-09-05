@@ -1,5 +1,10 @@
 # Installation
 
+## Binaries
+
+All binaries can be obtained from the project's CI server
+([Linux](https://jenkins.dogcraft.de/job/mamid/label=jenkins-mamid-builder,target=build/)/[Solaris](https://jenkins.dogcraft.de/job/mamid/label=mamid-builder-oi,target=build/)).
+
 ## Sample scenario
 
 For the instructions in this manual, the following cluster layout is assumed:
