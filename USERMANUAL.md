@@ -2,13 +2,13 @@
 
 ## Introduction
 
-The web interfaces of mamid gives information about the status of mamid:
- - status of slaves and replica sets
- - occuring problems
+The web interfaces of MAMID gives information about the status of MAMID:
+ - status of slaves and Replica Sets
+ - occurring problems
 
-It enables the user to configure mamid:
+It enables the user to configure MAMID:
  - create and modify slaves
- - create and modify replica sets
+ - create and modify Replica Sets
  - assign slaves into risk groups
 
 A button to access the help function can be found at the top right corner.
@@ -18,7 +18,7 @@ A button to access the help function can be found at the top right corner.
  - General information: The overview shows the three most recent problems, as well as the  general status of the slaves.
 
  - Problems:
-        The three most recent problems will appear in the overview. Problems can occure in slaves or replica sets. 
+        The three most recent problems will appear in the overview. Problems can occur in slaves or Replica Sets. 
          
  - Slave State:
         A pie diagram of the slaves states. Slaves can have one of four states: 
@@ -31,8 +31,8 @@ A button to access the help function can be found at the top right corner.
 ## Problems
 
 - General information
-    - Problems can occur in slaves and replica sets. 
-    - Every problem shown will have a link to the affected slave or replica set.
+    - Problems can occur in slaves and Replica Sets. 
+    - Every problem shown will have a link to the affected slave or Replica Set.
     - Problems are ordered chronological.
 
 ## Slaves
@@ -49,7 +49,7 @@ Slaves are ordered by their state.
     - States:
         1. Active: 
         	Slaves can be set to active.
-                The slave is available to host mongod instances as part of replica sets. Active slaves will be monitored. If a problem occurs in an active slave, it will be set to problematic.
+                The slave is available to host mongod instances as part of Replica Sets. Active slaves will be monitored. If a problem occurs in an active slave, it will be set to problematic.
         2. Maintenance: 
                 Slaves can be set to maintenance mode.
                 A slave in maintenance mode will not be monitored and no new mongod instances will be spawned. Existing mongods will be left untouched.
@@ -61,7 +61,7 @@ Slaves are ordered by their state.
                 If a problem occurs in a slave, it will be set to problematic. This happens automatically.
  - Possible Problems:
     1. Slave is unreachable: Occurs when a slave does not respond. 
-	   Check if a slave instance of mamid is running at the specified port.
+	   Check if a slave instance of MAMID is running at the specified port.
 	   Check if the associated host is running as planned.
  - Create slave:
     1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
@@ -87,7 +87,7 @@ Slaves are ordered by their state.
 
  - General information:
     Risk groups are sorted by their time of creation.
-    They reduce downtimes of replica sets.
+    They reduce downtimes of Replica Sets.
     To show the slaves in a risk group, click on the risk groups title.
  - How to choose a risk group: When ever slaves share a common fault source, they should be assigned to different risk groups. If this is not possible, the fault sources most likely to fail should e considered first. Possible fault sources are e.g. slaves running on the same blade or having the same power source. 
    
@@ -114,49 +114,49 @@ Slaves are ordered by their state.
 ## Replica Sets
 
  - General information:
-    A Replica set consist of a number of volatile and persistent slaves. Every replica set stores one set of data.    Each replica set has four parameters.
+    A Replica Set consist of a number of volatile and persistent slaves. Every Replica Set stores one set of data.    Each Replica Set has four parameters.
 
-    Replica set overview:
-        The replica set overview shows all replica sets; one list of working sets, one of sets with problems.
-        To get more information about each replica set, click on its entry in the list.
+    Replica Set overview:
+        The Replica Set overview shows all Replica Sets; one list of working sets, one of sets with problems.
+        To get more information about each Replica Set, click on its entry in the list.
 
     Parameters:
-        1. Replica Set name: A name to identify the replica set.
-        2. Persistent nodes: The number of persistent nodes in the replica set.
+        1. Replica Set name: A name to identify the Replica Set.
+        2. Persistent nodes: The number of persistent nodes in the Replica Set.
         Needs to be zero or a positive integer.
-        3. Volatile nodes: The number of volatile nodes in the replica set.
+        3. Volatile nodes: The number of volatile nodes in the Replica Set.
         Needs to be zero or a positive integer.
         The sum of persistent and volatile nodes needs to be odd.
         4. Sharding configuration server: 
        
  - Possible problems:
-    - Degraded Replica Set: Occurs when one or more instances of mongod from the slaves in the replica set are not running.
+    - Degraded Replica Set: Occurs when one or more instances of mongod from the slaves in the Replica Set are not running.
     Check the status of the assigned slaves.
-    - Unsatisfied constraints: Occurs when there are not enough ports to spawn the specified number of mongods for the replica set.
+    - Unsatisfied constraints: Occurs when there are not enough ports to spawn the specified number of mongods for the Replica Set.
     Check if there are enough free ports in assigned slaves.
-    Check if there are disabled slaves assigned to the replica set.
+    Check if there are disabled slaves assigned to the Replica Set.
    
- - Create replica set:
+ - Create Replica Set:
     1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
     2. Fill in the risk groups parameters.
     3. Click [Create]
        
- - Modify replica set:
+ - Modify Replica Set:
     Only the number of persistent and volatile nodes can be changed.
 
-    1. Choose the replica set from the list in the Replica Sets view.
+    1. Choose the Replica Set from the list in the Replica Sets view.
     2. Find [Replica Set Settings]
     3. Change the number of volatile and persistent nodes.
     They need to be zero or a positive integer.
     The sum of persistent and volatile nodes needs to be odd.
  
- - Remove replica set:
-    Attention: Removing a replica set will drop all data stored in it.
+ - Remove Replica Set:
+    Attention: Removing a Replica Set will drop all data stored in it.
     Recovering the data is not possible.
 	   
-    After removing a replica set, all slaves assigned to it are free to be used by other replica sets.
+    After removing a Replica Set, all slaves assigned to it are free to be used by other Replica Sets.
 
-    1. Choose the replica set from the list in the Replica Sets view.
+    1. Choose the Replica Set from the list in the Replica Sets view.
     2. Click [Remove Replica Set from system]. 
-    3. In the pop-up window, choose [Remove Replica Set]
+    3. In the pop-up window, choose [Remove Replica Set**]
 
