@@ -181,7 +181,10 @@ testbed_up: testbed_down testbed_net ca/mamid.pem ca/slaves/master $(addprefix c
 		--volume=$(shell pwd)/ca/slaves/master/master_key.pem:/mamid/master_key.pem \
 		mamid/master /mamid/master -db.dsn "host=10.101.202.3 user=postgres password=postgres sslmode=disable dbname=postgres" \
 		-slave.verifyCA /mamid/ca.pem -slave.auth.cert /mamid/master.pem -slave.auth.key /mamid/master_key.pem
-	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier mamid/notifier
+	$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.2" --name=notifier \
+		--volume=$(shell pwd)/notifier/config.ini:/mamid/notifier_config.ini \
+		--volume=$(shell pwd)/notifier/contacts.ini:/mamid/contacts.ini \
+		mamid/notifier /mamid/notifier /mamid/notifier_config.ini
 
 	for i in $(shell $(TESTBED_SLAVENAME_CMD)); do \
 		$(SUDO) docker run -d --net="mamidnet0" --ip="10.101.202.1$$i" \
