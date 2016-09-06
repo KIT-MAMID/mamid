@@ -56,29 +56,28 @@ func main() {
 		os.Exit(0)
 	}()
 	// Initiate api client and load certs
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		log.Fatalf("Error loading system keystore: %#v", err)
-	}
+	var httpTransport *http.Transport = &http.Transport{}
 	if config.masterCA != "" {
-		certPool = x509.NewCertPool()
+		certPool := x509.NewCertPool()
 		cert, err := loadCertificateFromFile(config.masterCA)
 		if err != nil {
 			log.Fatalf("Error loading matser CA file `%s`: %#v", config.masterCA, err)
 		}
 		certPool.AddCert(cert)
+		httpTransport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: certPool,
+			},
+		}
 	}
 	var apiClient APIClient
-	var httpTransport *http.Transport
-	httpTransport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: certPool,
-		},
-	}
 	if config.apiCert != "" {
 		clientAuthCert, err := tls.LoadX509KeyPair(config.apiCert, config.apiKey)
 		if err != nil {
 			log.Fatalf("Error loading keypair `%s`, `%s`: %#v", config.apiCert, config.apiKey, err)
+		}
+		if httpTransport.TLSClientConfig == nil {
+			httpTransport.TLSClientConfig = &tls.Config{}
 		}
 		httpTransport.TLSClientConfig.Certificates = []tls.Certificate{clientAuthCert}
 	}
