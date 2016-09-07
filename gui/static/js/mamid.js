@@ -338,9 +338,10 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     $scope.new_riskgroup = new RiskGroupService();
     $scope.createRiskGroup = function () {
-        $scope.new_riskgroup.$create();
-        $scope.new_riskgroup = new RiskGroupService();
-        $scope.refreshRiskGroups();
+        $scope.new_riskgroup.$create(function () {
+            $scope.new_riskgroup = new RiskGroupService();
+            $scope.refreshRiskGroups();
+        });
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
         if (slave.riskgroup == 0) {
