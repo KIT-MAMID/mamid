@@ -150,6 +150,9 @@ mamidApp.config(function ($routeProvider) {
             templateUrl: 'pages/system.html',
             controller: 'systemController'
         })
+        .when('/about', {
+            templateUrl: 'pages/about.html'
+        })
 });
 
 mamidApp.factory('SlaveService', function ($resource) {
