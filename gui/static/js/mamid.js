@@ -426,9 +426,10 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
         $scope.slave = new SlaveService();
 
         $scope.slave.configured_state = "disabled";
-
+        $scope.riskgroups = RiskGroupService.query()
         //Copy slave for edit form so that changes are only applied to model when apply is clicked
         $scope.edit_slave = angular.copy($scope.slave);
+        $scope.edit_slave.new_riskgroup_id = "";
     } else {
         $scope.slave = SlaveService.get({slave: slaveId});
 
@@ -459,6 +460,9 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             }
             angular.copy($scope.edit_slave, $scope.slave);
             $scope.slave.$create(function (res) {
+                if ($scope.edit_slave.new_riskgroup_id != "") {
+                    RiskGroupService.assignToRiskGroup({slave: res.id, riskgroup: $scope.edit_slave.new_riskgroup_id});
+                }
                 $location.path("/slaves/" + res.id);
             });
         } else {

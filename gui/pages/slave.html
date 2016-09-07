@@ -85,6 +85,17 @@
                             <input type="checkbox" ng-model="edit_slave.persistent_storage"/>
                         </td>
                     </tr>
+                    <tr ng-if="is_create_view">
+                        <th>Risk Group <span class="glyphicon glyphicon-flash"
+                                                                aria-hidden="true"></span>
+                        </th>
+                        <td colspan="3" style="text-align: center;">
+                            <select ng-model="edit_slave.new_riskgroup_id">
+                                <option value="" selected>-None-</option>
+                                <option ng-repeat="riskgroup in riskgroups" value="{{riskgroup.id}}">{{riskgroup.name}}</option>
+                            </select>
+                        </td>
+                    </tr>
                 </table>
                 <button type="submit"
                         class="btn btn-primary pull-right" ng-if="!is_create_view">
