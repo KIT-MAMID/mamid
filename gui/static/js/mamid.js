@@ -309,9 +309,9 @@ mamidApp.controller('slaveIndexController', function ($scope, $http, $timeout, S
             $.each($('.mamid-collapse'), function (index, value) {
                 value = $(value);
                 value.click(function () {
-                    $.each( value.find('.caret'), function (index, value) {
+                    $.each(value.find('.caret'), function (index, value) {
                         value = $(value);
-                        if(value.hasClass('rotatecaret')) {
+                        if (value.hasClass('rotatecaret')) {
                             value.addClass('rotatecaret-up');
                             value.removeClass('rotatecaret');
                         } else {
@@ -340,25 +340,24 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
     $scope.createRiskGroup = function () {
         $scope.new_riskgroup.$create(function () {
             $scope.new_riskgroup = new RiskGroupService();
-            $scope.refreshRiskGroups();
         });
     };
     $scope.assignToRiskGroup = function (slave, oldriskgroup) {
         if (slave.riskgroup == 0) {
             RiskGroupService.removeFromRiskGroup({slave: slave.id, riskgroup: oldriskgroup.id});
             $scope.refreshRiskGroups();
-            $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
             return;
         }
         RiskGroupService.assignToRiskGroup({slave: slave.id, riskgroup: slave.riskgroup});
         $scope.refreshRiskGroups();
-        $scope.unassigned_slaves = RiskGroupService.getUnassignedSlaves();
     };
     $scope.getSlaves = function (riskgroup) {
-        riskgroup.slaves = RiskGroupService.getSlaves({riskgroup: riskgroup.id});
+        RiskGroupService.getSlaves({riskgroup: riskgroup.id}, function (slaves) {
+            riskgroup.slaves = slaves;
+        });
     };
     $scope.removeRiskGroup = function (riskgroup) {
-        riskgroup.slaves = RiskGroupService.remove({riskgroup: riskgroup.id});
+        RiskGroupService.remove({riskgroup: riskgroup.id});
         $scope.refreshRiskGroups();
         $('#confirm_remove' + riskgroup.id).modal('hide');
     };
@@ -374,7 +373,10 @@ mamidApp.controller('riskGroupIndexController', function ($scope, $http, RiskGro
 
     $scope.refreshRiskGroups = function () {
         RiskGroupService.query(function (riskgroups) {
-            $scope.riskgroups = riskgroups;
+            RiskGroupService.getUnassignedSlaves(function (unassigned) {
+                $scope.riskgroups = riskgroups;
+                $scope.unassigned_slaves = unassigned;
+            });
         });
     }
 });
