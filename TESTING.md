@@ -34,22 +34,26 @@ Running tests requires a PostgreSQL instance with permission to `CREATE DATABASE
 
 # Docker Test Cluster
 
-The Makefile includes targets to create a cluster test environment in docker.
+The Makefile includes targets to create a cluster test environment in docker:
 
-It spawns the master, postgres, the notifier and three slaves.
+* `make testbed_down` kills all containers.
+* `make testbed_up` (re)spawns the master, postgres, the notifier and three slaves. This deletes all data from the previous run.
 
-If you want to spawn more than three slaves you can adjust the `TESTBED_SLAVE_COUNT` variable in the Makefile
+If you want to spawn more than three slaves you can adjust the `TESTBED_SLAVE_COUNT` variable in the Makefile.
+
+But before you can start the cluster you have to configure some things...
 
 ## Generate Certificates
 For communication between master and slaves certificates are needed for encryption and authentication.
 These have to be signed by a local CA.
 
+You will have to create a testing CA and certificates for all containers on your host machine. These will then be mounted into the containers by the Makefile target.
 
-You can generate a testing CA using
+You can generate the CA using
 
     ./scripts/generateCA.sh
 
-The CA public and private keys will be generated in `ca/mamid.pem` and `ca/private/mamid_private.pem`
+The CA public and private keys will be generated in `ca/mamid.pem` and `ca/private/mamid_private.pem`.
 
 You further have to create certificates for the master and the slaves:
 
@@ -83,12 +87,7 @@ You should then receive an Email for every problem.
 
 ## Starting the Cluster
 
-You can now start the testbed using `make testbed_up`.
-
-This will build MAMID inside a docker container and then start all components.
-Containers from previous testbed runs will be deleted.
-
-You should now have a running instance of the master at `10.101.202.1:8080`
+If you now start the testbed using `make testbed_up` you should have a running instance of the master at `10.101.202.1:8080`.
 
 
 # Testing Procedure / Basic Usage
@@ -117,7 +116,7 @@ If you then set the killed slave to disabled (and there still is a free slave of
 *Note:* The Mongod on the killed slave will not be removed as MAMID can not communicate with the slave.
 For it to be removed you have to either restart the slave or delete the slave using the GUI.
 
-*Note:* For the adding of the new Mongod to work the initial Replica Set has to consist of at least three members. 
+*Note:* For the adding of the new Mongod to work the initial Replica Set has to consist of at least three members.
 Otherwise the Replica Set will not be able to elect a new primary and MAMID can not configure the Replica Set as this can only happen through the primary (without force).
 
 To fix this, the administrator has to log in to the remaining secondary member and force the adding of the new Mongod, e.g.:
