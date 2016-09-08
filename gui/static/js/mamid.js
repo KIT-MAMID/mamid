@@ -461,9 +461,12 @@ mamidApp.controller('slaveByIdController', function ($scope, $http, $routeParams
             angular.copy($scope.edit_slave, $scope.slave);
             $scope.slave.$create(function (res) {
                 if ($scope.edit_slave.new_riskgroup_id != "") {
-                    RiskGroupService.assignToRiskGroup({slave: res.id, riskgroup: $scope.edit_slave.new_riskgroup_id});
+                    RiskGroupService.assignToRiskGroup({slave: res.id, riskgroup: $scope.edit_slave.new_riskgroup_id}, function () {
+                        $location.path("/slaves/" + res.id);
+                    });
+                } else {
+                    $location.path("/slaves/" + res.id);
                 }
-                $location.path("/slaves/" + res.id);
             });
         } else {
             $scope.edit_slave.$save(function (slave) {
