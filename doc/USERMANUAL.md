@@ -1,4 +1,4 @@
-# User Guide for MAMID
+# Usermanual for MAMID
 
 ## Introduction
 
@@ -41,6 +41,8 @@ Slaves are ordered by their state.
 
  - General information:
     - Slaves have four parameters and four states.
+    - While setting up a slave, the number of monogods can be choosen. 
+    - In the top of each slaves view, the number of possible and already deployed slaves is listed.
     - Parameters:
        	 1. Hostname: a name to identify the slave
          2. Slave port: The port on the host that should be used by the slave.
@@ -64,46 +66,57 @@ Slaves are ordered by their state.
 	   Check if a slave instance of MAMID is running at the specified port.
 	   Check if the associated host is running as planned.
  - Create slave:
-    1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar.
+    1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar. 
     2. Set the parameters of the slave.
     3. Choose [Apply].
     
     *After creation, a slave is in disabled state.*
  
  - Change slave state:
-    1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
+    1. Choose the slave to change in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
     2. In [Slave Control], one of three states can be set.
-        a. Disabled
+        a. Active
         b. Maintenance
-        c. Active
+        c. Disabled
 
  - Modify slave settings:
-    1. Choose the slave to change in the Slaves view. Slaves are sorted by their state.
+    1. Choose the slave to change in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
     2. Change the state of the slave to [Maintenance] (s. Change slave state)
     3. In Slave Settings, the parameters of the slave can be modified.
-    4. Choose [Apply].
-
+    4. Choose [Apply] 
+ 
+ - Remove slave:
+     1. Choose the slave to remove in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
+     2. In Slave Control, choose [Disabled] 
+     3. In the pop-up, click [Disable slave]
+     4. In the bottom of the slaves view, choose [Remove slave from system]
+     5. In the pop up, click [Remove slave]
+	
 ## Risk Groups
 
  - General information:
     Risk groups are sorted by their time of creation.
     They reduce downtimes of Replica Sets.
     To show the slaves in a risk group, click on the risk groups title.
+
  - How to choose a risk group: When ever slaves share a common fault source, they should be assigned to different risk groups. If this is not possible, the fault sources most likely to fail should e considered first. Possible fault sources are e.g. slaves running on the same blade or having the same power source. 
    
  - Create Risk Group:
-    1. Type in a name for the risk group.
+    1. In Create a new Risk Group, type in a name for the risk group.
     2. Choose [Create]
-    It takes a few seconds until the new risk group is shown.
+    
+   *It takes a few seconds until the new risk group is shown*
 
  - Assign slaves to a Risk group:
-    1. Choose a slave from the list of unassigned slaves or another risk group.
-    2. In the drop-down menu on the right side of the slaves field, choose the desired risk group.
+    1. Disable the slave.
+    2. Choose the slave from the list of unassigned slaves or another risk group or search by their hostname.
+    3. In the drop-down menu on the right side of the slaves field, choose the desired risk group.
 
  - Remove slave from a Risk Group:
-    1. Open the Risk Group.
-    2. Find the slave to be removed.
-    3. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
+    1. Disable the slave. 
+    2. Open the Risk Group.
+    3. Find the slave to be removed. Slaves can be filtered by their hostname.
+    4. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
  
  - Remove a Risk Group:
     1. Remove all slaves from the risk group
@@ -114,13 +127,20 @@ Slaves are ordered by their state.
 ## Replica Sets
 
  - General information:
-    A Replica Set consist of a number of volatile and persistent slaves. Every Replica Set stores one set of data.    Each Replica Set has four parameters.
+	- A Replica Set consist of a number of volatile and persistent slaves. Every Replica Set stores one set of data.
+	- Each Replica Set has four parameters.
+	- A Replica Set has one of three [Sharding](https://docs.mongodb.com/manual/sharding/ "Sharding in MongoDB") settings:
+		1. [configsvrMode](https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--configsvr)
+		2. [shardsvr](https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr)
+		3. none: no sharding will be apllied
+    	- Replica sets are listed divided by working sets and sets with problems.
+        - To get more information about each Replica Set, click on its entry in the list.
+ 
+- Replica set view:
+	- Problems in the replica set are shown at the top.
+	- Replica set overview: List of Mongods assigned to the replica set. Its slave is linked and problems are shown.
 
-    Replica Set overview:
-        The Replica Set overview shows all Replica Sets; one list of working sets, one of sets with problems.
-        To get more information about each Replica Set, click on its entry in the list.
-
-    Parameters:
+ - Parameters:
         1. Replica Set name: A name to identify the Replica Set.
         2. Persistent nodes: The number of persistent nodes in the Replica Set.
         Needs to be zero or a positive integer.
@@ -139,7 +159,8 @@ Slaves are ordered by their state.
  - Create Replica Set:
     1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
     2. Fill in the risk groups parameters.
-    3. Click [Create]
+    3. Choose the sharding setting.
+    4. Click [Create]
        
  - Modify Replica Set:
     Only the number of persistent and volatile nodes can be changed.
@@ -159,4 +180,9 @@ Slaves are ordered by their state.
     1. Choose the Replica Set from the list in the Replica Sets view.
     2. Click [Remove Replica Set from system]. 
     3. In the pop-up window, choose [Remove Replica Set**]
+    
+## System
 
+- General information:
+	- MongoDB Key File: All Mongod instances in the cluster are deployed with a key file for Internal Authentication
+	- Administrative Account: All Mongod instances deployed by MAMID have user access control enabled. Replica Sets have an administrative user with the root role. You may use this user for further configuration, e.g. adding additional users or configuring mongos instances.
