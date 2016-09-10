@@ -1,4 +1,4 @@
-# Usermanual for MAMID
+# User manual for MAMID
 
 ## Introduction
 
@@ -41,7 +41,7 @@ Slaves are ordered by their state.
 
  - General information:
     - Slaves have four parameters and four states.
-    - While setting up a slave, the number of monogods can be choosen. 
+    - While setting up a slave, the number of monogods can be chosen. 
     - In the top of each slaves view, the number of possible and already deployed slaves is listed.
     - Parameters:
        	 1. Hostname: a name to identify the slave
@@ -132,7 +132,7 @@ Slaves are ordered by their state.
 	- A Replica Set has one of three [Sharding](https://docs.mongodb.com/manual/sharding/ "Sharding in MongoDB") settings:
 		1. [configsvrMode](https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--configsvr)
 		2. [shardsvr](https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption--shardsvr)
-		3. none: no sharding will be apllied
+		3. none: no sharding will be applied
     	- Replica sets are listed divided by working sets and sets with problems.
         - To get more information about each Replica Set, click on its entry in the list.
  
