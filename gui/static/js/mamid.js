@@ -264,7 +264,7 @@ mamidApp.controller('mainController', function ($scope, $location, $timeout, fil
     $scope.slaves = SlaveService.query();
     $scope.codeReplace = function (string) {
         return string.replace(
-            /`(\w*)`/gi,
+            /`(.*)`/gi,
             '<code>$1</code>'
         );
     };
