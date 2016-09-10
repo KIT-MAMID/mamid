@@ -66,31 +66,31 @@ Slaves are ordered by their state.
 	   Check if a slave instance of MAMID is running at the specified port.
 	   Check if the associated host is running as planned.
  - Create slave:
-    1. Use [Create new slave] in the top right corner of the slave view or [New Slave] in the sidebar. 
+    1. Use `Create new slave` in the top right corner of the slave view or `New Slave` in the sidebar. 
     2. Set the parameters of the slave.
-    3. Choose [Apply].
+    3. Choose `Apply`.
     
     *After creation, a slave is in disabled state.*
  
  - Change slave state:
     1. Choose the slave to change in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
-    2. In [Slave Control], one of three states can be set.
+    2. In `Slave Control`, one of three states can be set.
         a. Active
         b. Maintenance
         c. Disabled
 
  - Modify slave settings:
     1. Choose the slave to change in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
-    2. Change the state of the slave to [Maintenance] (s. Change slave state)
+    2. Change the state of the slave to `Maintenance` (s. Change slave state)
     3. In Slave Settings, the parameters of the slave can be modified.
-    4. Choose [Apply] 
+    4. Choose `Apply`
  
  - Remove slave:
      1. Choose the slave to remove in the Slaves view. Slaves are sorted by their state and can be filtered by their hostname.
-     2. In Slave Control, choose [Disabled] 
-     3. In the pop-up, click [Disable slave]
-     4. In the bottom of the slaves view, choose [Remove slave from system]
-     5. In the pop up, click [Remove slave]
+     2. In Slave Control, choose `Disabled`
+     3. In the pop-up, click `Disable slave`
+     4. In the bottom of the slaves view, choose `Remove slave from system`
+     5. In the pop up, click `Remove slave`
 	
 ## Risk Groups
 
@@ -103,7 +103,7 @@ Slaves are ordered by their state.
    
  - Create Risk Group:
     1. In Create a new Risk Group, type in a name for the risk group.
-    2. Choose [Create]
+    2. Choose `Create`
     
    *It takes a few seconds until the new risk group is shown*
 
@@ -116,12 +116,12 @@ Slaves are ordered by their state.
     1. Disable the slave. 
     2. Open the Risk Group.
     3. Find the slave to be removed. Slaves can be filtered by their hostname.
-    4. In the drop-down menu on the right side of the slaves field, choose [Remove from Risk Group]
+    4. In the drop-down menu on the right side of the slaves field, choose `Remove from Risk Group`
  
  - Remove a Risk Group:
     1. Remove all slaves from the risk group
     2. Click on the red bin icon at the right side of the risk groups title field.
-    3. In the pop-up window, choose [Remove Risk Group]
+    3. In the pop-up window, choose `Remove Risk Group`
 
 
 ## Replica Sets
@@ -157,16 +157,16 @@ Slaves are ordered by their state.
     Check if there are disabled slaves assigned to the Replica Set.
    
  - Create Replica Set:
-    1. Choose [Create new Replica Set] in the top right corner of the Replica Sets view or the shortcut [New Replica Set] in the sidebar
+    1. Choose `Create new Replica Set` in the top right corner of the Replica Sets view or the shortcut `New Replica Set` in the sidebar
     2. Fill in the risk groups parameters.
     3. Choose the sharding setting.
-    4. Click [Create]
+    4. Click `Create`
        
  - Modify Replica Set:
     Only the number of persistent and volatile nodes can be changed.
 
     1. Choose the Replica Set from the list in the Replica Sets view.
-    2. Find [Replica Set Settings]
+    2. Find `Replica Set Settings`
     3. Change the number of volatile and persistent nodes.
     They need to be zero or a positive integer.
     The sum of persistent and volatile nodes needs to be odd.
@@ -178,9 +178,8 @@ Slaves are ordered by their state.
     After removing a Replica Set, all slaves assigned to it are free to be used by other Replica Sets.
 
     1. Choose the Replica Set from the list in the Replica Sets view.
-    2. Click [Remove Replica Set from system]. 
-    3. In the pop-up window, choose [Remove Replica Set**]
-    
+    2. Click `Remove Replica Set from system`. 
+    3. In the pop-up window, choose `Remove Replica Set`    
 ## System
 
 - General information:
