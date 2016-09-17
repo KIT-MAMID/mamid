@@ -53,6 +53,7 @@ const SCHEMA_VERSION string = "0.0.1"
 type Slave struct {
 	ID                   int64  `gorm:"primary_key"`
 	Hostname             string `gorm:"unique_index"`
+	Description          string
 	Port                 PortNumber
 	MongodPortRangeBegin PortNumber
 	MongodPortRangeEnd   PortNumber

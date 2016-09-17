@@ -16,6 +16,7 @@ func ProjectModelSlaveToSlave(tx *gorm.DB, m *model.Slave) (*Slave, error) {
 	return &Slave{
 		ID:                           m.ID,
 		Hostname:                     m.Hostname,
+		Description:                  m.Description,
 		Port:                         uint(m.Port),
 		MongodPortRangeBegin:         uint(m.MongodPortRangeBegin),
 		MongodPortRangeEnd:           uint(m.MongodPortRangeEnd),
@@ -74,6 +75,7 @@ func ProjectSlaveToModelSlave(s *Slave) (*model.Slave, error) {
 	return &model.Slave{
 		ID:                   s.ID,
 		Hostname:             s.Hostname,
+		Description:          s.Description,
 		Port:                 model.PortNumber(s.Port),
 		MongodPortRangeBegin: model.PortNumber(s.MongodPortRangeBegin),
 		MongodPortRangeEnd:   model.PortNumber(s.MongodPortRangeEnd),

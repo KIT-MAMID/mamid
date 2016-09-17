@@ -30,6 +30,7 @@ CREATE TABLE "msp_errors" (
 CREATE TABLE slaves (
 	"id" BIGSERIAL PRIMARY KEY,
 	"hostname" VARCHAR(255) UNIQUE,
+	"description" TEXT,
 	"port" INTEGER,
 	"mongod_port_range_begin" INTEGER,
 	"mongod_port_range_end" INTEGER,

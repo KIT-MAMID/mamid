@@ -13,6 +13,7 @@ import (
 type Slave struct {
 	ID                           int64  `json:"id"`
 	Hostname                     string `json:"hostname"`
+	Description                  string `json:"description"`
 	Port                         uint   `json:"slave_port"`
 	MongodPortRangeBegin         uint   `json:"mongod_port_range_begin"` //inclusive
 	MongodPortRangeEnd           uint   `json:"mongod_port_range_end"`   //exclusive
